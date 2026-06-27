@@ -62,82 +62,257 @@
 
     <script src="https://js.paystack.co/v1/inline.js"></script>
 
-    <script>
-        // ==================== YOUR FIREBASE CONFIG (uncomment if using auth) ====================
-        // const firebaseConfig = { ... };
-        // firebase.initializeApp(firebaseConfig);
-        // const auth = firebase.auth();
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-        const userEmail = "testuser@gmail.com"; // Replace with actual logged-in user email (e.g. from Firebase)
+<script>
 
-        /* DOM Elements */
-        const amountInput = document.getElementById('amount');
-        const depositBtn = document.getElementById('depositBtn');
-        const messageDiv = document.getElementById('message');
+// ================= FIREBASE =================
+const firebaseConfig = {
+    apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+    authDomain: "success-75f95.firebaseapp.com",
+    projectId: "success-75f95",
+    storageBucket: "success-75f95.firebasestorage.app",
+    messagingSenderId: "774097711994",
+    appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+};
 
-        function showMessage(text, color = "#ff4444") {
-            messageDiv.style.color = color;
-            messageDiv.textContent = text;
-            setTimeout(() => {
-                messageDiv.textContent = "";
-            }, 5000);
-        }
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
 
-        // Pay with Paystack
-        function payWithPaystack() {
-            let amount = parseFloat(amountInput.value);
 
-            if (!amount || amount < 500) {
-                showMessage("Minimum deposit is ₦500", "#ffaa00");
+// ================= SUPABASE =================
+const supabaseUrl = "https://axojmnizpewbewempaaa.supabase.co/rest/v1/";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4b2ptbml6cGV3YmV3ZW1wYWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDk3OTcsImV4cCI6MjA5ODA4NTc5N30._Ib3RhlMpPaUQoUVYDd6dS_gUOiaVsCBPBYEO30A8zc";
+
+const supabaseClient = supabase.createClient(
+    supabaseUrl,
+    supabaseKey
+);
+
+
+// ================= SETTINGS =================
+function showSettings() {
+    if (confirm("Do you want to logout?")) {
+        auth.signOut().then(() => location.reload());
+    }
+}
+
+
+// ================= PAGE REDIRECTS =================
+function deposit() {
+    window.location.href = "deposit.html";
+}
+
+function withdraw() {
+    window.location.href = "withdraw.html";
+}
+
+
+// ================= MESSAGE =================
+function showMessage(text, color = "red") {
+
+    let msg = document.getElementById("gameMessage");
+
+    if (!msg) {
+
+        msg = document.createElement("div");
+
+        msg.id = "gameMessage";
+
+        msg.style.position = "fixed";
+        msg.style.bottom = "20px";
+        msg.style.left = "50%";
+        msg.style.transform = "translateX(-50%)";
+        msg.style.background = "rgba(0,0,0,0.9)";
+        msg.style.padding = "12px 24px";
+        msg.style.borderRadius = "8px";
+        msg.style.zIndex = "9999";
+        msg.style.fontWeight = "bold";
+        msg.style.textAlign = "center";
+
+        document.body.appendChild(msg);
+    }
+
+    msg.style.color = color;
+    msg.textContent = text;
+
+    setTimeout(() => {
+        msg.textContent = "";
+    },3000);
+}
+
+
+// ================= INVEST =================
+function handleInvest() {
+
+    const user = auth.currentUser;
+
+    if (!user) {
+
+        showMessage(
+            "You need to login before investing",
+            "red"
+        );
+
+        return;
+    }
+
+    showMessage(
+        "Invest successful",
+        "lime"
+    );
+
+}
+
+
+// ================= BUTTON STATE =================
+function updateInvestButtons(isLoggedIn) {
+
+    const btn1 =
+        document.getElementById("investBtn");
+
+    const btn2 =
+        document.getElementById("investBtn2");
+
+    if(isLoggedIn){
+
+        btn1.disabled=false;
+        btn2.disabled=false;
+
+        btn1.style.opacity="1";
+        btn2.style.opacity="1";
+
+        btn1.style.cursor="pointer";
+        btn2.style.cursor="pointer";
+
+    }else{
+
+        btn1.disabled=true;
+        btn2.disabled=true;
+
+        btn1.style.opacity="0.6";
+        btn2.style.opacity="0.6";
+
+        btn1.style.cursor="not-allowed";
+        btn2.style.cursor="not-allowed";
+    }
+
+}
+
+
+// ================= AUTH STATE =================
+auth.onAuthStateChanged(async (user)=>{
+
+    const topBar =
+    document.getElementById("topBar");
+
+    if(user){
+
+        topBar.innerHTML=`
+
+<div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 12px;box-sizing:border-box;gap:10px;">
+
+<button onclick="deposit()" style="background:#00aa44;color:white;border:none;padding:8px 20px;border-radius:8px;font-weight:bold;cursor:pointer;">
+DEPOSIT
+</button>
+
+<div style="color:#00ff88;font-weight:bold;font-size:18px;flex:1;text-align:center;">
+₦<span id="balance">Loading...</span>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px;">
+
+<button onclick="withdraw()" style="background:#ff8800;color:white;border:none;padding:8px 20px;border-radius:8px;font-weight:bold;cursor:pointer;">
+WITHDRAW
+</button>
+
+<button onclick="showSettings()" style="background:none;border:none;font-size:28px;cursor:pointer;color:white;padding:5px;">
+⚙️
+</button>
+
+</div>
+
+</div>
+`;
+
+        updateInvestButtons(true);
+
+
+        // ================= LOAD BALANCE =================
+        try{
+
+            const {data,error}=
+            await supabaseClient
+            .from("users")
+            .select("balance")
+            .eq("email",user.email)
+            .single();
+
+            if(error){
+
+                console.log(error);
+
+                document.getElementById(
+                    "balance"
+                ).textContent="0.00";
+
                 return;
             }
 
-            depositBtn.disabled = true;
-            depositBtn.textContent = "PROCESSING...";
+            document.getElementById(
+                "balance"
+            ).textContent=
+            parseFloat(
+                data.balance||0
+            ).toFixed(2);
 
-            let handler = PaystackPop.setup({
-                key: "pk_test_ff5168e3103fbd4034574de88fd3be28a623b863", // ← Replace with your real key
-                email: userEmail,
-                amount: amount * 100, // Paystack uses kobo (smallest unit)
-                currency: "NGN",
-                ref: "AVI-" + Math.floor(Math.random() * 1000000000), // Unique reference
+        }
+        catch(err){
 
-                callback: function(response) {
-                    showMessage("Payment successful! Reference: " + response.reference, "lime");
-                    console.log("Payment reference:", response.reference);
-                    
-                    // TODO: Send reference to your backend for verification
-                    // Example: fetch('/verify-payment', { method: 'POST', body: JSON.stringify({ref: response.reference}) })
+            console.log(err);
 
-                    setTimeout(() => {
-                        window.location.href = 'index.html'; // Redirect back to game
-                    }, 2500);
-                },
-
-                onClose: function() {
-                    showMessage("Payment cancelled", "#ffaa00");
-                    depositBtn.disabled = false;
-                    depositBtn.textContent = "PAY NOW";
-                }
-            });
-
-            handler.openIframe();
+            document.getElementById(
+                "balance"
+            ).textContent="0.00";
         }
 
-        // Button click
-        depositBtn.addEventListener('click', payWithPaystack);
+    }
 
-        // Enter key support
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                payWithPaystack();
-            }
-        });
+    else{
 
-        // Optional: Auto-focus amount input
-        window.addEventListener("load", () => {
-            amountInput.focus();
-        });
-    </script>
+        topBar.innerHTML=`
+
+<button class="top-btn"
+onclick="window.location.href='login.html'">
+
+Login
+
+</button>
+
+`;
+
+        updateInvestButtons(false);
+
+    }
+
+});
+
+
+// ================= INVEST BUTTONS =================
+document.getElementById(
+"investBtn"
+).addEventListener(
+"click",
+handleInvest
+);
+
+document.getElementById(
+"investBtn2"
+).addEventListener(
+"click",
+handleInvest
+);
+
+</script>
 </body>
 </html>

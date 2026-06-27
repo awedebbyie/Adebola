@@ -119,6 +119,8 @@
 <script src="js/main.js"></script>
 <script src="crashLogic.js"></script>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
 
 // ================= FIREBASE =================
@@ -134,12 +136,26 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 
+
+// ================= SUPABASE =================
+const supabaseUrl = "YOUR_SUPABASE_URL";
+const supabaseKey = "YOUR_SUPABASE_ANON_KEY";
+
+const supabaseClient = supabase.createClient(
+    supabaseUrl,
+    supabaseKey
+);
+
+
+// ================= SETTINGS =================
 function showSettings() {
     if (confirm("Do you want to logout?")) {
         auth.signOut().then(() => location.reload());
     }
 }
 
+
+// ================= PAGE REDIRECTS =================
 function deposit() {
     window.location.href = "deposit.html";
 }
@@ -148,13 +164,18 @@ function withdraw() {
     window.location.href = "withdraw.html";
 }
 
-// ================= FIX 1: SAFE MESSAGE =================
+
+// ================= MESSAGE =================
 function showMessage(text, color = "red") {
+
     let msg = document.getElementById("gameMessage");
 
     if (!msg) {
+
         msg = document.createElement("div");
+
         msg.id = "gameMessage";
+
         msg.style.position = "fixed";
         msg.style.bottom = "20px";
         msg.style.left = "50%";
@@ -165,6 +186,7 @@ function showMessage(text, color = "red") {
         msg.style.zIndex = "9999";
         msg.style.fontWeight = "bold";
         msg.style.textAlign = "center";
+
         document.body.appendChild(msg);
     }
 
@@ -172,93 +194,181 @@ function showMessage(text, color = "red") {
     msg.textContent = text;
 
     setTimeout(() => {
-        if (msg) msg.textContent = "";
-    }, 3000);
+        msg.textContent = "";
+    },3000);
 }
 
 
-// ================= INVEST CONTROL =================
+// ================= INVEST =================
 function handleInvest() {
+
     const user = auth.currentUser;
 
     if (!user) {
-        showMessage("You need to login. Investments can only be placed when a user is logged in.", "red");
+
+        showMessage(
+            "You need to login before investing",
+            "red"
+        );
+
         return;
     }
 
-    // ✅ Only runs when logged in
-    showMessage("Invest successful", "lime");
+    showMessage(
+        "Invest successful",
+        "lime"
+    );
 
-    // your real invest logic here
 }
 
-// ================= BUTTON STATE MANAGEMENT =================
+
+// ================= BUTTON STATE =================
 function updateInvestButtons(isLoggedIn) {
-    const btn1 = document.getElementById("investBtn");
-    const btn2 = document.getElementById("investBtn2");
 
-    if (isLoggedIn) {
-        btn1.disabled = false;
-        btn2.disabled = false;
-        btn1.style.opacity = "1";
-        btn2.style.opacity = "1";
-        btn1.style.cursor = "pointer";
-        btn2.style.cursor = "pointer";
-    } else {
-        btn1.disabled = true;
-        btn2.disabled = true;
-        btn1.style.opacity = "0.6";
-        btn2.style.opacity = "0.6";
-        btn1.style.cursor = "not-allowed";
-        btn2.style.cursor = "not-allowed";
+    const btn1 =
+        document.getElementById("investBtn");
+
+    const btn2 =
+        document.getElementById("investBtn2");
+
+    if(isLoggedIn){
+
+        btn1.disabled=false;
+        btn2.disabled=false;
+
+        btn1.style.opacity="1";
+        btn2.style.opacity="1";
+
+        btn1.style.cursor="pointer";
+        btn2.style.cursor="pointer";
+
+    }else{
+
+        btn1.disabled=true;
+        btn2.disabled=true;
+
+        btn1.style.opacity="0.6";
+        btn2.style.opacity="0.6";
+
+        btn1.style.cursor="not-allowed";
+        btn2.style.cursor="not-allowed";
     }
+
 }
+
 
 // ================= AUTH STATE =================
-auth.onAuthStateChanged((user) => {
-    const topBar = document.getElementById("topBar");
+auth.onAuthStateChanged(async (user)=>{
 
-    if (user) {
-        topBar.innerHTML = `
-    <div style="display:flex; align-items:center; justify-content:space-between; width:100%; padding:0 12px; box-sizing:border-box; gap:10px;">
+    const topBar =
+    document.getElementById("topBar");
 
-        <!-- Deposit Button - Left -->
-        <button onclick="deposit()" style="background:#00aa44; color:white; border:none; padding:8px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">
-            DEPOSIT
-        </button>
+    if(user){
 
-        <!-- Balance - Center -->
-        <div style="color:#00ff88; font-weight:bold; font-size:18px; flex:1; text-align:center;">
-            ₦<span id="balance">0.00</span>
-        </div>
+        topBar.innerHTML=`
 
-        <!-- Withdraw + Settings - Right -->
-        <div style="display:flex; align-items:center; gap:12px;">
-            <button onclick="withdraw()" style="background:#ff8800; color:white; border:none; padding:8px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">
-                WITHDRAW
-            </button>
+<div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 12px;box-sizing:border-box;gap:10px;">
 
-            <button onclick="showSettings()" style="background:none; border:none; font-size:28px; cursor:pointer; color:white; padding:5px;">
-                ⚙️
-            </button>
-        </div>
+<button onclick="deposit()" style="background:#00aa44;color:white;border:none;padding:8px 20px;border-radius:8px;font-weight:bold;cursor:pointer;">
+DEPOSIT
+</button>
 
-    </div>
+<div style="color:#00ff88;font-weight:bold;font-size:18px;flex:1;text-align:center;">
+₦<span id="balance">Loading...</span>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px;">
+
+<button onclick="withdraw()" style="background:#ff8800;color:white;border:none;padding:8px 20px;border-radius:8px;font-weight:bold;cursor:pointer;">
+WITHDRAW
+</button>
+
+<button onclick="showSettings()" style="background:none;border:none;font-size:28px;cursor:pointer;color:white;padding:5px;">
+⚙️
+</button>
+
+</div>
+
+</div>
 `;
+
         updateInvestButtons(true);
-    } else {
-        topBar.innerHTML = `
-            <button class="top-btn" onclick="window.location.href='login.html'">
-                Login
-            </button>
-        `;
-        updateInvestButtons(false);
+
+
+        // ================= LOAD BALANCE =================
+        try{
+
+            const {data,error}=
+            await supabaseClient
+            .from("users")
+            .select("balance")
+            .eq("email",user.email)
+            .single();
+
+            if(error){
+
+                console.log(error);
+
+                document.getElementById(
+                    "balance"
+                ).textContent="0.00";
+
+                return;
+            }
+
+            document.getElementById(
+                "balance"
+            ).textContent=
+            parseFloat(
+                data.balance||0
+            ).toFixed(2);
+
+        }
+        catch(err){
+
+            console.log(err);
+
+            document.getElementById(
+                "balance"
+            ).textContent="0.00";
+        }
+
     }
+
+    else{
+
+        topBar.innerHTML=`
+
+<button class="top-btn"
+onclick="window.location.href='login.html'">
+
+Login
+
+</button>
+
+`;
+
+        updateInvestButtons(false);
+
+    }
+
 });
 
-// ================= FIX 3: BOTH BUTTONS =================
-document.getElementById("investBtn").addEventListener("click", handleInvest);
-document.getElementById("investBtn2").addEventListener("click", handleInvest);
+
+// ================= INVEST BUTTONS =================
+document.getElementById(
+"investBtn"
+).addEventListener(
+"click",
+handleInvest
+);
+
+document.getElementById(
+"investBtn2"
+).addEventListener(
+"click",
+handleInvest
+);
 
 </script>
 
