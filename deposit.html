@@ -6,14 +6,14 @@
     <title>Aviator Game - Deposit</title>
     <link rel="stylesheet" href="style.css">
     <!-- Firebase SDK (optional - only if you want auth protection) -->
-    <!-- <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script> -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 </head>
 <body>
     <div class="login-container">  <!-- Reusing same container class for consistent styling -->
 
         <!-- Top Bar -->
-        <div class="top-bar">
+        <div class="top-bar" id="topBar">
             <button class="top-btn" onclick="window.location.href='index.html'">
                 ← Back to Game
             </button>
@@ -81,7 +81,7 @@ const auth = firebase.auth();
 
 
 // ================= SUPABASE =================
-const supabaseUrl = "https://axojmnizpewbewempaaa.supabase.co/rest/v1/";
+const supabaseUrl = "https://axojmnizpewbewempaaa.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4b2ptbml6cGV3YmV3ZW1wYWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDk3OTcsImV4cCI6MjA5ODA4NTc5N30._Ib3RhlMpPaUQoUVYDd6dS_gUOiaVsCBPBYEO30A8zc";
 
 const supabaseClient = supabase.createClient(
@@ -165,41 +165,6 @@ function handleInvest() {
 }
 
 
-// ================= BUTTON STATE =================
-function updateInvestButtons(isLoggedIn) {
-
-    const btn1 =
-        document.getElementById("investBtn");
-
-    const btn2 =
-        document.getElementById("investBtn2");
-
-    if(isLoggedIn){
-
-        btn1.disabled=false;
-        btn2.disabled=false;
-
-        btn1.style.opacity="1";
-        btn2.style.opacity="1";
-
-        btn1.style.cursor="pointer";
-        btn2.style.cursor="pointer";
-
-    }else{
-
-        btn1.disabled=true;
-        btn2.disabled=true;
-
-        btn1.style.opacity="0.6";
-        btn2.style.opacity="0.6";
-
-        btn1.style.cursor="not-allowed";
-        btn2.style.cursor="not-allowed";
-    }
-
-}
-
-
 // ================= AUTH STATE =================
 auth.onAuthStateChanged(async (user)=>{
 
@@ -235,46 +200,56 @@ WITHDRAW
 </div>
 `;
 
-        updateInvestButtons(true);
-
 
         // ================= LOAD BALANCE =================
-        try{
+        try {
 
-            const {data,error}=
-            await supabaseClient
-            .from("users")
-            .select("balance")
-            .eq("email",user.email)
-            .single();
+    let { data, error } = await supabaseClient
+    .from("Users")
+    .select("Balance")
+    .eq("Email", user.email)
+    .maybeSingle();
 
-            if(error){
+    // User doesn't exist yet → create one
+    if (!data) {
 
-                console.log(error);
-
-                document.getElementById(
-                    "balance"
-                ).textContent="0.00";
-
-                return;
+        const { error: insertError } =
+        await supabaseClient
+        .from("Users")
+        .insert([
+            {
+                Email: user.email,
+                Balance: 0
             }
+        ]);
 
-            document.getElementById(
-                "balance"
-            ).textContent=
-            parseFloat(
-                data.balance||0
-            ).toFixed(2);
-
+        if(insertError){
+            console.log(insertError);
         }
-        catch(err){
 
-            console.log(err);
+        document.getElementById(
+            "balance"
+        ).textContent = "0.00";
 
-            document.getElementById(
-                "balance"
-            ).textContent="0.00";
-        }
+        return;
+    }
+
+    document.getElementById(
+        "balance"
+    ).textContent =
+    parseFloat(
+        data.Balance || 0
+    ).toFixed(2);
+
+}
+catch(err){
+
+    console.log(err);
+
+    document.getElementById(
+        "balance"
+    ).textContent="0.00";
+}
 
     }
 
@@ -291,26 +266,207 @@ Login
 
 `;
 
-        updateInvestButtons(false);
-
     }
 
 });
 
+// ================= PAYSTACK PAYMENT =================
 
-// ================= INVEST BUTTONS =================
-document.getElementById(
-"investBtn"
-).addEventListener(
-"click",
-handleInvest
+// ================= PAYSTACK PAYMENT =================
+
+const amountInput =
+document.getElementById("amount");
+
+const depositBtn =
+document.getElementById("depositBtn");
+
+function payWithPaystack(){
+
+    const user =
+    auth.currentUser;
+
+    if(!user){
+
+        showMessage(
+            "Please login first",
+            "red"
+        );
+
+        return;
+    }
+
+    let amount =
+    parseFloat(
+        amountInput.value
+    );
+
+    if(
+        !amount ||
+        amount < 500
+    ){
+
+        showMessage(
+            "Minimum deposit is ₦500",
+            "#ffaa00"
+        );
+
+        return;
+    }
+
+    depositBtn.disabled=true;
+
+    depositBtn.textContent=
+    "PROCESSING...";
+
+    let paymentRef =
+    "AVI-" + Date.now();
+
+    let handler =
+    PaystackPop.setup({
+
+        key:"pk_test_ff5168e3103fbd4034574de88fd3be28a623b863",
+
+        email:user.email,
+
+        amount:amount*100,
+
+        currency:"NGN",
+
+        ref:paymentRef,
+
+        callback: function(response){
+
+    (async ()=>{
+
+        try{
+
+            showMessage(
+                "Verifying payment...",
+                "#ffaa00"
+            );
+
+            const verify =
+            await fetch(
+            "https://axojmnizpewbewempaaa.supabase.co/functions/v1/verify-payment",
+            {
+                method:"POST",
+
+                headers:{
+                    "Content-Type":"application/json"
+                },
+
+                body:JSON.stringify({
+                    reference:response.reference
+                })
+
+            });
+
+            const result =
+            await verify.json();
+
+            console.log(result);
+
+            if(!result.success){
+
+                throw new Error(
+                    result.error
+                );
+
+            }
+
+            const {data} =
+await supabaseClient
+.from("Users")
+.select("Balance")
+.eq(
+    "Email",
+    auth.currentUser.email
+)
+.maybeSingle();
+
+const currentBalance =
+parseFloat(
+    data?.Balance || 0
 );
 
+const newBalance =
+currentBalance +
+result.amount;
+
+const {error:updateError} =
+await supabaseClient
+.from("Users")
+.update({
+    Balance:newBalance
+})
+.eq(
+    "Email",
+    auth.currentUser.email
+);
+
+if(updateError){
+
+    throw new Error(
+        updateError.message
+    );
+
+}
+
 document.getElementById(
-"investBtn2"
-).addEventListener(
-"click",
-handleInvest
+    "balance"
+).textContent =
+newBalance.toFixed(2);
+
+            showMessage(
+                "Deposit successful",
+                "lime"
+            );
+
+            amountInput.value="";
+
+        }
+
+        catch(err){
+
+            console.log(err);
+
+            showMessage(
+                "Verification failed",
+                "red"
+            );
+
+        }
+
+        depositBtn.disabled=false;
+
+        depositBtn.textContent=
+        "PAY NOW";
+
+    })();
+
+},
+
+        onClose: function(){
+
+            showMessage(
+                "Payment cancelled",
+                "#ffaa00"
+            );
+
+            depositBtn.disabled=false;
+
+            depositBtn.textContent=
+            "PAY NOW";
+
+        }
+
+    });
+
+    handler.openIframe();
+}
+depositBtn.addEventListener(
+    "click",
+    payWithPaystack
 );
 
 </script>

@@ -143,11 +143,9 @@ loginBtn.addEventListener('click', async () => {
         return;
     }
 
-    // ✅ FIX: disable button correctly while loading
-    loginBtn.disabled = true;
-    loginBtn.textContent = "LOGGING IN...";
-    loginBtn.disabled = false;
-loginBtn.textContent = "LOGIN";
+   // disable button while loading
+loginBtn.disabled = true;
+loginBtn.textContent = "LOGGING IN...";
 
     try {
         const userCredential = await auth.signInWithEmailAndPassword(email, password);
