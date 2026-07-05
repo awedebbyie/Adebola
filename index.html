@@ -1,31 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Aviator Game</title>
-
     <link rel="stylesheet" href="style.css">
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-
 </head>
-
 <body>
 
 <div class="game-container">
 
 <!-- Top Bar -->
 <div class="top-bar" id="topBar">
-    <button class="top-btn" onclick="window.location.href='login.html'">
-        Login
-    </button>
+    <!-- Initially empty to avoid flashing wrong state -->
 </div>
 
 <!-- GRAPH AREA -->
@@ -58,14 +49,10 @@
 
 <!-- CONTROLS -->
 <div class="controls">
-
     <!-- ROW 1 -->
     <div class="invest-row">
-
         <div class="left-side">
-
             <input type="text" class="amount-input" placeholder="Enter amount">
-
             <div class="price-grid">
                 <button class="price-btn">100</button>
                 <button class="price-btn">200</button>
@@ -78,20 +65,14 @@
                 <button class="price-btn">900</button>
                 <button class="price-btn">1000</button>
             </div>
-
         </div>
-
         <button id="investBtn" class="invest-btn" disabled>INVEST</button>
-
     </div>
 
     <!-- ROW 2 -->
     <div class="invest-row">
-
         <div class="left-side">
-
             <input type="text" class="amount-input" placeholder="Enter amount">
-
             <div class="price-grid">
                 <button class="price-btn">100</button>
                 <button class="price-btn">200</button>
@@ -104,13 +85,9 @@
                 <button class="price-btn">900</button>
                 <button class="price-btn">1000</button>
             </div>
-
         </div>
-
         <button id="investBtn2" class="invest-btn" disabled>INVEST</button>
-
     </div>
-
 </div>
 
 <script src="js/invest.js"></script>
@@ -120,7 +97,6 @@
 <script src="crashLogic.js"></script>
 
 <script>
-
 // ================= FIREBASE =================
 const firebaseConfig = {
     apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
@@ -134,10 +110,16 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+// Force sign out if coming from logout
+if (window.location.search.includes('logout')) {
+    auth.signOut();
+}
+
+// ================= HELPER FUNCTIONS =================
 function showSettings() {
-    if (confirm("Do you want to logout?")) {
-        auth.signOut().then(() => location.reload());
-    }
+    window.location.href = "settings.html";
 }
 
 function deposit() {
@@ -148,51 +130,17 @@ function withdraw() {
     window.location.href = "withdraw.html";
 }
 
-// ================= FIX 1: SAFE MESSAGE =================
-function showMessage(text, color = "red") {
-    let msg = document.getElementById("gameMessage");
-
-    if (!msg) {
-        msg = document.createElement("div");
-        msg.id = "gameMessage";
-        msg.style.position = "fixed";
-        msg.style.bottom = "20px";
-        msg.style.left = "50%";
-        msg.style.transform = "translateX(-50%)";
-        msg.style.background = "rgba(0,0,0,0.9)";
-        msg.style.padding = "12px 24px";
-        msg.style.borderRadius = "8px";
-        msg.style.zIndex = "9999";
-        msg.style.fontWeight = "bold";
-        msg.style.textAlign = "center";
-        document.body.appendChild(msg);
-    }
-
-    msg.style.color = color;
-    msg.textContent = text;
-
-    setTimeout(() => {
-        if (msg) msg.textContent = "";
-    }, 3000);
-}
-
-
 // ================= INVEST CONTROL =================
 function handleInvest() {
     const user = auth.currentUser;
-
     if (!user) {
-        showMessage("You need to login. Investments can only be placed when a user is logged in.", "red");
+        alert("You need to login. Investments can only be placed when a user is logged in.");
         return;
     }
-
-    // ✅ Only runs when logged in
-    showMessage("Invest successful", "lime");
-
-    // your real invest logic here
+    // Your real invest logic here
 }
 
-// ================= BUTTON STATE MANAGEMENT =================
+// ================= BUTTON STATE =================
 function updateInvestButtons(isLoggedIn) {
     const btn1 = document.getElementById("investBtn");
     const btn2 = document.getElementById("investBtn2");
@@ -220,31 +168,23 @@ auth.onAuthStateChanged((user) => {
 
     if (user) {
         topBar.innerHTML = `
-    <div style="display:flex; align-items:center; justify-content:space-between; width:100%; padding:0 12px; box-sizing:border-box; gap:10px;">
-
-        <!-- Deposit Button - Left -->
-        <button onclick="deposit()" style="background:#00aa44; color:white; border:none; padding:8px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">
-            DEPOSIT
-        </button>
-
-        <!-- Balance - Center -->
-        <div style="color:#00ff88; font-weight:bold; font-size:18px; flex:1; text-align:center;">
-            ₦<span id="balance">0.00</span>
-        </div>
-
-        <!-- Withdraw + Settings - Right -->
-        <div style="display:flex; align-items:center; gap:12px;">
-            <button onclick="withdraw()" style="background:#ff8800; color:white; border:none; padding:8px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">
-                WITHDRAW
-            </button>
-
-            <button onclick="showSettings()" style="background:none; border:none; font-size:28px; cursor:pointer; color:white; padding:5px;">
-                ⚙️
-            </button>
-        </div>
-
-    </div>
-`;
+            <div style="display:flex; align-items:center; justify-content:space-between; width:100%; padding:0 12px; box-sizing:border-box; gap:10px;">
+                <button onclick="deposit()" style="background:#00aa44; color:white; border:none; padding:8px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">
+                    DEPOSIT
+                </button>
+                <div style="color:#00ff88; font-weight:bold; font-size:18px; flex:1; text-align:center;">
+                    ₦<span id="balance">0.00</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <button onclick="withdraw()" style="background:#ff8800; color:white; border:none; padding:8px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">
+                        WITHDRAW
+                    </button>
+                    <button onclick="showSettings()" style="background:none; border:none; font-size:28px; cursor:pointer; color:white; padding:5px;">
+                        ⚙️
+                    </button>
+                </div>
+            </div>
+        `;
         updateInvestButtons(true);
     } else {
         topBar.innerHTML = `
@@ -256,10 +196,9 @@ auth.onAuthStateChanged((user) => {
     }
 });
 
-// ================= FIX 3: BOTH BUTTONS =================
+// ================= BUTTON LISTENERS =================
 document.getElementById("investBtn").addEventListener("click", handleInvest);
 document.getElementById("investBtn2").addEventListener("click", handleInvest);
-
 </script>
 
 </body>

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Aviator</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        body {
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-wrapper {
+            width: 25vw;
+            min-width: 380px;
+            max-width: 420px;
+            height: 100vh;
+            background: #121212;
+            box-shadow: 0 0 30px rgba(0,0,0,0.3);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background-color: #e60000;
+            padding: 10px 16px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin: 0;
+        }
+        
+        .header .home {
+            font-size: 22px;
+            cursor: pointer;
+            color: white;
+        }
+
+        .section {
+            padding: 16px;
+        }
+        
+        .section-title {
+            background-color: #1f1f1f;
+            padding: 12px 16px;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        
+        .menu-item {
+            background-color: #1f1f1f;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        .menu-item:hover {
+            background-color: #2a2a2a;
+        }
+        
+        .dark-mode-options {
+            background-color: #1f1f1f;
+            padding: 8px 0;
+        }
+        
+        .option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            border-bottom: 1px solid #2a2a2a;
+        }
+        
+        .option:last-child {
+            border-bottom: none;
+        }
+        
+        .radio {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #666;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .radio.checked {
+            border-color: #00ff88;
+            background: #00ff88;
+        }
+        
+        .radio.checked::after {
+            content: '';
+            width: 10px;
+            height: 10px;
+            background: #121212;
+            border-radius: 50%;
+        }
+        
+        .new-badge {
+            background-color: #e60000;
+            color: white;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        
+        .popup-banner {
+            background: #0066ff;
+            color: white;
+            padding: 12px 16px;
+            margin: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            position: relative;
+        }
+        
+        .popup-banner .close {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .logout-btn {
+            margin: 30px 16px 40px;
+            background: #e60000;
+            color: white;
+            border: none;
+            padding: 16px;
+            font-size: 17px;
+            font-weight: bold;
+            border-radius: 10px;
+            width: calc(100% - 32px);
+            cursor: pointer;
+        }
+        
+        .logout-btn:hover {
+            background: #ff1a1a;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-wrapper">
+        <!-- Header -->
+        <div class="header">
+            <div onclick="goBack()" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                ←
+                <h1>Settings</h1>
+            </div>
+            <div class="home" onclick="goHome()">🏠</div>
+        </div>
+
+        <div class="section">
+            <!-- Profile -->
+            <div class="menu-item" onclick="goToProfile()">
+                Profile
+                <span style="font-size:20px;">›</span>
+            </div>
+
+            <!-- Dark Mode -->
+            <div class="section-title">Dark Mode</div>
+            <div class="dark-mode-options">
+                <div class="option">
+                    <span>On</span>
+                    <div class="radio"></div>
+                </div>
+                <div class="option">
+                    <span>Off</span>
+                    <div class="radio"></div>
+                </div>
+                <div class="option">
+                    <span>Follow System Settings</span>
+                    <div class="radio checked"></div>
+                </div>
+            </div>
+
+            <!-- Preference -->
+            <div class="section-title">Preference</div>
+
+            <!-- Notifications -->
+            <div class="section-title">Notifications</div>
+            <div class="menu-item">Notification Settings <span style="font-size:20px;">›</span></div>
+
+            <!-- Safety & Security -->
+            <div class="section-title">Safety & Security</div>
+            
+            <div class="popup-banner">
+                Enable 2-Step Verification to protect your account
+                <span class="close" onclick="this.parentElement.style.display='none'">×</span>
+            </div>
+            
+            <div class="menu-item">
+                <span>Multifactor Authentication</span>
+                <span class="new-badge">New</span>
+                <span style="font-size:20px;">›</span>
+            </div>
+            
+            <div class="menu-item">Deactivate <span style="font-size:20px;">›</span></div>
+            <div class="menu-item">Device Management <span style="font-size:20px;">›</span></div>
+        </div>
+
+        <!-- Logout Button -->
+        <button onclick="logoutUser()" class="logout-btn">
+            LOGOUT
+        </button>
+    </div>
+
+    <script>
+        function goBack() {
+            window.history.back();
+        }
+        
+        function goHome() {
+            window.location.href = 'index.html';
+        }
+        
+        function goToProfile() {
+            window.location.href = 'profile.html';
+        }
+
+        // Strong Logout
+        function logoutUser() {
+            if (confirm("Are you sure you want to logout?")) {
+                if (typeof firebase !== 'undefined' && firebase.auth) {
+                    firebase.auth().signOut().then(() => {
+                        localStorage.clear();
+                        sessionStorage.clear();
+                        window.location.href = 'index.html?logout=true';
+                    }).catch(() => {
+                        window.location.href = 'index.html?logout=true';
+                    });
+                } else {
+                    window.location.href = 'index.html?logout=true';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

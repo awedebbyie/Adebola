@@ -97,22 +97,56 @@ serve(async (req) => {
 
     }
 
-    await supabase
-    .from("Transactions")
-    .insert([{
-      reference:reference,
-      email:verifyData.data.customer.email,
-      amount:verifyData.data.amount/100
-    }]);
+    const amount =
+verifyData.data.amount / 100;
 
-    return new Response(
-      JSON.stringify({
-        success:true,
-        amount:
-        verifyData.data.amount/100,
-        email:
-        verifyData.data.customer.email
-      }),
+const email =
+verifyData.data.customer.email;
+
+// Save transaction
+await supabase
+.from("Transactions")
+.insert([{
+    reference:reference,
+    email:email,
+    amount:amount
+}]);
+
+// Get current balance
+const {data:userData} =
+await supabase
+.from("Users")
+.select("Balance")
+.eq("Email",email)
+.maybeSingle();
+
+const currentBalance =
+parseFloat(
+    userData?.Balance || 0
+);
+
+const newBalance =
+currentBalance + amount;
+
+// Update balance
+await supabase
+.from("Users")
+.update({
+    Balance:newBalance
+})
+.eq("Email",email);
+
+return new Response(
+JSON.stringify({
+    success:true,
+    balance:newBalance
+}),
+{
+headers:{
+    "Content-Type":"application/json"
+}
+}
+);
       {
         headers:{
           "Content-Type":"application/json"

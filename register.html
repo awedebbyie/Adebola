@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aviator Game - Create Account</title>
     <link rel="stylesheet" href="style.css">
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -25,115 +26,215 @@
 
         <div class="login-form">
             <input type="email" id="email" class="amount-input" placeholder="Email Address" style="margin-bottom:16px;">
+
             <input type="password" id="password" class="amount-input" placeholder="Password" style="margin-bottom:16px;">
+
             <input type="password" id="confirmPassword" class="amount-input" placeholder="Confirm Password" style="margin-bottom:20px;">
 
             <button id="registerBtn" class="invest-btn" style="width:100%; height:58px; margin-bottom:20px;">
                 CREATE ACCOUNT
             </button>
 
-            <button id="googleBtn" style="width:100%; height:52px; background:#4285F4; color:white; border:none; border-radius:8px; font-size:16px; font-weight:500; cursor:pointer; margin-bottom:25px; display:flex; align-items:center; justify-content:center; gap:10px;">
-                <img src="https://www.google.com/images/branding/googleg/1x/googleg_standard_color_24dp.png" 
-                     alt="Google" width="24" height="24" style="filter: brightness(0) invert(1);">
+            <button id="googleBtn"
+                style="width:100%; height:52px; background:#4285F4; color:white; border:none; border-radius:8px; font-size:16px; font-weight:500; cursor:pointer; margin-bottom:25px; display:flex; align-items:center; justify-content:center; gap:10px;">
+
+                <img src="https://www.google.com/images/branding/googleg/1x/googleg_standard_color_24dp.png"
+                     alt="Google"
+                     width="24"
+                     height="24"
+                     style="filter: brightness(0) invert(1);">
+
                 Sign up with Google
             </button>
 
-            <div id="message" style="text-align:center; margin:10px 0; font-size:14px; min-height:24px;"></div>
+            <div id="message"
+                 style="text-align:center; margin:10px 0; font-size:14px; min-height:24px;">
+            </div>
 
             <div style="text-align:center; margin-top:20px; color:#bbb; font-size:14px;">
-                Already have an account? 
-                <a href="login.html" style="color:#00aa44; text-decoration:none;">Login</a>
+                Already have an account?
+                <a href="login.html"
+                   style="color:#00aa44; text-decoration:none;">
+                    Login
+                </a>
             </div>
         </div>
     </div>
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
-            authDomain: "success-75f95.firebaseapp.com",
-            projectId: "success-75f95",
-            storageBucket: "success-75f95.firebasestorage.app",
-            messagingSenderId: "774097711994",
-            appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
-        };
-        firebase.initializeApp(firebaseConfig);
+<script>
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+    authDomain: "success-75f95.firebaseapp.com",
+    projectId: "success-75f95",
+    storageBucket: "success-75f95.firebasestorage.app",
+    messagingSenderId: "774097711994",
+    appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+};
+
+firebase.initializeApp(firebaseConfig);
+
 const auth = firebase.auth();
 
-        const registerBtn = document.getElementById('registerBtn');
-        const googleBtn = document.getElementById('googleBtn');
-        const messageDiv = document.getElementById('message');
+const registerBtn = document.getElementById('registerBtn');
+const googleBtn = document.getElementById('googleBtn');
+const messageDiv = document.getElementById('message');
 
-        function showMessage(text, color = "#ff4444") {
-            messageDiv.style.color = color;
-            messageDiv.textContent = text;
-        }
-
-        // Email Registration
-        registerBtn.addEventListener('click', async () => {
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            const confirm = document.getElementById('confirmPassword').value;
-            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-            if (!email || !password || !confirm) return showMessage("All fields required");
-if (!emailPattern.test(email)) {
-    return showMessage("Invalid email format");
+function showMessage(text, color = "#ff4444") {
+    messageDiv.style.color = color;
+    messageDiv.textContent = text;
 }
-            if (password !== confirm) return showMessage("Passwords do not match");
-            if (password.length < 6) return showMessage("Password must be at least 6 characters");
 
-            registerBtn.disabled = true;
-            registerBtn.textContent = "CREATING...";
 
-            try {
-    await auth.createUserWithEmailAndPassword(email, password);
-    showMessage("Account created! Redirecting...", "lime");
-    setTimeout(() => window.location.href = "login.html", 1500);
+// Email Registration
 
-} catch (error) {
-    console.error(error);
+registerBtn.addEventListener('click', async () => {
 
-    if (error.code === "auth/email-already-in-use") {
-        showMessage("Email already registered");
-    } 
-    else if (error.code === "auth/invalid-email") {
-        showMessage("Invalid email address");
-    } 
-    else if (error.code === "auth/weak-password") {
-        showMessage("Password is too weak");
-    } 
-    else {
-        showMessage("Something went wrong");
-    }
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const confirm = document.getElementById('confirmPassword').value;
 
-} finally {
-    registerBtn.disabled = false;
-    registerBtn.textContent = "CREATE ACCOUNT";
-}
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!email || !password || !confirm)
+        return showMessage("All fields required");
+
+    if (!emailPattern.test(email))
+        return showMessage("Invalid email format");
+
+    if (password !== confirm)
+        return showMessage("Passwords do not match");
+
+    if (password.length < 6)
+        return showMessage("Password must be at least 6 characters");
+
+    registerBtn.disabled = true;
+    registerBtn.textContent = "CREATING...";
+
+    try {
+
+        const userCredential =
+            await auth.createUserWithEmailAndPassword(email,password);
+
+        const user = userCredential.user;
+
+        // Generate permanent avatar
+        const firstLetter = email.charAt(0).toUpperCase();
+
+        const avatarURL =
+        `https://ui-avatars.com/api/?name=${firstLetter}&background=00aa44&color=fff&size=200`;
+
+        // Save avatar
+        await user.updateProfile({
+            displayName:"Player",
+            photoURL: avatarURL
         });
 
-// Google Sign Up
-googleBtn.addEventListener('click', async () => {
-    try {
-        googleBtn.disabled = true;
+        showMessage(
+            "Account created! Redirecting...",
+            "lime"
+        );
 
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({
-    prompt: 'select_account'
-});
-        const result = await auth.signInWithPopup(provider);
+        setTimeout(()=>{
+            window.location.href="login.html";
+        },1500);
 
-console.log("SUCCESS", result);
-showMessage("Account created successfully", "lime");
-window.location.href = "login.html";
-
-    } catch (error) {
-        console.error("GOOGLE ERROR:", error);
-        showMessage(error.message);
-    } finally {
-        googleBtn.disabled = false;
     }
+    catch(error){
+
+        console.error(error);
+
+        if(error.code==="auth/email-already-in-use"){
+            showMessage("Email already registered");
+        }
+
+        else if(error.code==="auth/invalid-email"){
+            showMessage("Invalid email address");
+        }
+
+        else if(error.code==="auth/weak-password"){
+            showMessage("Password is too weak");
+        }
+
+        else{
+            showMessage("Something went wrong");
+        }
+
+    }
+    finally{
+
+        registerBtn.disabled=false;
+        registerBtn.textContent="CREATE ACCOUNT";
+
+    }
+
 });
-    </script>
+
+
+// Google Signup
+
+googleBtn.addEventListener('click', async () => {
+
+    try{
+
+        googleBtn.disabled=true;
+
+        const provider =
+            new firebase.auth.GoogleAuthProvider();
+
+        provider.setCustomParameters({
+            prompt:'select_account'
+        });
+
+        const result =
+            await auth.signInWithPopup(provider);
+
+        const user = result.user;
+
+        // Only generate avatar if Google did not provide one
+        if(!user.photoURL){
+
+            const firstLetter =
+            user.email.charAt(0).toUpperCase();
+
+            const avatarURL =
+            `https://ui-avatars.com/api/?name=${firstLetter}&background=00aa44&color=fff&size=200`;
+
+            await user.updateProfile({
+                photoURL: avatarURL
+            });
+
+        }
+
+        console.log("SUCCESS", result);
+
+        showMessage(
+            "Account created successfully",
+            "lime"
+        );
+
+        window.location.href="login.html";
+
+    }
+    catch(error){
+
+        console.error(
+            "GOOGLE ERROR:",
+            error
+        );
+
+        showMessage(error.message);
+
+    }
+    finally{
+
+        googleBtn.disabled=false;
+
+    }
+
+});
+
+</script>
+
 </body>
 </html>

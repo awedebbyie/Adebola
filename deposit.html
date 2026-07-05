@@ -108,37 +108,17 @@ function withdraw() {
 }
 
 
-// ================= MESSAGE =================
+// ================= MESSAGE (Updated - uses #message div) =================
 function showMessage(text, color = "red") {
-
-    let msg = document.getElementById("gameMessage");
-
-    if (!msg) {
-
-        msg = document.createElement("div");
-
-        msg.id = "gameMessage";
-
-        msg.style.position = "fixed";
-        msg.style.bottom = "20px";
-        msg.style.left = "50%";
-        msg.style.transform = "translateX(-50%)";
-        msg.style.background = "rgba(0,0,0,0.9)";
-        msg.style.padding = "12px 24px";
-        msg.style.borderRadius = "8px";
-        msg.style.zIndex = "9999";
-        msg.style.fontWeight = "bold";
-        msg.style.textAlign = "center";
-
-        document.body.appendChild(msg);
-    }
+    let msg = document.getElementById("message");
+    if (!msg) return;
 
     msg.style.color = color;
     msg.textContent = text;
 
     setTimeout(() => {
         msg.textContent = "";
-    },3000);
+    }, 4000);
 }
 
 
@@ -163,114 +143,6 @@ function handleInvest() {
     );
 
 }
-
-
-// ================= AUTH STATE =================
-auth.onAuthStateChanged(async (user)=>{
-
-    const topBar =
-    document.getElementById("topBar");
-
-    if(user){
-
-        topBar.innerHTML=`
-
-<div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 12px;box-sizing:border-box;gap:10px;">
-
-<button onclick="deposit()" style="background:#00aa44;color:white;border:none;padding:8px 20px;border-radius:8px;font-weight:bold;cursor:pointer;">
-DEPOSIT
-</button>
-
-<div style="color:#00ff88;font-weight:bold;font-size:18px;flex:1;text-align:center;">
-₦<span id="balance">Loading...</span>
-</div>
-
-<div style="display:flex;align-items:center;gap:12px;">
-
-<button onclick="withdraw()" style="background:#ff8800;color:white;border:none;padding:8px 20px;border-radius:8px;font-weight:bold;cursor:pointer;">
-WITHDRAW
-</button>
-
-<button onclick="showSettings()" style="background:none;border:none;font-size:28px;cursor:pointer;color:white;padding:5px;">
-⚙️
-</button>
-
-</div>
-
-</div>
-`;
-
-
-        // ================= LOAD BALANCE =================
-        try {
-
-    let { data, error } = await supabaseClient
-    .from("Users")
-    .select("Balance")
-    .eq("Email", user.email)
-    .maybeSingle();
-
-    // User doesn't exist yet → create one
-    if (!data) {
-
-        const { error: insertError } =
-        await supabaseClient
-        .from("Users")
-        .insert([
-            {
-                Email: user.email,
-                Balance: 0
-            }
-        ]);
-
-        if(insertError){
-            console.log(insertError);
-        }
-
-        document.getElementById(
-            "balance"
-        ).textContent = "0.00";
-
-        return;
-    }
-
-    document.getElementById(
-        "balance"
-    ).textContent =
-    parseFloat(
-        data.Balance || 0
-    ).toFixed(2);
-
-}
-catch(err){
-
-    console.log(err);
-
-    document.getElementById(
-        "balance"
-    ).textContent="0.00";
-}
-
-    }
-
-    else{
-
-        topBar.innerHTML=`
-
-<button class="top-btn"
-onclick="window.location.href='login.html'">
-
-Login
-
-</button>
-
-`;
-
-    }
-
-});
-
-// ================= PAYSTACK PAYMENT =================
 
 // ================= PAYSTACK PAYMENT =================
 
@@ -374,48 +246,10 @@ function payWithPaystack(){
 
             }
 
-            const {data} =
-await supabaseClient
-.from("Users")
-.select("Balance")
-.eq(
-    "Email",
-    auth.currentUser.email
-)
-.maybeSingle();
-
-const currentBalance =
-parseFloat(
-    data?.Balance || 0
-);
-
-const newBalance =
-currentBalance +
-result.amount;
-
-const {error:updateError} =
-await supabaseClient
-.from("Users")
-.update({
-    Balance:newBalance
-})
-.eq(
-    "Email",
-    auth.currentUser.email
-);
-
-if(updateError){
-
-    throw new Error(
-        updateError.message
-    );
-
-}
-
-document.getElementById(
+            document.getElementById(
     "balance"
 ).textContent =
-newBalance.toFixed(2);
+result.balance.toFixed(2);
 
             showMessage(
                 "Deposit successful",

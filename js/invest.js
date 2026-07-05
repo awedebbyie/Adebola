@@ -103,8 +103,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 return; // STOP HERE - DO NOT PLACE BET
             }
         
-            // Place bet only when amount is already valid
-            alert(`Investment placed: ₦${value.toFixed(2)}`);
+            // Investment placed - No message shown anymore
+            // You can add your real investment logic here
+
         });
 
     });

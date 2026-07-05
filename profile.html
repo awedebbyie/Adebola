@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Aviator</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        body{
+            margin:0;
+            background:white;
+            font-family:Arial,sans-serif;
+            display:flex;
+            justify-content:center;
+            min-height:100vh;
+        }
+
+        .app-wrapper{
+            width:25vw;
+            min-width:380px;
+            max-width:420px;
+            height:100vh;
+            background:#121212;
+            box-shadow:0 0 30px rgba(0,0,0,0.3);
+            overflow-y:auto;
+        }
+
+        .header{
+            background-color:#e60000;
+            padding:12px 16px;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            position:sticky;
+            top:0;
+            z-index:100;
+        }
+
+        .header h1{
+            font-size:20px;
+            font-weight:600;
+            color:white;
+        }
+
+        .profile-header{
+            padding:20px 16px;
+            text-align:center;
+        }
+
+        .avatar{
+            width:100px;
+            height:100px;
+            border-radius:50%;
+            object-fit:cover;
+            border:4px solid #00aa44;
+            margin-bottom:12px;
+        }
+
+        .username{
+            font-size:22px;
+            font-weight:600;
+            color:white;
+        }
+
+        .change-link{
+            color:#00ff88;
+            font-size:15px;
+            cursor:pointer;
+        }
+
+        .info-row{
+            display:flex;
+            justify-content:space-between;
+            padding:16px;
+            background:#1f1f1f;
+            margin-bottom:2px;
+            font-size:16px;
+            align-items:center;
+        }
+
+        .info-label{
+            color:#ccc;
+        }
+
+        .info-value{
+            color:white;
+            font-weight:500;
+        }
+
+        .set-btn{
+            background:#00aa44;
+            color:white;
+            border:none;
+            padding:6px 14px;
+            border-radius:6px;
+            font-weight:600;
+            cursor:pointer;
+            font-size:14px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+<div class="header">
+<div onclick="goBack()" style="display:flex;align-items:center;gap:8px;cursor:pointer;color:white;">
+←
+<h1>Profile</h1>
+</div>
+
+<div onclick="goHome()" style="color:white;font-size:24px;cursor:pointer;">
+🏠
+</div>
+</div>
+
+<div class="profile-header">
+
+<img
+id="avatar"
+class="avatar"
+src="https://via.placeholder.com/100/00aa44/ffffff?text=AVIATOR">
+
+<div class="username" id="displayName">
+Player
+</div>
+
+<div onclick="changeAvatar()" class="change-link">
+Change Avatar
+</div>
+
+</div>
+
+<div class="info-row">
+<span class="info-label">User ID</span>
+<span class="info-value" id="userUid">
+Loading...
+</span>
+</div>
+
+<div class="info-row">
+<span class="info-label">Date of Birth</span>
+<span class="info-value" id="dobDisplay">
+Set
+</span>
+
+<button class="set-btn"
+onclick="setDateOfBirth()">
+Set
+</button>
+</div>
+
+<div class="info-row">
+<span class="info-label">
+Email
+</span>
+
+<span class="info-value"
+style="color:#00ff88;"
+id="emailDisplay">
+Loading...
+</span>
+</div>
+
+</div>
+
+<input
+type="file"
+id="avatarInput"
+accept="image/*"
+style="display:none">
+
+<script>
+
+const firebaseConfig = {
+apiKey:"AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+authDomain:"success-75f95.firebaseapp.com",
+projectId:"success-75f95",
+storageBucket:"success-75f95.firebasestorage.app",
+messagingSenderId:"774097711994",
+appId:"1:774097711994:web:cb2729f49ed1348b2ddcc3"
+};
+
+if(!firebase.apps.length){
+firebase.initializeApp(firebaseConfig);
+}
+
+const auth=firebase.auth();
+
+const supabaseUrl="https://axojmnizpewbewempaaa.supabase.co";
+
+const supabaseKey="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4b2ptbml6cGV3YmV3ZW1wYWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDk3OTcsImV4cCI6MjA5ODA4NTc5N30._Ib3RhlMpPaUQoUVYDd6dS_gUOiaVsCBPBYEO30A8zc";
+
+const { createClient } = supabase;
+
+const supabaseClient =
+createClient(
+supabaseUrl,
+supabaseKey
+);
+
+function goBack(){
+window.history.back();
+}
+
+function goHome(){
+window.location.href='index.html';
+}
+
+function changeAvatar(){
+document.getElementById(
+"avatarInput"
+).click();
+}
+
+document
+.getElementById("avatarInput")
+.addEventListener(
+"change",
+async(event)=>{
+
+const file=
+event.target.files[0];
+
+if(!file) return;
+
+const user=
+auth.currentUser;
+
+if(!user){
+alert("Please log in");
+return;
+}
+
+try{
+
+const fileName=
+`${user.uid}-${Date.now()}`;
+
+const {error}=
+await supabaseClient.storage
+.from("avatars")
+.upload(
+fileName,
+file
+);
+
+if(error){
+throw error;
+}
+
+const imageURL=
+`${supabaseUrl}/storage/v1/object/public/avatars/${fileName}`;
+
+await user.updateProfile({
+photoURL:imageURL
+});
+
+document.getElementById(
+"avatar"
+).src=
+imageURL;
+
+alert(
+"Profile picture updated!"
+);
+
+}
+catch(error){
+
+console.error(error);
+
+alert(
+"Upload failed: "+
+error.message
+);
+
+}
+
+});
+
+function loadUserInfo(){
+
+auth.onAuthStateChanged(
+(user)=>{
+
+if(!user){
+
+window.location.href=
+"login.html";
+
+return;
+}
+
+document.getElementById(
+"userUid"
+).textContent=
+user.uid;
+
+document.getElementById(
+"displayName"
+).textContent=
+user.displayName ||
+"Player";
+
+document.getElementById(
+"emailDisplay"
+).textContent=
+user.email ||
+"No email";
+
+document.getElementById(
+"avatar"
+).src=
+user.photoURL ||
+"https://ui-avatars.com/api/?name=P&background=00aa44&color=fff&size=200";
+
+});
+
+}
+
+function setDateOfBirth(){
+alert("DOB feature unchanged");
+}
+
+window.onload=loadUserInfo;
+
+</script>
+
+</body>
+</html>

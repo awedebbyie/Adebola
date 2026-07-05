@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aviator Game - Withdraw</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+</head>
+<body>
+    <div class="login-container">
+
+        <!-- Top Bar -->
+        <div class="top-bar" id="topBar">
+            <button class="top-btn" onclick="window.location.href='index.html'">
+                ← Back to Game
+            </button>
+        </div>
+
+        <!-- Circular Logo -->
+        <div style="margin: 20px 0 25px 0;">
+            <img src="aviator-logo.png" 
+                 alt="Aviator Logo" 
+                 class="logo-circle">
+        </div>
+
+        <h1 style="color:white; margin:0 0 30px 0; font-size:32px; text-align:center;">Withdraw Funds</h1>
+
+        <!-- Withdrawal Form -->
+        <div class="login-form">
+
+            <div style="margin-bottom: 20px; text-align: center; color: #ccc; font-size: 15px;">
+                Minimum withdrawal: ₦1000
+            </div>
+
+            <input 
+                type="number" 
+                id="amount" 
+                class="amount-input" 
+                placeholder="Enter amount (₦)"
+                min="1000"
+                style="margin-bottom:16px; font-size: 18px;"
+            >
+
+            <div style="margin-bottom:20px; padding:0 10px; font-size:14px; color:#aaa; text-align:center;">
+                Funds will be sent to your registered account within 24 hours.
+            </div>
+
+            <button id="withdrawBtn" class="invest-btn" style="width:100%; height:58px; margin-bottom:20px; background:#ff8800;">
+                WITHDRAW NOW
+            </button>
+
+            <!-- Message area (replaces floating box) -->
+            <div id="message" style="text-align:center; margin:12px 0; font-size:15px; min-height:28px; font-weight:bold;"></div>
+
+            <div style="text-align:center; margin-top:30px; color:#bbb; font-size:14px;">
+                Need help? <a href="#" style="color:#00aa44; text-decoration:none;">Contact Support</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+
+// ================= FIREBASE =================
+const firebaseConfig = {
+    apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+    authDomain: "success-75f95.firebaseapp.com",
+    projectId: "success-75f95",
+    storageBucket: "success-75f95.firebasestorage.app",
+    messagingSenderId: "774097711994",
+    appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+// ================= SUPABASE =================
+const supabaseUrl = "https://axojmnizpewbewempaaa.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4b2ptbml6cGV3YmV3ZW1wYWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDk3OTcsImV4cCI6MjA5ODA4NTc5N30._Ib3RhlMpPaUQoUVYDd6dS_gUOiaVsCBPBYEO30A8zc";
+
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+// ================= SETTINGS =================
+function showSettings() {
+    if (confirm("Do you want to logout?")) {
+        auth.signOut().then(() => location.reload());
+    }
+}
+
+// ================= PAGE REDIRECTS =================
+function deposit() {
+    window.location.href = "deposit.html";
+}
+
+function withdraw() {
+    window.location.href = "withdraw.html";
+}
+
+// ================= MESSAGE (Now shows inside form) =================
+function showMessage(text, color = "red") {
+    const msg = document.getElementById("message");
+    if (!msg) return;
+
+    msg.style.color = color;
+    msg.textContent = text;
+
+    setTimeout(() => {
+        msg.textContent = "";
+    }, 4000);
+}
+
+// ================= AUTH STATE =================
+auth.onAuthStateChanged(async (user) => {
+    // Top bar remains simple "Back to Game"
+});
+
+// ================= WITHDRAWAL LOGIC =================
+const amountInput = document.getElementById("amount");
+const withdrawBtn = document.getElementById("withdrawBtn");
+
+async function handleWithdrawal() {
+    const user = auth.currentUser;
+    if (!user) {
+        showMessage("Please login first", "red");
+        return;
+    }
+
+    let amount = parseFloat(amountInput.value);
+    if (!amount || amount < 1000) {
+        showMessage("Minimum withdrawal is ₦1000", "#ffaa00");
+        return;
+    }
+
+    withdrawBtn.disabled = true;
+    withdrawBtn.textContent = "PROCESSING...";
+
+    try {
+        let { data: userData, error: fetchError } = await supabaseClient
+            .from("Users")
+            .select("Balance")
+            .eq("Email", user.email)
+            .maybeSingle();
+
+        if (fetchError || !userData) {
+            showMessage("Error fetching balance", "red");
+            resetButton();
+            return;
+        }
+
+        const currentBalance = parseFloat(userData.Balance || 0);
+
+        if (amount > currentBalance) {
+            showMessage("Insufficient balance", "#ffaa00");
+            resetButton();
+            return;
+        }
+
+        const newBalance = currentBalance - amount;
+
+        const { error: updateError } = await supabaseClient
+            .from("Users")
+            .update({ Balance: newBalance })
+            .eq("Email", user.email);
+
+        if (updateError) {
+            console.error(updateError);
+            showMessage("Withdrawal failed. Try again.", "red");
+        } else {
+            showMessage(`₦${amount} withdrawal request submitted successfully!`, "lime");
+            amountInput.value = "";
+        }
+    } catch (err) {
+        console.error(err);
+        showMessage("Something went wrong", "red");
+    }
+
+    resetButton();
+}
+
+function resetButton() {
+    withdrawBtn.disabled = false;
+    withdrawBtn.textContent = "WITHDRAW NOW";
+}
+
+// Button Click
+withdrawBtn.addEventListener("click", handleWithdrawal);
+
+</script>
+</body>
+</html>
