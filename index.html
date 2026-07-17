@@ -5,99 +5,315 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aviator Game</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            margin: 0;
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 10px 0;
+        }
+
+        .game-container {
+    width: 25vw;
+    min-width: 380px;
+    max-width: 420px;
+
+    background: #555;
+    padding: 16px;
+    box-sizing: border-box;
+
+    display: flex;
+    flex-direction: column;
+
+    box-shadow: 0 0 30px rgba(0,0,0,0.3);
+
+    /* CHANGED */
+    min-height: 100vh;
+    height: auto;
+    overflow: hidden;
+}
+
+        /* Whole Page Scrollbar */
+        body::-webkit-scrollbar { width: 8px; }
+        body::-webkit-scrollbar-track { background: #333; }
+        body::-webkit-scrollbar-thumb { background: #777; border-radius: 10px; }
+        body::-webkit-scrollbar-thumb:hover { background: #999; }
+        html { scrollbar-width: thin; scrollbar-color: #777 #333; }
+
+        /* Graph Area */
+        .graph-area {
+            position: relative;
+            width: 100%;
+            height: 42%;
+            flex-shrink: 0;
+            border-radius: 18px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        /* Controls */
+        .controls {
+            flex-shrink: 0;
+            margin-bottom: 15px;
+        }
+
+        .invest-row { display: flex; gap: 8px; width: 100%; align-items: flex-start; }
+        .left-side { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        .amount-input { width: 100%; height: 45px; background: #1a1a1a; border: none; border-radius: 10px; color: white; font-size: 16px; padding-left: 10px; box-sizing: border-box; }
+        .price-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 4px; }
+        .price-btn { background: #333; color: white; border: none; border-radius: 6px; font-size: 11px; padding: 4px 0; cursor: pointer; }
+        .invest-btn { width: 110px; height: 95px; border: none; border-radius: 12px; background: #00aa44; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; font-size: 18px; font-weight: bold; cursor: pointer; flex-shrink: 0; }
+
+        .top-bar { 
+            width: 110%; height: 40px; margin-left: -16px; margin-right: 18px; margin-top: -6px; 
+            margin-bottom: 12px; background: #ff0000; display: flex; gap: 10px; 
+            box-sizing: border-box; align-items: center; justify-content: flex-start; padding: 0; 
+        }
+
+        /* BET HISTORY PANEL - Inside game-container, full width All Bets */
+        .bet-history-panel {
+    margin-top: 15px;
+    width: 100%;
+    box-sizing: border-box;
+
+    background: rgba(0,0,0,0.75);
+    border: 1px solid #444;
+    border-radius: 12px;
+
+    display: flex;
+    flex-direction: column;
+
+    min-height: 340px;
+    height: 340px;
+
+    overflow: hidden;
+
+    flex-shrink: 0;
+}
+
+        .history-tabs {
+            display: flex;
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
+            flex-shrink: 0;
+            width: 100%;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 14px;
+            background: none;
+            border: none;
+            color: #ccc;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .tab-btn.active {
+            background: #00ff88;
+            color: black;
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow: hidden;
+            padding: 10px 0;
+            width: 100%;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        .history-list {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    width: 100%;
+    box-sizing: border-box;
+
+    padding: 0 8px;
+}
+
+        .bet-item {
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 8px;
+            border-bottom: 1px solid #333;
+            color: white;
+            font-size: 14px;
+        }
+
+        /* History Scrollbar */
+        .history-list::-webkit-scrollbar { width: 6px; }
+        .history-list::-webkit-scrollbar-thumb { background: #666; border-radius: 10px; }
+        .history-list::-webkit-scrollbar-track { background: #222; }
+    </style>
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
 <div class="game-container">
 
-<!-- Top Bar -->
-<div class="top-bar" id="topBar">
-    <!-- Initially empty to avoid flashing wrong state -->
-</div>
+    <!-- Top Bar -->
+    <div class="top-bar" id="topBar"></div>
 
-<!-- GRAPH AREA -->
-<div class="graph-area">
-    <div class="multiplier">1.00x</div>
-
-    <svg class="curve-svg" viewBox="0 0 400 320" preserveAspectRatio="none">
-        <path id="fillArea"></path>
-        <path id="flightPath"></path>
-    </svg>
-
-    <div class="y-axis"></div>
-    <div class="x-axis"></div>
-
-    <div class="dot origin"></div>
-    <div class="dot y1"></div>
-    <div class="dot y2"></div>
-    <div class="dot y3"></div>
-    <div class="dot y4"></div>
-    <div class="dot y5"></div>
-
-    <div class="dot x1"></div>
-    <div class="dot x2"></div>
-    <div class="dot x3"></div>
-    <div class="dot x4"></div>
-    <div class="dot x5"></div>
-
-    <img src="helicopter.png" class="helicopter" id="helicopter">
-</div>
-
-<!-- CONTROLS -->
-<div class="controls">
-    <!-- ROW 1 -->
-    <div class="invest-row">
-        <div class="left-side">
-            <input type="text" class="amount-input" placeholder="Enter amount">
-            <div class="price-grid">
-                <button class="price-btn">100</button>
-                <button class="price-btn">200</button>
-                <button class="price-btn">300</button>
-                <button class="price-btn">400</button>
-                <button class="price-btn">500</button>
-                <button class="price-btn">600</button>
-                <button class="price-btn">700</button>
-                <button class="price-btn">800</button>
-                <button class="price-btn">900</button>
-                <button class="price-btn">1000</button>
-            </div>
-        </div>
-        <button id="investBtn" class="invest-btn" disabled>INVEST</button>
+    <!-- GRAPH AREA -->
+    <div class="graph-area">
+        <div class="multiplier">1.00x</div>
+        <svg class="curve-svg" viewBox="0 0 400 320" preserveAspectRatio="none">
+            <path id="fillArea"></path>
+            <path id="flightPath"></path>
+        </svg>
+        <div class="y-axis"></div>
+        <div class="x-axis"></div>
+        <div class="dot origin"></div>
+        <div class="dot y1"></div>
+        <div class="dot y2"></div>
+        <div class="dot y3"></div>
+        <div class="dot y4"></div>
+        <div class="dot y5"></div>
+        <div class="dot x1"></div>
+        <div class="dot x2"></div>
+        <div class="dot x3"></div>
+        <div class="dot x4"></div>
+        <div class="dot x5"></div>
+        <img src="helicopter.png" class="helicopter" id="helicopter">
     </div>
 
-    <!-- ROW 2 -->
-    <div class="invest-row">
-        <div class="left-side">
-            <input type="text" class="amount-input" placeholder="Enter amount">
-            <div class="price-grid">
-                <button class="price-btn">100</button>
-                <button class="price-btn">200</button>
-                <button class="price-btn">300</button>
-                <button class="price-btn">400</button>
-                <button class="price-btn">500</button>
-                <button class="price-btn">600</button>
-                <button class="price-btn">700</button>
-                <button class="price-btn">800</button>
-                <button class="price-btn">900</button>
-                <button class="price-btn">1000</button>
+    <!-- CONTROLS -->
+    <div class="controls">
+        <div class="invest-row">
+            <div class="left-side">
+                <input type="text" class="amount-input" placeholder="Enter amount">
+                <div class="price-grid">
+                    <button class="price-btn">100</button>
+                    <button class="price-btn">200</button>
+                    <button class="price-btn">300</button>
+                    <button class="price-btn">400</button>
+                    <button class="price-btn">500</button>
+                    <button class="price-btn">600</button>
+                    <button class="price-btn">700</button>
+                    <button class="price-btn">800</button>
+                    <button class="price-btn">900</button>
+                    <button class="price-btn">1000</button>
+                </div>
+            </div>
+            <button id="investBtn" class="invest-btn" disabled>INVEST</button>
+        </div>
+
+        <div class="invest-row">
+            <div class="left-side">
+                <input type="text" class="amount-input" placeholder="Enter amount">
+                <div class="price-grid">
+                    <button class="price-btn">100</button>
+                    <button class="price-btn">200</button>
+                    <button class="price-btn">300</button>
+                    <button class="price-btn">400</button>
+                    <button class="price-btn">500</button>
+                    <button class="price-btn">600</button>
+                    <button class="price-btn">700</button>
+                    <button class="price-btn">800</button>
+                    <button class="price-btn">900</button>
+                    <button class="price-btn">1000</button>
+                </div>
+            </div>
+            <button id="investBtn2" class="invest-btn" disabled>INVEST</button>
+        </div>
+    </div>
+
+    <!-- BET HISTORY PANEL (All Bets section) - Inside game-container -->
+    <!-- BET HISTORY PANEL -->
+<div class="bet-history-panel">
+
+    <div class="history-tabs">
+        <button class="tab-btn active" data-tab="all">All Bets</button>
+        <button class="tab-btn" data-tab="previous">Previous</button>
+        <button class="tab-btn" data-tab="top">Top</button>
+    </div>
+
+    <!-- ALL BETS -->
+    <div class="tab-content active" id="tab-all">
+
+        <div class="all-bets-header">
+            <div>
+                <div class="bets-count">
+                    <span id="betCount">0</span>/<span id="playerCount">0</span> Bets
+                </div>
+                <div class="progress-bar"></div>
+            </div>
+
+            <div class="total-win">
+                ₦<span id="totalWin">0.00</span>
+                <br>
+                <span>Total Win</span>
             </div>
         </div>
-        <button id="investBtn2" class="invest-btn" disabled>INVEST</button>
-    </div>
-</div>
 
-<script src="js/invest.js"></script>
-<script src="js/aviator.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/main.js"></script>
-<script src="crashLogic.js"></script>
+        <div class="bets-table-header">
+            <div></div>
+            <div>Player</div>
+            <div>Bet</div>
+            <div>X</div>
+            <div style="text-align:right;">Win</div>
+        </div>
+
+        <div class="history-list" id="all-bets-list">
+
+            <!-- Added dynamically from multiplayer.js -->
+
+        </div>
+
+    </div>
+
+    <!-- PREVIOUS -->
+    <div class="tab-content" id="tab-previous">
+
+        <div class="bets-table-header">
+            <div></div>
+            <div>Player</div>
+            <div>Bet</div>
+            <div>X</div>
+            <div style="text-align:right;">Win</div>
+        </div>
+
+        <div class="history-list" id="previous-list"></div>
+
+    </div>
+
+    <!-- TOP -->
+    <div class="tab-content" id="tab-top">
+
+        <div class="bets-table-header">
+            <div></div>
+            <div>Player</div>
+            <div>Bet</div>
+            <div>X</div>
+            <div style="text-align:right;">Win</div>
+        </div>
+
+        <div class="history-list" id="top-list"></div>
+
+    </div>
+
+</div>
 
 <script>
-// ================= FIREBASE =================
+// Your scripts (unchanged)
 const firebaseConfig = {
     apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
     authDomain: "success-75f95.firebaseapp.com",
@@ -109,97 +325,73 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-
+const db = firebase.firestore();
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
-// Force sign out if coming from logout
-if (window.location.search.includes('logout')) {
-    auth.signOut();
-}
+function showSettings() { window.location.href = "settings.html"; }
+function deposit() { window.location.href = "deposit.html"; }
+function withdraw() { window.location.href = "withdraw.html"; }
 
-// ================= HELPER FUNCTIONS =================
-function showSettings() {
-    window.location.href = "settings.html";
-}
-
-function deposit() {
-    window.location.href = "deposit.html";
-}
-
-function withdraw() {
-    window.location.href = "withdraw.html";
-}
-
-// ================= INVEST CONTROL =================
 function handleInvest() {
     const user = auth.currentUser;
     if (!user) {
         alert("You need to login. Investments can only be placed when a user is logged in.");
         return;
     }
-    // Your real invest logic here
 }
 
-// ================= BUTTON STATE =================
 function updateInvestButtons(isLoggedIn) {
     const btn1 = document.getElementById("investBtn");
     const btn2 = document.getElementById("investBtn2");
-
     if (isLoggedIn) {
-        btn1.disabled = false;
-        btn2.disabled = false;
-        btn1.style.opacity = "1";
-        btn2.style.opacity = "1";
-        btn1.style.cursor = "pointer";
-        btn2.style.cursor = "pointer";
+        btn1.disabled = false; btn2.disabled = false;
+        btn1.style.opacity = "1"; btn2.style.opacity = "1";
+        btn1.style.cursor = "pointer"; btn2.style.cursor = "pointer";
     } else {
-        btn1.disabled = true;
-        btn2.disabled = true;
-        btn1.style.opacity = "0.6";
-        btn2.style.opacity = "0.6";
-        btn1.style.cursor = "not-allowed";
-        btn2.style.cursor = "not-allowed";
+        btn1.disabled = true; btn2.disabled = true;
+        btn1.style.opacity = "0.6"; btn2.style.opacity = "0.6";
+        btn1.style.cursor = "not-allowed"; btn2.style.cursor = "not-allowed";
     }
 }
 
-// ================= AUTH STATE =================
 auth.onAuthStateChanged((user) => {
     const topBar = document.getElementById("topBar");
-
     if (user) {
         topBar.innerHTML = `
             <div style="display:flex; align-items:center; justify-content:space-between; width:100%; padding:0 12px; box-sizing:border-box; gap:10px;">
-                <button onclick="deposit()" style="background:#00aa44; color:white; border:none; padding:8px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">
-                    DEPOSIT
-                </button>
-                <div style="color:#00ff88; font-weight:bold; font-size:18px; flex:1; text-align:center;">
-                    ₦<span id="balance">0.00</span>
-                </div>
+                <button onclick="deposit()" style="background:#00aa44; color:white; border:none; padding:8px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">DEPOSIT</button>
+                <div style="color:#00ff88; font-weight:bold; font-size:18px; flex:1; text-align:center;">₦<span id="balance">0.00</span></div>
                 <div style="display:flex; align-items:center; gap:12px;">
-                    <button onclick="withdraw()" style="background:#ff8800; color:white; border:none; padding:8px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">
-                        WITHDRAW
-                    </button>
-                    <button onclick="showSettings()" style="background:none; border:none; font-size:28px; cursor:pointer; color:white; padding:5px;">
-                        ⚙️
-                    </button>
+                    <button onclick="withdraw()" style="background:#ff8800; color:white; border:none; padding:8px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">WITHDRAW</button>
+                    <button onclick="showSettings()" style="background:none; border:none; font-size:28px; cursor:pointer; color:white; padding:5px;">⚙️</button>
                 </div>
             </div>
         `;
         updateInvestButtons(true);
     } else {
-        topBar.innerHTML = `
-            <button class="top-btn" onclick="window.location.href='login.html'">
-                Login
-            </button>
-        `;
+        topBar.innerHTML = `<button class="top-btn" onclick="window.location.href='login.html'">Login</button>`;
         updateInvestButtons(false);
     }
 });
 
-// ================= BUTTON LISTENERS =================
 document.getElementById("investBtn").addEventListener("click", handleInvest);
 document.getElementById("investBtn2").addEventListener("click", handleInvest);
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+    });
+});
 </script>
 
+<script src="js/crashLogic.js"></script>
+<script src="js/multiplayer.js"></script>
+<script src="js/invest.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+<script src="js/aviator.js"></script>
 </body>
 </html>

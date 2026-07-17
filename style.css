@@ -3,9 +3,10 @@ body{
     background:white;
     font-family:Arial, sans-serif;
     display:flex;
-    justify-content: center;
-    height:100vh;
-    overflow:hidden;
+    justify-content:center;
+    min-height:100vh;
+    overflow-y:auto;
+    overflow-x:hidden;
 }
 
 .game-container{
@@ -15,92 +16,110 @@ body{
     height:100vh;
 
     background:#555;
-
-    border-radius:0px;
+    border-radius:0;
 
     padding:16px;
-
     box-sizing:border-box;
 
     display:flex;
     flex-direction:column;
 
-    justify-content:flex-start;
-
     box-shadow:0 0 30px rgba(0,0,0,0.3);
 
     overflow:hidden;
-    height:100vh;
 }
+
+/* Scrollbar styling */
+.game-container::-webkit-scrollbar{
+    width:6px;
+}
+
+.game-container::-webkit-scrollbar-thumb{
+    background:#555;
+    border-radius:10px;
+}
+
+.game-container::-webkit-scrollbar-thumb:hover{
+    background:#777;
+}
+
 /* ========================
    LOGIN PAGE SPECIFIC STYLES
-   ======================== */
+======================== */
 
-  .login-container {
-    width: 25vw;
-    min-width: 380px;
-    max-width: 420px;
-    height: 100vh;
-    margin: 0 auto;
-    background: #111;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: white;
-    overflow-y: auto;           /* This enables the scrollbar */
-    padding-bottom: 30px;       /* Extra space at bottom */
-    box-sizing: border-box;
-}
+.login-container{
+    width:25vw;
+    min-width:380px;
+    max-width:420px;
+    height:100vh;
+    margin:0 auto;
+    background:#111;
 
-/* Scrollbar styling (nice thin dark scrollbar) */
-.login-container::-webkit-scrollbar {
-    width: 6px;
-}
-.login-container::-webkit-scrollbar-thumb {
-    background: #555;
-    border-radius: 10px;
-}
-.login-container::-webkit-scrollbar-thumb:hover {
-    background: #777;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+
+    color:white;
+
+    overflow-y:auto;
+    padding-bottom:30px;
+
+    box-sizing:border-box;
 }
 
-/* Scrollable form area */
-.login-form {
-    width: 100%;
-    max-width: 320px;
-    text-align: center;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+.login-container::-webkit-scrollbar{
+    width:6px;
 }
 
-/* Circular Logo */
-.logo-circle {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 4px solid #00aa44;
-    box-shadow: 0 0 20px rgba(0, 170, 68, 0.4);
+.login-container::-webkit-scrollbar-thumb{
+    background:#555;
+    border-radius:10px;
+}
+
+.login-container::-webkit-scrollbar-thumb:hover{
+    background:#777;
+}
+
+.login-form{
+    width:100%;
+    max-width:320px;
+
+    text-align:center;
+
+    flex-grow:1;
+
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+}
+
+.logo-circle{
+    width:120px;
+    height:120px;
+
+    border-radius:50%;
+    object-fit:cover;
+
+    border:4px solid #00aa44;
+
+    box-shadow:0 0 20px rgba(0,170,68,0.4);
 }
 
 /* =========================
-   GRAPH AREA
+GRAPH AREA
 ========================= */
 
 .graph-area{
-
     position:relative;
 
     width:100%;
-
     height:50%;
 
     flex-shrink:0;
 
     border-radius:18px;
-    margin-bottom: 10px;
+    margin-bottom:10px;
+
     overflow:hidden;
 
     isolation:isolate;
@@ -108,47 +127,52 @@ body{
     z-index:1;
 
     background:
-        radial-gradient(
-            circle at top left,
-            rgba(0,255,120,0.06),
-            transparent 35%
-        ),
+    radial-gradient(
+        circle at top left,
+        rgba(0,255,120,0.06),
+        transparent 35%
+    ),
 
-        linear-gradient(
-            135deg,
-            #050505,
-            #101010,
-            #060606
-        );
-        
+    linear-gradient(
+        135deg,
+        #050505,
+        #101010,
+        #060606
+    );
 }
 
 /* =========================
-   TOP BUTTONS (NEW SECTION)
+TOP BAR
 ========================= */
 
 .top-bar{
     width:110%;
     height:40px;
-    position: relative;
-    margin-left: -16px;
-    position: relative;
-    margin-right: 18px;
-    margin-top: -6px;
+
+    margin-left:-16px;
+    margin-right:18px;
+    margin-top:-6px;
     margin-bottom:10px;
-    background: #ff0000;
+
+    background:#ff0000;
+
     display:flex;
     gap:10px;
-    box-sizing: border-box;
+
+    box-sizing:border-box;
+
     align-items:center;
     justify-content:flex-start;
+
     padding:0;
 }
 
 .top-btn{
-    display: flex;
-    align-items: center;
-    margin-left: 10px;
+    display:flex;
+    align-items:center;
+
+    margin-left:10px;
+
     background:#222;
     color:white;
 
@@ -165,13 +189,10 @@ body{
 }
 
 /* =========================
-   MOVING GRID
+MOVING GRID
 ========================= */
 
 .graph-area::before{
-
-    position: relative;
-    overflow: hidden;
 
     content:"";
 
@@ -184,31 +205,30 @@ body{
     left:-50%;
 
     background:
-        repeating-linear-gradient(
-            90deg,
-            rgba(255,255,255,0.02) 0px,
-            rgba(255,255,255,0.02) 1px,
-            transparent 1px,
-            transparent 80px
-        ),
+    repeating-linear-gradient(
+        90deg,
+        rgba(255,255,255,0.02) 0px,
+        rgba(255,255,255,0.02) 1px,
+        transparent 1px,
+        transparent 80px
+    ),
 
-        repeating-linear-gradient(
-            0deg,
-            rgba(255,255,255,0.02) 0px,
-            rgba(255,255,255,0.02) 1px,
-            transparent 1px,
-            transparent 80px
-        );
+    repeating-linear-gradient(
+        0deg,
+        rgba(255,255,255,0.02) 0px,
+        rgba(255,255,255,0.02) 1px,
+        transparent 1px,
+        transparent 80px
+    );
 
-
-    animation:
-        moveGrid 18s linear infinite;
+    animation:moveGrid 18s linear infinite;
 
     z-index:0;
 
-    background-image: url("bg.png");
-    background-color: rgba(0, 0, 0, 0.7);
-    background-blend-mode: darken;
+    background-image:url("bg.png");
+    background-color:rgba(0,0,0,0.7);
+
+    background-blend-mode:darken;
 }
 
 @keyframes moveGrid{
@@ -223,41 +243,34 @@ body{
 }
 
 /* =========================
-   MULTIPLIER
+MULTIPLIER
 ========================= */
 
 .multiplier{
-
     position:absolute;
 
     top:150px;
-
     left:50%;
 
     transform:translateX(-50%);
 
-    color: red;
+    color:red;
 
     font-size:45px;
-
     font-weight:bold;
-
 
     z-index:20;
 }
 
 /* =========================
-   SVG
+SVG
 ========================= */
 
 .curve-svg{
-
     position:absolute;
 
     width:100%;
     height:100%;
-
-    max-height:100%;
 
     left:0;
     top:0;
@@ -265,42 +278,29 @@ body{
     z-index:2;
 
     pointer-events:none;
-
-    overflow:hidden;
 }
-
-/* FILLED GRAPH */
 
 #fillArea{
-
-    fill: rgba(255, 120, 120, 0.12);
+    fill:rgba(255,120,120,0.12);
 }
 
-/* GRAPH LINE */
-
 #flightPath{
-
     fill:none;
-
-    stroke: red;
-
+    stroke:red;
     stroke-width:4;
-
 }
 
 /* =========================
-   AXES
+AXES
 ========================= */
 
 .y-axis{
-
     position:absolute;
 
     left:0;
     top:0;
 
     width:8px;
-
     height:100%;
 
     background:white;
@@ -311,14 +311,12 @@ body{
 }
 
 .x-axis{
-
     position:absolute;
 
-    bottom:0;
     left:0;
+    bottom:0;
 
     width:100%;
-
     height:8px;
 
     background:white;
@@ -329,11 +327,10 @@ body{
 }
 
 /* =========================
-   DOTS
+DOTS
 ========================= */
 
 .dot{
-
     position:absolute;
 
     width:10px;
@@ -346,92 +343,46 @@ body{
     z-index:3;
 }
 
-.origin{
-    left:0;
-    bottom:0;
-}
+.origin{left:0;bottom:0;}
+.y1{left:0;top:18%;}
+.y2{left:0;top:33%;}
+.y3{left:0;top:48%;}
+.y4{left:0;top:63%;}
+.y5{left:0;top:78%;}
 
-.y1{
-    left:0;
-    top:18%;
-}
-
-.y2{
-    left:0;
-    top:33%;
-}
-
-.y3{
-    left:0;
-    top:48%;
-}
-
-.y4{
-    left:0;
-    top:63%;
-}
-
-.y5{
-    left:0;
-    top:78%;
-}
-
-.x1{
-    left:20%;
-    bottom:0;
-}
-
-.x2{
-    left:35%;
-    bottom:0;
-}
-
-.x3{
-    left:50%;
-    bottom:0;
-}
-
-.x4{
-    left:65%;
-    bottom:0;
-}
-
-.x5{
-    left:80%;
-    bottom:0;
-}
+.x1{left:20%;bottom:0;}
+.x2{left:35%;bottom:0;}
+.x3{left:50%;bottom:0;}
+.x4{left:65%;bottom:0;}
+.x5{left:80%;bottom:0;}
 
 /* =========================
-   HELICOPTER
+HELICOPTER
 ========================= */
 
 .helicopter{
-
     position:absolute;
 
     width:70px;
 
     left:-15px;
-    bottom:0px;
+    bottom:0;
 
     z-index:10;
 
     pointer-events:none;
 
-    filter:
-        drop-shadow(
-            0 0 10px rgba(255,255,255,0.3)
-        );
+    filter:drop-shadow(
+        0 0 10px rgba(255,255,255,0.3)
+    );
 }
 
 /* =========================
-   CONTROLS
+CONTROLS
 ========================= */
 
 .controls{
-
     display:flex;
-
     flex-direction:column;
 
     gap:14px;
@@ -441,14 +392,14 @@ body{
     position:relative;
 
     z-index:999;
-    box-sizing: border-box;
+
+    box-sizing:border-box;
+
     margin-top:12px;
 }
 
 .invest-row{
-
     display:flex;
-
     gap:8px;
 
     width:100%;
@@ -457,30 +408,24 @@ body{
 }
 
 .left-side{
-
     flex:1;
 
     display:flex;
-
     flex-direction:column;
 
     gap:6px;
 }
 
 .amount-input{
-
     width:100%;
-
     height:45px;
 
     background:#1a1a1a;
 
     border:none;
-
     border-radius:10px;
 
     color:white;
-
     font-size:16px;
 
     padding-left:10px;
@@ -489,23 +434,17 @@ body{
 }
 
 .price-grid{
-
     display:grid;
-
-    grid-template-columns:
-        repeat(5, 1fr);
+    grid-template-columns:repeat(5,1fr);
 
     gap:4px;
 }
 
 .price-btn{
-
     background:#333;
-
     color:white;
 
     border:none;
-
     border-radius:6px;
 
     font-size:11px;
@@ -516,60 +455,185 @@ body{
 }
 
 .price-btn:hover{
-
     background:#444;
 }
 
 .invest-btn{
-
     width:110px;
-
     height:95px;
 
     border:none;
-
     border-radius:12px;
 
     background:#00aa44;
 
-    white-space: nowrap;
+    display:flex;
+    flex-direction:column;
 
-    font-size: 14px;
-
-    padding: 0 12px;
-
-    display: flex;
-    
-    flex-direction: column;
-
-    align-items: center;
-
-    justify-content: center;
-
-    gap: 4px;
+    align-items:center;
+    justify-content:center;
 
     color:white;
 
     font-size:18px;
-
     font-weight:bold;
 
     cursor:pointer;
 
-    position:relative;
-
-    z-index:1000;
-
     flex-shrink:0;
-
-    box-shadow:
-        0 0 12px rgba(0,255,120,0.2);
 }
 
-.invest-btn small{
-    font-size: 11px;
+.bet-history-panel{
+    margin-top:15px;
+    width:100%;
+    background:#1b1b1b;
+    border-radius:12px;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    border:1px solid #333;
+}
 
-    font-weight: 500;
+.history-tabs{
+    display:flex;
+    background:#111;
+}
 
-    opacity: 0.9;
+.tab-btn{
+    flex:1;
+    border:none;
+    background:none;
+    color:#999;
+    padding:14px;
+    cursor:pointer;
+    font-weight:bold;
+    font-size:14px;
+}
+
+.tab-btn.active{
+    color:#00ff88;
+    border-bottom:3px solid #00ff88;
+}
+
+.tab-content{
+    display:none;
+    flex-direction:column;
+}
+
+.tab-content.active{
+    display:flex;
+}
+
+.all-bets-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px;
+    background:#202020;
+    border-bottom:1px solid #333;
+}
+
+.bets-count{
+    color:white;
+    font-size:13px;
+}
+
+.total-win{
+    text-align:right;
+    color:#00ff88;
+    font-weight:bold;
+    font-size:15px;
+}
+
+.total-win span{
+    color:#999;
+    font-size:11px;
+    font-weight:normal;
+}
+
+.progress-bar{
+    width:90px;
+    height:3px;
+    background:#00ff88;
+    margin-top:6px;
+}
+
+.bets-table-header{
+    display:grid;
+    grid-template-columns:45px 1fr 90px 60px 100px;
+    background:#252525;
+    color:#888;
+    padding:10px;
+    font-size:12px;
+    font-weight:bold;
+}
+
+.history-list{
+    max-height:320px;
+    overflow-y:auto;
+}
+
+.bet-row{
+    display:grid;
+    grid-template-columns:45px 1fr 90px 60px 100px;
+    align-items:center;
+    padding:10px;
+    border-bottom:1px solid #2f2f2f;
+    color:white;
+    font-size:13px;
+}
+
+.player-avatar{
+    width:30px;
+    height:30px;
+    border-radius:50%;
+    overflow:hidden;
+}
+
+.player-avatar img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+
+.bet-amount{
+    color:white;
+}
+
+.multiplier{
+    color:#00c8ff;
+    font-weight:bold;
+}
+
+.win-amount{
+    color:#00ff88;
+    text-align:right;
+    font-weight:bold;
+}
+
+.history-list::-webkit-scrollbar{
+    width:6px;
+}
+
+.history-list::-webkit-scrollbar-thumb{
+    background:#555;
+    border-radius:20px;
+}
+
+.history-list::-webkit-scrollbar-track{
+    background:#222;
+}
+
+.bet-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+
+    padding:10px;
+
+    border-bottom:1px solid #333;
+
+    color:white;
+
+    font-size:14px;
 }

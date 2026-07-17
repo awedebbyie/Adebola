@@ -243,11 +243,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function startNextRound() {
-        resetGame();
-        isRunning = true;
-        lastTime = 0;
-        requestAnimationFrame(animate);
-    }
+
+    // Create a brand-new multiplayer round
+    startNewRound();
+
+    resetGame();
+
+    isRunning = true;
+
+    lastTime = 0;
+
+    requestAnimationFrame(animate);
+}
 
     setTimeout(() => startNextRound(), 600);
 });

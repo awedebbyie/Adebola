@@ -103,8 +103,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 return; // STOP HERE - DO NOT PLACE BET
             }
         
-            // Investment placed - No message shown anymore
-            // You can add your real investment logic here
+            // =========================
+// CREATE BET IN FIRESTORE
+// =========================
+
+createBet(value)
+    .then(() => {
+        input.value = "";
+        investBtn.innerHTML = `<span>INVEST</span>`;
+    })
+    .catch((error) => {
+        console.error(error);
+        alert("Failed to place investment.");
+    });
 
         });
 

@@ -8,6 +8,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -36,7 +37,7 @@
 
         .header{
             background-color:#e60000;
-            padding:12px 16px;
+            padding:0px 16px;
             display:flex;
             align-items:center;
             justify-content:space-between;
@@ -107,6 +108,8 @@
             font-size:14px;
         }
     </style>
+    <link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
 </head>
 <body>
 
@@ -131,7 +134,7 @@ class="avatar"
 src="https://via.placeholder.com/100/00aa44/ffffff?text=AVIATOR">
 
 <div class="username" id="displayName">
-Player
+Loading...
 </div>
 
 <div onclick="changeAvatar()" class="change-link">
@@ -148,15 +151,40 @@ Loading...
 </div>
 
 <div class="info-row">
-<span class="info-label">Date of Birth</span>
-<span class="info-value" id="dobDisplay">
-Set
+<span class="info-label">Username</span>
+<span class="info-value" id="usernameDisplay">
+Loading...
 </span>
+</div>
 
-<button class="set-btn"
-onclick="setDateOfBirth()">
-Set
-</button>
+<div class="info-row">
+<span class="info-label">Age</span>
+<span class="info-value" id="ageDisplay">
+Loading...
+</span>
+</div>
+
+<div class="info-row">
+<span class="info-label">Gender</span>
+<span class="info-value" id="genderDisplay">
+Loading...
+</span>
+</div>
+
+<div class="info-row">
+<span class="info-label">Phone</span>
+<span class="info-value" id="phoneDisplay">
+Loading...
+</span>
+</div>
+
+<div class="info-row">
+<span class="info-label">Date of Birth</span>
+
+<span class="info-value"
+id="dobDisplay">
+Loading...
+</span>
 </div>
 
 <div class="info-row">
@@ -170,7 +198,6 @@ id="emailDisplay">
 Loading...
 </span>
 </div>
-
 </div>
 
 <input
@@ -195,6 +222,7 @@ firebase.initializeApp(firebaseConfig);
 }
 
 const auth=firebase.auth();
+const db = firebase.firestore();
 
 const supabaseUrl="https://axojmnizpewbewempaaa.supabase.co";
 
@@ -290,8 +318,7 @@ error.message
 
 function loadUserInfo(){
 
-auth.onAuthStateChanged(
-(user)=>{
+auth.onAuthStateChanged(async (user) => {
 
 if(!user){
 
@@ -301,6 +328,13 @@ window.location.href=
 return;
 }
 
+const userDoc = await db
+    .collection("users")
+    .doc(user.uid)
+    .get();
+
+const data = userDoc.data() || {};
+
 document.getElementById(
 "userUid"
 ).textContent=
@@ -309,8 +343,68 @@ user.uid;
 document.getElementById(
 "displayName"
 ).textContent=
+data.username ||
 user.displayName ||
 "Player";
+
+document.getElementById(
+"usernameDisplay"
+).textContent=
+data.username ||
+"Not set";
+
+let calculatedAge="Not set";
+
+if(data.dob){
+
+const dob=
+new Date(data.dob);
+
+const today=
+new Date();
+
+calculatedAge=
+today.getFullYear()-
+dob.getFullYear();
+
+const monthDifference=
+today.getMonth()-
+dob.getMonth();
+
+if(
+monthDifference<0 ||
+(
+monthDifference===0 &&
+today.getDate()<dob.getDate()
+)
+){
+calculatedAge--;
+}
+
+}
+
+document.getElementById(
+"ageDisplay"
+).textContent=
+calculatedAge;
+
+document.getElementById(
+"dobDisplay"
+).textContent=
+data.dob ||
+"Not set";
+
+document.getElementById(
+"genderDisplay"
+).textContent=
+data.gender ||
+"Not set";
+
+document.getElementById(
+"phoneDisplay"
+).textContent=
+data.phone ||
+"Not set";
 
 document.getElementById(
 "emailDisplay"
@@ -326,10 +420,6 @@ user.photoURL ||
 
 });
 
-}
-
-function setDateOfBirth(){
-alert("DOB feature unchanged");
 }
 
 window.onload=loadUserInfo;

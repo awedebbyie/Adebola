@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings - Aviator</title>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
@@ -91,6 +93,7 @@
             align-items: center;
             padding: 14px 16px;
             border-bottom: 1px solid #2a2a2a;
+            cursor:pointer;
         }
         
         .option:last-child {
@@ -164,11 +167,13 @@
             background: #ff1a1a;
         }
     </style>
+    <link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
 </head>
 <body>
 
     <div class="app-wrapper">
-        <!-- Header -->
+        
         <div class="header">
             <div onclick="goBack()" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
                 ←
@@ -178,37 +183,42 @@
         </div>
 
         <div class="section">
-            <!-- Profile -->
+            
             <div class="menu-item" onclick="goToProfile()">
                 Profile
                 <span style="font-size:20px;">›</span>
             </div>
 
-            <!-- Dark Mode -->
+            
             <div class="section-title">Dark Mode</div>
+
             <div class="dark-mode-options">
-                <div class="option">
+
+                <div class="option" onclick="setTheme('dark')">
                     <span>On</span>
-                    <div class="radio"></div>
+                    <div class="radio" id="darkRadio"></div>
                 </div>
-                <div class="option">
+
+                <div class="option" onclick="setTheme('light')">
                     <span>Off</span>
-                    <div class="radio"></div>
+                    <div class="radio" id="lightRadio"></div>
                 </div>
-                <div class="option">
+
+                <div class="option" onclick="setTheme('system')">
                     <span>Follow System Settings</span>
-                    <div class="radio checked"></div>
+                    <div class="radio checked" id="systemRadio"></div>
                 </div>
+
             </div>
 
-            <!-- Preference -->
+            
             <div class="section-title">Preference</div>
 
-            <!-- Notifications -->
+            
             <div class="section-title">Notifications</div>
             <div class="menu-item">Notification Settings <span style="font-size:20px;">›</span></div>
 
-            <!-- Safety & Security -->
+            
             <div class="section-title">Safety & Security</div>
             
             <div class="popup-banner">
@@ -226,13 +236,28 @@
             <div class="menu-item">Device Management <span style="font-size:20px;">›</span></div>
         </div>
 
-        <!-- Logout Button -->
+        
         <button onclick="logoutUser()" class="logout-btn">
             LOGOUT
         </button>
     </div>
 
     <script>
+        const firebaseConfig = {
+    apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+    authDomain: "success-75f95.firebaseapp.com",
+    projectId: "success-75f95",
+    storageBucket: "success-75f95.firebasestorage.app",
+    messagingSenderId: "774097711994",
+    appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+};
+
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+
+const auth = firebase.auth();
+
         function goBack() {
             window.history.back();
         }
@@ -246,21 +271,208 @@
         }
 
         // Strong Logout
-        function logoutUser() {
-            if (confirm("Are you sure you want to logout?")) {
-                if (typeof firebase !== 'undefined' && firebase.auth) {
-                    firebase.auth().signOut().then(() => {
-                        localStorage.clear();
-                        sessionStorage.clear();
-                        window.location.href = 'index.html?logout=true';
-                    }).catch(() => {
-                        window.location.href = 'index.html?logout=true';
-                    });
-                } else {
-                    window.location.href = 'index.html?logout=true';
-                }
-            }
+        async function logoutUser() {
+
+    const confirmed = confirm("Are you sure you want to logout?");
+
+    if (!confirmed) return;
+
+    try {
+
+        await auth.signOut();
+
+        localStorage.removeItem("userData");
+        sessionStorage.clear();
+
+        window.location.replace("index.html");
+
+    } catch (error) {
+
+        console.error("Logout failed:", error);
+
+        alert("Logout failed.");
+
+    }
         }
+
+        // Dark mode system
+
+        function setTheme(mode){
+
+            localStorage.setItem(
+                "themeMode",
+                mode
+            );
+
+            applyTheme();
+
+        }
+
+        function applyTheme(){  
+  
+const mode=  
+localStorage.getItem(  
+"themeMode"  
+) || "system";  
+  
+document  
+.querySelectorAll(".radio")  
+.forEach(r=>{  
+  
+r.classList.remove(  
+"checked"  
+);  
+  
+});  
+  
+let finalTheme=mode;  
+  
+if(mode==="system"){  
+  
+const prefersDark=  
+window.matchMedia(  
+"(prefers-color-scheme: dark)"  
+).matches;  
+  
+finalTheme=  
+prefersDark ?  
+"dark" :  
+"light";  
+  
+document.getElementById(  
+"systemRadio"  
+).classList.add(  
+"checked"  
+);  
+  
+}  
+  
+else if(mode==="dark"){  
+  
+document.getElementById(  
+"darkRadio"  
+).classList.add(  
+"checked"  
+);  
+  
+}  
+  
+else{  
+  
+document.getElementById(  
+"lightRadio"  
+).classList.add(  
+"checked"  
+);  
+  
+}  
+  
+if(finalTheme==="dark"){  
+  
+document.querySelector(  
+".app-wrapper"  
+).style.background=  
+"#121212";  
+  
+document.querySelectorAll(  
+".section-title,.menu-item,.dark-mode-options"  
+).forEach(el=>{  
+  
+el.style.background=  
+"#1f1f1f";  
+  
+el.style.color=  
+"white";  
+  
+});  
+  
+document.querySelectorAll(  
+".option"  
+).forEach(el=>{  
+  
+el.style.color=  
+"white";  
+  
+el.style.borderBottom=  
+"1px solid #2a2a2a";  
+  
+});  
+  
+document.querySelectorAll(  
+"h1"  
+).forEach(el=>{  
+  
+el.style.color=  
+"white";  
+  
+});  
+  
+}  
+  
+else{  
+  
+document.querySelector(  
+".app-wrapper"  
+).style.background=  
+"#ffffff";  
+  
+document.querySelectorAll(  
+".section-title,.menu-item,.dark-mode-options"  
+).forEach(el=>{  
+  
+el.style.background=  
+"#f5f5f5";  
+  
+el.style.color=  
+"black";  
+  
+});  
+  
+document.querySelectorAll(  
+".option"  
+).forEach(el=>{  
+  
+el.style.color=  
+"black";  
+  
+el.style.borderBottom=  
+"1px solid #cccccc";  
+  
+});  
+  
+document.querySelectorAll(  
+"h1"  
+).forEach(el=>{  
+  
+el.style.color=  
+"black";  
+  
+});  
+  
+}  
+  
+}
+
+        window.matchMedia(
+            "(prefers-color-scheme: dark)"
+        ).addEventListener(
+            "change",
+            ()=>{
+
+                const mode=
+                localStorage.getItem(
+                    "themeMode"
+                );
+
+                if(mode==="system"){
+                    applyTheme();
+                }
+
+            }
+        );
+
+        applyTheme();
+
     </script>
 </body>
 </html>
