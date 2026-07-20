@@ -28,12 +28,13 @@ gameStateRef.onSnapshot(doc => {
 
         currentRoundId = data.roundId;
 
-        console.log("Current round:", currentRoundId);
-
         listenForBets();
 
+        // Start the animation for everyone
+        if (window.beginRound) {
+            window.beginRound();
+        }
     }
-
 });
 
 // Creates a new round by updating Firestore
@@ -79,33 +80,83 @@ function listenForBets() {
         .onSnapshot(snapshot => {
 
             const list = document.getElementById("all-bets-list");
+            const betCount = document.getElementById("betCount");
+            const playerCount = document.getElementById("playerCount");
+            const totalWin = document.getElementById("totalWin");
 
             if (!list) return;
 
             list.innerHTML = "";
 
+            let players = new Set();
+            let total = 0;
+
             snapshot.forEach(doc => {
 
                 const bet = doc.data();
 
-                const row = document.createElement("div");
+                players.add(bet.uid);
 
-                row.className = "bet-item";
+                total += Number(bet.profit || 0);
+
+                const row = document.createElement("div");
+                row.className = "bet-row";
+
+                const multiplier =
+                    bet.cashOutMultiplier != null
+                        ? bet.cashOutMultiplier.toFixed(2) + "x"
+                        : "";
+
+                const win =
+                    bet.profit > 0
+                        ? "₦" + Number(bet.profit).toLocaleString(undefined,{
+                              minimumFractionDigits:2,
+                              maximumFractionDigits:2
+                          })
+                        : "";
 
                 row.innerHTML = `
-                    <span>${bet.username}</span>
-                    <span>₦${bet.amount}</span>
-                    <span>${bet.status}</span>
+                    <div class="avatar">👤</div>
+
+                    <div class="player-name">
+                        ${bet.username}
+                    </div>
+
+                    <div class="bet-amount">
+                        ₦${Number(bet.amount).toLocaleString(undefined,{
+                            minimumFractionDigits:2,
+                            maximumFractionDigits:2
+                        })}
+                    </div>
+
+                    <div class="multiplier">
+                        ${multiplier}
+                    </div>
+
+                    <div class="win-amount">
+                        ${win}
+                    </div>
                 `;
 
                 list.appendChild(row);
 
             });
 
+            if (betCount)
+                betCount.textContent = snapshot.size;
+
+            if (playerCount)
+                playerCount.textContent = players.size;
+
+            if (totalWin)
+                totalWin.textContent = total.toLocaleString(undefined,{
+                    minimumFractionDigits:2,
+                    maximumFractionDigits:2
+                });
+
         });
 
 }
-
 window.startNewRound = startNewRound;
 window.createBet = createBet;
 window.listenForBets = listenForBets;

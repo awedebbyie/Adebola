@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aviator Bet History</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: white;
+            color: #fff;
+            max-width: 100%;
+            margin: 0 auto;
+            height: 100vh;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+        }
+        
+        .bet-history-panel {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+        }
+        
+        .panel-scroll-content {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 70px;
+            scrollbar-width: thin;
+            scrollbar-color: #444 #222;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            color: #ffd700;
+        }
+        
+        /* Tabs */
+        .history-tabs {
+            display: flex;
+            background: #1f1f2e;
+            border-bottom: 1px solid #333;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 14px 0;
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .tab-btn.active {
+            color: #00ff88;
+            border-bottom: 3px solid #00ff88;
+            position: relative;
+        }
+        
+        /* ALL BETS HEADER */
+        .all-bets-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            background: #1a1a2e;
+            border-bottom: 1px solid #2a2a3a;
+        }
+        
+        .bets-count {
+            font-size: 14px;
+            color: #ddd;
+        }
+        
+        .bets-count span {
+            color: #00ff88;
+            font-weight: 700;
+        }
+        
+        .total-win {
+            text-align: right;
+            font-size: 15px;
+            font-weight: 700;
+        }
+        
+        .total-win span:last-child {
+            font-size: 12px;
+            color: #888;
+            font-weight: 400;
+            display: block;
+        }
+        
+        /* Table Header */
+        .bets-table-header {
+            display: grid;
+            grid-template-columns: 42px 1fr 88px 62px 88px;
+            padding: 10px 16px;
+            background: #25253a;
+            font-size: 13px;
+            color: #999;
+            border-bottom: 1px solid #333;
+            font-weight: 500;
+        }
+        
+        .bets-table-header div:last-child {
+            text-align: right;
+        }
+        
+        /* History List */
+        .history-list {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .bet-row {
+            display: grid;
+            grid-template-columns: 42px 1fr 88px 62px 88px;
+            padding: 12px 16px;
+            border-bottom: 1px solid #2a2a3a;
+            align-items: center;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        
+        .bet-row:hover {
+            background: rgba(0, 255, 136, 0.06);
+        }
+        
+        .bet-row:last-child {
+            border-bottom: none;
+        }
+        
+        .avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3a3a5a, #1f1f3a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .player-name {
+            font-size: 14.5px;
+            color: #ddd;
+            font-weight: 500;
+        }
+        
+        .bet-amount {
+            color: #fff;
+            font-weight: 600;
+        }
+        
+        .multiplier {
+            color: #00ff88;
+            font-weight: 700;
+        }
+        
+        .multiplier.lost {
+            color: #ff6666;
+        }
+        
+        .win-amount {
+            text-align: right;
+            font-weight: 700;
+            color: #00ff88;
+        }
+        
+        .win-amount.lost {
+            color: #888;
+        }
+        
+        /* Highlight for big wins */
+        .bet-row.highlight {
+            background: rgba(255, 215, 0, 0.1);
+            border-left: 3px solid #ffd700;
+        }
+        
+        /* Placeholder styles */
+        .placeholder {
+            opacity: 0.6;
+        }
+        
+        .progress-bar {
+            height: 3px;
+            background: linear-gradient(to right, #00ff88, #00cc66);
+            margin-top: 6px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="bet-history-panel">
+
+        <!-- Tabs -->
+        <div class="history-tabs">
+            <button class="tab-btn active" data-tab="all">All Bets</button>
+            <button class="tab-btn" data-tab="my">My Bets</button>
+            <button class="tab-btn" data-tab="top">Top Wins</button>
+        </div>
+
+        <!-- ALL BETS TAB -->
+        <div class="panel-scroll-content">
+            <div id="tab-all">
+                <div class="all-bets-header">
+                    <div>
+                        <div class="bets-count">
+                            <span id="betCount">0</span> Bets
+                        </div>
+                        <div class="progress-bar"></div>
+                    </div>
+
+                    <div class="total-win">
+                        ₦<span id="totalWin">0.00</span><br>
+                        <span>Total Win NGN</span>
+                    </div>
+                </div>
+
+                <div class="bets-table-header">
+                    <div></div>
+                    <div>Player</div>
+                    <div>Bet NGN</div>
+                    <div>X</div>
+                    <div>Win NGN</div>
+                </div>
+
+                <div class="history-list" id="all-bets-list">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+</div>
+
+    <script>
+        // Sample placeholder data (for demonstration only - replace with real data in production)
+        const sampleBets = [
+            {
+                avatar: "🦅",
+                name: "J***R",
+                bet: "500000",
+                coeff: "6.3x",
+                win: "3150000",
+                highlight: true
+            },
+            {
+                avatar: "🐬",
+                name: "H***O",
+                bet: "25000",
+                coeff: "122.72x",
+                win: "3068000",
+                highlight: true
+            },
+            {
+                avatar: "🦈",
+                name: "J***O",
+                bet: "500000",
+                coeff: "6x",
+                win: "3000000",
+                highlight: true
+            },
+            {
+                avatar: "🐟",
+                name: "b***o",
+                bet: "250000",
+                coeff: "--",
+                win: "0",
+                lost: true
+            }
+        ];
+
+        function createBetRow(bet) {
+            const row = document.createElement('div');
+            row.className = `bet-row ${bet.highlight ? 'highlight' : ''} ${bet.lost ? 'placeholder' : ''}`;
+            
+            row.innerHTML = `
+                <div class="avatar">${bet.avatar}</div>
+                <div class="player-info">
+                    <div class="player-name">${bet.name}</div>
+                </div>
+                <div class="bet-amount">${bet.bet}</div>
+                <div class="multiplier ${bet.lost ? 'lost' : ''}">${bet.coeff}</div>
+                <div class="win-amount ${bet.lost ? 'lost' : ''}">${bet.win}</div>
+            `;
+            return row;
+        }
+
+        // Populate sample data
+        function populateBets() {
+            const container = document.getElementById('all-bets-list');
+            container.innerHTML = '';
+            
+            sampleBets.forEach(bet => {
+                container.appendChild(createBetRow(bet));
+            });
+        }
+
+        // Tab functionality
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // For demo purposes only
+                if (btn.dataset.tab === 'all') {
+                    document.getElementById('tab-all').style.display = 'block';
+                }
+            });
+        });
+
+        // Initialize
+        window.onload = () => {
+            populateBets();
+            
+            // Set placeholder totals
+            document.getElementById('betCount').textContent = "783";
+            document.getElementById('totalWin').textContent = "0.00";
+        };
+    </script>
+</body>
+</html>

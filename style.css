@@ -26,7 +26,8 @@ body{
 
     box-shadow:0 0 30px rgba(0,0,0,0.3);
 
-    overflow:hidden;
+    overflow-y:auto;
+    overflow-x:hidden;
 }
 
 /* Scrollbar styling */
@@ -484,140 +485,66 @@ CONTROLS
 }
 
 .bet-history-panel{
-    margin-top:15px;
-    width:100%;
-    background:#1b1b1b;
+    margin-top:25px;
+    background:rgba(0,0,0,0.7);
     border-radius:12px;
-    overflow:hidden;
+    border:1px solid #444;
+
     display:flex;
     flex-direction:column;
-    border:1px solid #333;
+
+    height:300px; /* Fixed height */
+    flex-shrink:0;
 }
 
 .history-tabs{
     display:flex;
-    background:#111;
+    background:#1a1a1a;
+    border-bottom:1px solid #333;
+    flex-shrink:0;
 }
 
 .tab-btn{
     flex:1;
-    border:none;
-    background:none;
-    color:#999;
     padding:14px;
-    cursor:pointer;
+    background:none;
+    border:none;
+    color:#ccc;
     font-weight:bold;
-    font-size:14px;
+    cursor:pointer;
 }
 
 .tab-btn.active{
-    color:#00ff88;
-    border-bottom:3px solid #00ff88;
+    background:#00ff88;
+    color:black;
 }
 
 .tab-content{
     display:none;
-    flex-direction:column;
+    flex:1;
+    overflow:hidden;
+    padding:10px;
 }
 
 .tab-content.active{
     display:flex;
 }
 
-.all-bets-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:12px;
-    background:#202020;
-    border-bottom:1px solid #333;
-}
-
-.bets-count{
-    color:white;
-    font-size:13px;
-}
-
-.total-win{
-    text-align:right;
-    color:#00ff88;
-    font-weight:bold;
-    font-size:15px;
-}
-
-.total-win span{
-    color:#999;
-    font-size:11px;
-    font-weight:normal;
-}
-
-.progress-bar{
-    width:90px;
-    height:3px;
-    background:#00ff88;
-    margin-top:6px;
-}
-
-.bets-table-header{
-    display:grid;
-    grid-template-columns:45px 1fr 90px 60px 100px;
-    background:#252525;
-    color:#888;
-    padding:10px;
-    font-size:12px;
-    font-weight:bold;
-}
-
 .history-list{
-    max-height:320px;
+    flex:1;
+    min-height:0;
     overflow-y:auto;
+    overflow-x:hidden;
 }
 
-.bet-row{
-    display:grid;
-    grid-template-columns:45px 1fr 90px 60px 100px;
-    align-items:center;
-    padding:10px;
-    border-bottom:1px solid #2f2f2f;
-    color:white;
-    font-size:13px;
-}
-
-.player-avatar{
-    width:30px;
-    height:30px;
-    border-radius:50%;
-    overflow:hidden;
-}
-
-.player-avatar img{
-    width:100%;
-    height:100%;
-    object-fit:cover;
-}
-
-.bet-amount{
-    color:white;
-}
-
-.multiplier{
-    color:#00c8ff;
-    font-weight:bold;
-}
-
-.win-amount{
-    color:#00ff88;
-    text-align:right;
-    font-weight:bold;
-}
-
+/* Scrollbar */
 .history-list::-webkit-scrollbar{
     width:6px;
 }
 
 .history-list::-webkit-scrollbar-thumb{
-    background:#555;
-    border-radius:20px;
+    background:#666;
+    border-radius:10px;
 }
 
 .history-list::-webkit-scrollbar-track{
@@ -636,4 +563,65 @@ CONTROLS
     color:white;
 
     font-size:14px;
+}
+
+/* =========================
+CRASH GAME OVERLAYS (absolute, locked to .graph-area)
+========================= */
+
+#flewAwayContainer{
+    position:absolute;
+    top:40%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    text-align:center;
+    z-index:999;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.4s ease;
+}
+
+#flewAwayContainer div{
+    font-size:23px;
+    font-weight:900;
+    color:red;
+    letter-spacing:2px;
+}
+
+#countdownBarContainer{
+    position:absolute;
+    top:54%;
+    left:50%;
+    transform:translateX(-50%);
+    width:280px;
+    height:8px;
+    background:rgba(255,255,255,0.2);
+    border-radius:4px;
+    overflow:visible;
+    z-index:999;
+    opacity:0;
+    transition:opacity 0.4s;
+}
+
+#countdownBar{
+    width:100%;
+    height:100%;
+    background:red;
+    transition:width 5s linear;
+}
+
+#preparingText{
+    position:absolute;
+    top:48%;
+    left:50%;
+    transform:translateX(-50%);
+    color:#ffffff;
+    font-size:14px;
+    font-weight:900;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    white-space:nowrap;
+    opacity:0;
+    transition:opacity 0.3s ease;
+    z-index:99999;
 }

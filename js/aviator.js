@@ -18,108 +18,25 @@ document.addEventListener("DOMContentLoaded", () => {
     const MIN_Y = 140; // top limit
     const MAX_Y = 320; // bottom limit (ground level)
 
-    let flewAwayContainer = document.getElementById("flewAwayContainer");
-    let countdownBarContainer = document.getElementById("countdownBarContainer");
-    let countdownBar;
-    let preparingText;
+    // ================= STATIC OVERLAY ELEMENTS =================
+    // These now live directly in index.html and are styled via style.css,
+    // so we just grab them instead of creating them dynamically.
+    const flewAwayContainer = document.getElementById("flewAwayContainer");
+    const preparingText = document.getElementById("preparingText");
+    const countdownBarContainer = document.getElementById("countdownBarContainer");
+    const countdownBar = document.getElementById("countdownBar");
 
-    const gameContainer =
-        document.querySelector(".game-container") ||
-        document.querySelector("#game") ||
-        helicopter.parentElement;
+    window.beginRound = function () {
 
-    // ================= FLEW AWAY =================
-    if (!flewAwayContainer) {
-        flewAwayContainer = document.createElement("div");
-        flewAwayContainer.id = "flewAwayContainer";
-        flewAwayContainer.style.cssText = `
-            position: absolute;
-            top: 29%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            z-index: 100;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.4s ease;
-        `;
+    resetGame();
 
-        const flewText = document.createElement("div");
-        flewText.textContent = "FLEW AWAY!";
-        flewText.style.cssText = `
-            font-size: 23px;
-            font-weight: 900;
-            color: red;
-            letter-spacing: 2px;
-        `;
+    isRunning = true;
 
-        flewAwayContainer.appendChild(flewText);
-        gameContainer.appendChild(flewAwayContainer);
-    }
+    lastTime = 0;
 
-    // ================= COUNTDOWN =================
-    if (!countdownBarContainer) {
-        countdownBarContainer = document.createElement("div");
-        countdownBarContainer.id = "countdownBarContainer";
-        countdownBarContainer.style.cssText = `
-            position: absolute;
-            bottom: 60%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 280px;
-            height: 8px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 4px;
-            overflow: visible;
-            z-index: 95;
-            opacity: 0;
-            transition: opacity 0.4s;
-        `;
+    requestAnimationFrame(animate);
 
-        gameContainer.appendChild(countdownBarContainer);
-    }
-
-    countdownBar = document.getElementById("countdownBar");
-
-    if (!countdownBar) {
-        countdownBar = document.createElement("div");
-        countdownBar.id = "countdownBar";
-        countdownBar.style.cssText = `
-            width: 100%;
-            height: 100%;
-            background: red;
-            transition: width 5s linear;
-        `;
-        countdownBarContainer.appendChild(countdownBar);
-    }
-
-    // ================= PREPARING TEXT =================
-    preparingText = document.getElementById("preparingText");
-
-    if (!preparingText) {
-        preparingText = document.createElement("div");
-        preparingText.id = "preparingText";
-        preparingText.textContent = "PREPARING FOR NEXT ROUND";
-
-        gameContainer.appendChild(preparingText);
-
-        preparingText.style.cssText = `
-            position: absolute;
-            bottom: 62%;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #ffffff;
-            font-size:14px;
-            font-weight: 900;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            white-space: nowrap;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            z-index: 999;
-        `;
-    }
-
+};
     // ================= RESET =================
     function resetGame() {
         x = 55;
@@ -244,16 +161,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function startNextRound() {
 
-    // Create a brand-new multiplayer round
-    startNewRound();
-
-    resetGame();
-
-    isRunning = true;
-
-    lastTime = 0;
-
-    requestAnimationFrame(animate);
+    if (isHost) {
+        startNewRound();
+    }
 }
 
     setTimeout(() => startNextRound(), 600);

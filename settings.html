@@ -199,12 +199,12 @@
                     <div class="radio" id="darkRadio"></div>
                 </div>
 
-                <div class="option" onclick="setTheme('light')">
+                <div class="option" onclick="comingSoon()">
                     <span>Off</span>
                     <div class="radio" id="lightRadio"></div>
                 </div>
 
-                <div class="option" onclick="setTheme('system')">
+                <div class="option" onclick="comingSoon()">
                     <span>Follow System Settings</span>
                     <div class="radio checked" id="systemRadio"></div>
                 </div>
@@ -214,9 +214,12 @@
             
             <div class="section-title">Preference</div>
 
+            <div class="menu-item" onclick="comingSoon()">Avispy <span style="font-size:20px;">›</span></div>
+            <div class="menu-item" onclick="comingSoon()">Aviloyalty <span style="font-size:20px;">›</span></div>
+
             
             <div class="section-title">Notifications</div>
-            <div class="menu-item">Notification Settings <span style="font-size:20px;">›</span></div>
+            <div class="menu-item" onclick="comingSoon()">Notification Settings <span style="font-size:20px;">›</span></div>
 
             
             <div class="section-title">Safety & Security</div>
@@ -226,14 +229,14 @@
                 <span class="close" onclick="this.parentElement.style.display='none'">×</span>
             </div>
             
-            <div class="menu-item">
+            <div class="menu-item" onclick="comingSoon()">
                 <span>Multifactor Authentication</span>
                 <span class="new-badge">New</span>
                 <span style="font-size:20px;">›</span>
             </div>
             
-            <div class="menu-item">Deactivate <span style="font-size:20px;">›</span></div>
-            <div class="menu-item">Device Management <span style="font-size:20px;">›</span></div>
+            <div class="menu-item" onclick="comingSoon()">Deactivate <span style="font-size:20px;">›</span></div>
+            <div class="menu-item" onclick="comingSoon()">Device Management <span style="font-size:20px;">›</span></div>
         </div>
 
         
@@ -268,6 +271,10 @@ const auth = firebase.auth();
         
         function goToProfile() {
             window.location.href = 'profile.html';
+        }
+
+        function comingSoon() {
+            alert("Coming soon!");
         }
 
         // Strong Logout
