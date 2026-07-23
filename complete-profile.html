@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aviator Game - Complete Your Profile</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="login-container">
+        <div style="margin: 20px 0 25px 0;">
+            <img src="aviator-logo.png" alt="Aviator Logo" class="logo-circle">
+        </div>
+
+        <h1 style="color:white; margin:0 0 10px 0; font-size:28px; text-align:center;">Complete Your Profile</h1>
+        <p style="color:#bbb; margin:0 0 25px 0; font-size:14px; text-align:center; padding:0 10px;">
+            Just a few more details before you can start playing.
+        </p>
+
+        <div class="login-form">
+
+            <input type="text" id="username" class="amount-input" placeholder="Username" style="margin-bottom:16px;">
+
+            <input type="number" id="age" class="amount-input" placeholder="Age" style="margin-bottom:16px;">
+
+            <select id="gender" class="amount-input" style="margin-bottom:16px;">
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+            </select>
+
+            <input type="tel" id="phone" class="amount-input" placeholder="Phone Number" style="margin-bottom:20px;">
+
+            <button id="saveBtn" class="invest-btn" style="width:100%; height:58px; margin-bottom:20px;">
+                SAVE & CONTINUE
+            </button>
+
+            <div id="message" style="text-align:center; margin:10px 0; font-size:14px; min-height:24px;"></div>
+        </div>
+    </div>
+
+<script>
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+    authDomain: "success-75f95.firebaseapp.com",
+    projectId: "success-75f95",
+    storageBucket: "success-75f95.firebasestorage.app",
+    messagingSenderId: "774097711994",
+    appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+};
+
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+const saveBtn = document.getElementById('saveBtn');
+const messageDiv = document.getElementById('message');
+
+function showMessage(text, color = "#ff4444") {
+    messageDiv.style.color = color;
+    messageDiv.textContent = text;
+}
+
+// Fields that must be filled before an account counts as "complete".
+// Keep this in sync with the same list in login.html / register.html / index.html.
+function isProfileComplete(data) {
+    return !!(data && data.username && data.age && data.gender && data.phone);
+}
+
+let currentUser = null;
+
+auth.onAuthStateChanged(async (user) => {
+
+    if (!user) {
+        window.location.replace("login.html");
+        return;
+    }
+
+    currentUser = user;
+
+    const userDoc = await db.collection("users").doc(user.uid).get();
+    const data = userDoc.data() || {};
+
+    // Already complete? Nothing to do here, send them into the app.
+    if (isProfileComplete(data)) {
+        window.location.replace("index.html");
+        return;
+    }
+
+    // Pre-fill whatever we already have (e.g. Google's display name).
+    document.getElementById('username').value =
+        data.username || user.displayName || "";
+    if (data.age) document.getElementById('age').value = data.age;
+    if (data.gender) document.getElementById('gender').value = data.gender;
+    if (data.phone) document.getElementById('phone').value = data.phone;
+});
+
+saveBtn.addEventListener('click', async () => {
+
+    if (!currentUser) {
+        showMessage("Please wait, checking your session...");
+        return;
+    }
+
+    const username = document.getElementById('username').value.trim();
+    const age = parseInt(document.getElementById('age').value);
+    const gender = document.getElementById('gender').value;
+    const phone = document.getElementById('phone').value.trim();
+
+    if (!username || !age || !gender || !phone) {
+        return showMessage("All fields are required");
+    }
+
+    if (age < 18) {
+        return showMessage("You must be at least 18");
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = "SAVING...";
+
+    try {
+
+        const currentDate = new Date();
+        const birthYear = currentDate.getFullYear() - age;
+        const dob =
+            `${birthYear}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+
+        // Update Firebase Auth display name too, so it's consistent everywhere.
+        if (currentUser.displayName !== username) {
+            await currentUser.updateProfile({ displayName: username });
+        }
+
+        // merge:true so we never wipe out balance / createdAt / anything
+        // else already on the document.
+        await db.collection("users").doc(currentUser.uid).set({
+            username: username,
+            email: currentUser.email,
+            age: age,
+            gender: gender,
+            phone: phone,
+            dob: dob
+        }, { merge: true });
+
+        showMessage("Profile saved! Redirecting...", "lime");
+
+        setTimeout(() => {
+            window.location.href = "index.html";
+        }, 1200);
+
+    }
+    catch (error) {
+        console.error(error);
+        showMessage(error.message);
+    }
+    finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "SAVE & CONTINUE";
+    }
+
+});
+
+</script>
+
+</body>
+</html>

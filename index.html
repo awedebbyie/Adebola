@@ -159,6 +159,12 @@ window.currentGameState = null;
 window.lastRoundId = null;
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
+// Fields that must be filled before an account counts as "complete".
+// Keep this in sync with the same list in complete-profile.html / login.html.
+function isProfileComplete(data) {
+    return !!(data && data.username && data.age && data.gender && data.phone);
+}
+
 const loadingOverlay = document.getElementById('loadingOverlay');
 
 // Show loading immediately
@@ -198,10 +204,17 @@ function updateInvestButtons(isLoggedIn) {
     }
 }
 
-auth.onAuthStateChanged((user) => {
+auth.onAuthStateChanged(async (user) => {
     const topBar = document.getElementById("topBar");
     
     if (user) {
+
+    const userDoc = await db.collection("users").doc(user.uid).get();
+
+    if (!isProfileComplete(userDoc.data())) {
+        window.location.replace("complete-profile.html");
+        return;
+    }
 
     topBar.innerHTML = `
         <div style="display:flex; align-items:center; justify-content:space-between; width:100%; padding:0 12px; box-sizing:border-box; gap:10px;">
@@ -266,6 +279,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 <script src="js/crashLogic.js"></script>
 <script src="js/invest.js"></script>
 <script src="js/aviator.js"></script>
+<script src="js/liveBetsPanel.js"></script>
 <script src="js/loadBetHistory.js"></script>
 </body>
 </html>

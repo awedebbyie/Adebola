@@ -257,13 +257,28 @@ googleBtn.addEventListener('click', async () => {
         }    
     
         console.log("SUCCESS", result);    
-    
+
+        // Make sure a Firestore doc exists for this user (Google sign-in
+        // skips the manual form fields), then send them to complete
+        // whatever's still missing before they can use the app.
+        const userDocRef = db.collection("users").doc(user.uid);
+        const userDoc = await userDocRef.get();
+
+        if (!userDoc.exists) {
+            await userDocRef.set({
+                username: user.displayName || "",
+                email: user.email,
+                balance: 0,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+
         showMessage(    
             "Account created successfully",    
             "lime"    
         );    
     
-        window.location.href="login.html";    
+        window.location.href="complete-profile.html";    
     
     }    
     catch(error){    

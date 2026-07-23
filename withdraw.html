@@ -103,7 +103,7 @@ let currentUser = null;
 auth.onAuthStateChanged(async (user) => {
 
     if (!user) {
-        location.href = "register.html";
+        location.replace("login.html");
         return;
     }
 
