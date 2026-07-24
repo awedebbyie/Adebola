@@ -607,7 +607,10 @@ CRASH GAME OVERLAYS (absolute, locked to .graph-area)
     width:100%;
     height:100%;
     background:red;
-    transition:width 5s linear;
+    /* Must match the real betting-window length in engine/gameEngine.js
+       (currently 4s) - js/aviator.js sets this inline too, but this default
+       is kept in sync so nothing silently reverts to the old 5s. */
+    transition:width 4s linear;
 }
 
 #preparingText{

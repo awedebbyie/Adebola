@@ -185,7 +185,7 @@ async function gameLoop() {
             console.error("Round failed:", err);
         }
 
-        console.log("⏳ Waiting 5 seconds before next round...");
+        console.log("⏳ Waiting 3 seconds before next round...");
         await sleep(3000);
     }
 }

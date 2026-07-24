@@ -107,11 +107,3 @@ async function crashRound(multiplier) {
     }, 5000);
 
 }
-
-claimHost().then(isHost=>{
-
-    if(isHost){
-        startRound();
-    }
-
-});

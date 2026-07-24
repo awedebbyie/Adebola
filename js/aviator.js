@@ -62,7 +62,11 @@ requestAnimationFrame(animate);
         flewAwayContainer.style.opacity = "0";
         countdownBarContainer.style.opacity = "0";
         preparingText.style.opacity = "0";
+
+        countdownBar.style.transition = "none";
         countdownBar.style.width = "100%";
+        countdownBar.offsetHeight; // force reflow
+        countdownBar.style.transition = "width 4s linear"; // matches the real 4s betting window in engine/gameEngine.js
     }
     window.resetGame = resetGame;   
 
@@ -94,15 +98,37 @@ requestAnimationFrame(animate);
 
             multiplierEl.style.opacity = "0";
 
+            // Snap the bar back to full width with the transition
+            // temporarily off - otherwise the CSS's permanent
+            // "transition: width Ns linear" animates THIS reset too, so by
+            // the time we set width to 0% a moment later, the bar never
+            // actually reached 100% and the countdown looks like it skips/
+            // interrupts itself instead of running a clean countdown.
+            countdownBar.style.transition = "none";
             countdownBar.style.width = "100%";
-            countdownBar.offsetHeight;
+
+            countdownBar.offsetHeight; // force reflow
+
+            // 4s, not 5s - this MUST match the actual betting-window length
+            // in engine/gameEngine.js (await sleep(4000) before it flips
+            // status to "flying"). Rounds are driven by that server-side
+            // engine, not by this local timer: gameState.js calls
+            // beginRound()/resetGame() the instant it polls status ===
+            // "flying", regardless of what this countdown is doing. If this
+            // duration is longer than the real betting window, the real
+            // round starts flying - and 1.00x reappears - before this
+            // countdown visually finishes, so the two MUST stay in sync.
+            countdownBar.style.transition = "width 4s linear";
             countdownBar.style.width = "0%";
 
             setTimeout(() => {
                 countdownBarContainer.style.opacity = "0";
                 preparingText.style.opacity = "0";
-                startNextRound();
-            }, 5000);
+                // Round restarts are driven by the host client in
+                // gameController.js (claimHost() + startRound()), so there's
+                // nothing to do here. This used to call an undefined
+                // startNextRound(), throwing a ReferenceError every round.
+            }, 4000); // matches the real betting-window length above
 
         }, 3000);
     }

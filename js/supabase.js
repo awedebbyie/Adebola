@@ -8,64 +8,18 @@ window.supabaseClient = window.supabase.createClient(
 
 console.log("✅ Supabase connected");
 
-// Stores the latest game state from the backend
+// Stores the latest game state from the backend. The actual polling loop
+// that keeps this up to date lives in gameState.js (getCurrentGameState).
+//
+// This file previously ALSO ran its own independent 250ms poll
+// (loadCurrentRound) with its own separate status tracking, which called
+// window.resetGame() the instant it saw status "betting" - completely
+// bypassing aviator.js's own crash/countdown animation timing. Since
+// "betting" starts only 3 seconds after a crash (see engine/gameEngine.js),
+// that duplicate call landed at almost the exact same moment
+// crashInstantly() was trying to SHOW the countdown bar - so the two raced
+// every single round, and whichever happened to run last in that instant
+// decided whether you saw the countdown or "1.00x" stomping over it. That
+// duplicate loop has been removed for good; gameState.js + aviator.js's own
+// timers are now the only things that touch resetGame()/beginRound().
 window.currentGameState = null;
-
-window.currentGameState = null;
-let previousStatus = null;
-
-async function loadCurrentRound() {
-
-    const { data, error } = await window.supabaseClient
-        .from("current_round")
-        .select("*")
-        .eq("id", 1)
-        .single();
-
-    if (error) {
-        console.error("Polling error:", error);
-        return;
-    }
-
-    const previousRoundId = window.currentGameState?.round_id;
-
-    window.currentGameState = data;
-
-    if (
-        previousRoundId !== data.round_id &&
-        typeof listenForBets === "function"
-    ) {
-        console.log("New round detected. Reloading bets...");
-        listenForBets();
-    }
-
-    // Detect status changes
-    if (previousStatus !== data.status) {
-
-    console.log("Game Status:", data.status);
-
-    if (data.status === "betting") {
-
-        if (window.resetGame) {
-            window.resetGame();
-        }
-
-    }
-
-    if (data.status === "flying") {
-
-        if (window.beginRound) {
-            window.beginRound();
-        }
-
-    }
-
-    previousStatus = data.status;
-}
-}
-
-// Load immediately
-loadCurrentRound();
-
-// Check for updates every 250ms
-setInterval(loadCurrentRound, 250);
