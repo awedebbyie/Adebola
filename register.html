@@ -46,7 +46,21 @@
     
             <input type="password" id="confirmPassword" class="amount-input" placeholder="Confirm Password" style="margin-bottom:20px;">    
     
-            <button id="registerBtn" class="invest-btn" style="width:100%; height:58px; margin-bottom:20px;">    
+            <!-- New Checkboxes -->
+            <div style="margin: 15px 0 20px 0; color: #ddd; font-size: 14px;">
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;">
+                    <input type="checkbox" id="termsCheckbox" style="width: 18px; height: 18px; accent-color: #00aa44;">
+                    I agree to the 
+                    <a href="readme.html" target="_blank" style="color: #00aa44; text-decoration: underline;">Terms of Service</a>
+                </label>
+                
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="ageCheckbox" style="width: 18px; height: 18px; accent-color: #00aa44;">
+                    I am 18 or older
+                </label>
+            </div>
+
+            <button id="registerBtn" class="invest-btn" style="width:100%; height:58px; margin-bottom:20px;" disabled>    
                 CREATE ACCOUNT    
             </button>    
     
@@ -96,12 +110,58 @@ const registerBtn = document.getElementById('registerBtn');
 const googleBtn = document.getElementById('googleBtn');    
 const messageDiv = document.getElementById('message');    
     
+const termsCheckbox = document.getElementById('termsCheckbox');
+const ageCheckbox = document.getElementById('ageCheckbox');
+
+function updateRegisterButtonState() {
+    registerBtn.disabled = !(termsCheckbox.checked && ageCheckbox.checked);
+}
+
+// Add event listeners for checkboxes
+termsCheckbox.addEventListener('change', updateRegisterButtonState);
+ageCheckbox.addEventListener('change', updateRegisterButtonState);
+
 function showMessage(text, color = "#ff4444") {    
     messageDiv.style.color = color;    
     messageDiv.textContent = text;    
 }    
     
     
+// Username uniqueness (case-insensitive)
+//
+// Firestore has no built-in "unique" constraint, so uniqueness is enforced
+// with a lock collection: usernames/{username-lowercased} -> { uid }.
+// Claiming a username is done inside a transaction so two people racing to
+// grab the same name can't both succeed. Matching Firestore security rules
+// should only allow a user to create/delete the usernames/{key} doc for
+// their own uid, and never overwrite someone else's.
+function usernameKeyFor(username) {
+    return username.trim().toLowerCase();
+}
+
+async function isUsernameTaken(username) {
+    const doc = await db.collection("usernames").doc(usernameKeyFor(username)).get();
+    return doc.exists;
+}
+
+async function claimUsername(uid, username) {
+    await db.runTransaction(async (tx) => {
+        const usernameRef = db.collection("usernames").doc(usernameKeyFor(username));
+        const usernameDoc = await tx.get(usernameRef);
+
+        if (usernameDoc.exists) {
+            const err = new Error("That username was just taken, please pick another");
+            err.code = "username-taken";
+            throw err;
+        }
+
+        tx.set(usernameRef, {
+            uid: uid,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    });
+}
+
 // Email Registration    
     
 registerBtn.addEventListener('click', async () => {
@@ -116,9 +176,13 @@ registerBtn.addEventListener('click', async () => {
     const confirm = document.getElementById('confirmPassword').value;
 
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const usernamePattern = /^[a-zA-Z0-9_]{3,20}$/;
 
     if (!username || !age || !gender || !phone || !email || !password || !confirm)
         return showMessage("All fields required");
+
+    if (!usernamePattern.test(username))
+        return showMessage("Username must be 3-20 characters (letters, numbers, underscore only)");
 
     if (age < 18)
         return showMessage("You must be at least 18");
@@ -133,7 +197,17 @@ registerBtn.addEventListener('click', async () => {
         return showMessage("Password must be at least 6 characters");
 
     registerBtn.disabled = true;
+    registerBtn.textContent = "CHECKING USERNAME...";
+
+    if (await isUsernameTaken(username)) {
+        registerBtn.disabled = false;
+        registerBtn.textContent = "CREATE ACCOUNT";
+        return showMessage("That username is already taken");
+    }
+
     registerBtn.textContent = "CREATING...";
+
+    let createdUser = null;
 
     try {
 
@@ -141,6 +215,7 @@ registerBtn.addEventListener('click', async () => {
             await auth.createUserWithEmailAndPassword(email, password);
 
         const user = userCredential.user;
+        createdUser = user;
 
         const avatarURL =
             `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=00aa44&color=fff&size=200`;
@@ -158,7 +233,10 @@ registerBtn.addEventListener('click', async () => {
         const dob =
             `${birthYear}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
 
-        // Save to Firestore
+        // Claim the username (fails if someone grabbed it in the moment
+        // between the check above and now), then save the profile.
+        await claimUsername(user.uid, username);
+
         await db.collection("users").doc(user.uid).set({
             username: username,
             email: user.email,
@@ -196,6 +274,13 @@ registerBtn.addEventListener('click', async () => {
 
         console.error(error);
 
+        // Username was claimed by someone else mid-registration: the auth
+        // account already exists at this point, so roll it back rather than
+        // leaving an orphaned account with no profile/username.
+        if (error.code === "username-taken" && createdUser) {
+            await createdUser.delete().catch(() => {});
+        }
+
         if (error.code === "auth/email-already-in-use") {
             showMessage("Email already registered");
         }
@@ -207,6 +292,9 @@ registerBtn.addEventListener('click', async () => {
         }
         else if (error.code === "permission-denied") {
             showMessage("Database permission denied.");
+        }
+        else if (error.code === "username-taken") {
+            showMessage(error.message);
         }
         else {
             showMessage(error.message);

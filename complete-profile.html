@@ -37,7 +37,21 @@
 
             <input type="tel" id="phone" class="amount-input" placeholder="Phone Number" style="margin-bottom:20px;">
 
-            <button id="saveBtn" class="invest-btn" style="width:100%; height:58px; margin-bottom:20px;">
+            <!-- Checkboxes -->
+            <div style="margin: 15px 0 20px 0; color: #ddd; font-size: 14px;">
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;">
+                    <input type="checkbox" id="termsCheckbox" style="width: 18px; height: 18px; accent-color: #00aa44;">
+                    I agree to the 
+                    <a href="readme.html" target="_blank" style="color: #00aa44; text-decoration: underline;">Terms of Service</a>
+                </label>
+                
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="ageCheckbox" style="width: 18px; height: 18px; accent-color: #00aa44;">
+                    I am 18 or older
+                </label>
+            </div>
+
+            <button id="saveBtn" class="invest-btn" style="width:100%; height:58px; margin-bottom:20px;" disabled>
                 SAVE & CONTINUE
             </button>
 
@@ -66,21 +80,24 @@ const db = firebase.firestore();
 const saveBtn = document.getElementById('saveBtn');
 const messageDiv = document.getElementById('message');
 
+const termsCheckbox = document.getElementById('termsCheckbox');
+const ageCheckbox = document.getElementById('ageCheckbox');
+
+function updateSaveButtonState() {
+    saveBtn.disabled = !(termsCheckbox.checked && ageCheckbox.checked);
+}
+
+termsCheckbox.addEventListener('change', updateSaveButtonState);
+ageCheckbox.addEventListener('change', updateSaveButtonState);
+
 function showMessage(text, color = "#ff4444") {
     messageDiv.style.color = color;
     messageDiv.textContent = text;
 }
 
-// Fields that must be filled before an account counts as "complete".
-// Keep this in sync with the same list in login.html / register.html / index.html.
-function isProfileComplete(data) {
-    return !!(data && data.username && data.age && data.gender && data.phone);
-}
-
-let currentUser = null;
+// ==================== IMPROVED ERROR HANDLING ====================
 
 auth.onAuthStateChanged(async (user) => {
-
     if (!user) {
         window.location.replace("login.html");
         return;
@@ -88,25 +105,74 @@ auth.onAuthStateChanged(async (user) => {
 
     currentUser = user;
 
-    const userDoc = await db.collection("users").doc(user.uid).get();
-    const data = userDoc.data() || {};
+    try {
+        const userDoc = await db.collection("users").doc(user.uid).get();
+        const data = userDoc.data() || {};
+        previousUsername = data.username || null;
 
-    // Already complete? Nothing to do here, send them into the app.
-    if (isProfileComplete(data)) {
-        window.location.replace("index.html");
-        return;
+        if (isProfileComplete(data)) {
+            window.location.replace("index.html");
+            return;
+        }
+
+        // Pre-fill
+        document.getElementById('username').value = data.username || user.displayName || "";
+        if (data.age) document.getElementById('age').value = data.age;
+        if (data.gender) document.getElementById('gender').value = data.gender;
+        if (data.phone) document.getElementById('phone').value = data.phone;
+
+        updateSaveButtonState();
+
+    } catch (error) {
+        console.error("Error loading profile:", error);
+        showMessage("Error loading your profile. Please try again.", "#ff4444");
     }
-
-    // Pre-fill whatever we already have (e.g. Google's display name).
-    document.getElementById('username').value =
-        data.username || user.displayName || "";
-    if (data.age) document.getElementById('age').value = data.age;
-    if (data.gender) document.getElementById('gender').value = data.gender;
-    if (data.phone) document.getElementById('phone').value = data.phone;
 });
 
-saveBtn.addEventListener('click', async () => {
+let currentUser = null;
+let previousUsername = null;
 
+function isProfileComplete(data) {
+    return !!(data && data.username && data.age && data.gender && data.phone);
+}
+
+function usernameKeyFor(username) {
+    return username.trim().toLowerCase();
+}
+
+async function isUsernameTaken(username, ownUid) {
+    try {
+        const doc = await db.collection("usernames").doc(usernameKeyFor(username)).get();
+        return doc.exists && doc.data().uid !== ownUid;
+    } catch (e) {
+        console.error("isUsernameTaken error:", e);
+        return false;
+    }
+}
+
+async function claimUsername(uid, newUsername, previousUsername) {
+    await db.runTransaction(async (tx) => {
+        const newRef = db.collection("usernames").doc(usernameKeyFor(newUsername));
+        const newDoc = await tx.get(newRef);
+
+        if (newDoc.exists && newDoc.data().uid !== uid) {
+            const err = new Error("That username was just taken, please pick another");
+            err.code = "username-taken";
+            throw err;
+        }
+
+        if (previousUsername && usernameKeyFor(previousUsername) !== usernameKeyFor(newUsername)) {
+            tx.delete(db.collection("usernames").doc(usernameKeyFor(previousUsername)));
+        }
+
+        tx.set(newRef, {
+            uid: uid,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    });
+}
+
+saveBtn.addEventListener('click', async () => {
     if (!currentUser) {
         showMessage("Please wait, checking your session...");
         return;
@@ -117,8 +183,14 @@ saveBtn.addEventListener('click', async () => {
     const gender = document.getElementById('gender').value;
     const phone = document.getElementById('phone').value.trim();
 
+    const usernamePattern = /^[a-zA-Z0-9_]{3,20}$/;
+
     if (!username || !age || !gender || !phone) {
         return showMessage("All fields are required");
+    }
+
+    if (!usernamePattern.test(username)) {
+        return showMessage("Username must be 3-20 characters (letters, numbers, underscore only)");
     }
 
     if (age < 18) {
@@ -126,22 +198,27 @@ saveBtn.addEventListener('click', async () => {
     }
 
     saveBtn.disabled = true;
-    saveBtn.textContent = "SAVING...";
+    saveBtn.textContent = "CHECKING USERNAME...";
 
     try {
+        if (await isUsernameTaken(username, currentUser.uid)) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = "SAVE & CONTINUE";
+            return showMessage("That username is already taken");
+        }
+
+        saveBtn.textContent = "SAVING...";
 
         const currentDate = new Date();
         const birthYear = currentDate.getFullYear() - age;
-        const dob =
-            `${birthYear}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+        const dob = `${birthYear}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
 
-        // Update Firebase Auth display name too, so it's consistent everywhere.
         if (currentUser.displayName !== username) {
             await currentUser.updateProfile({ displayName: username });
         }
 
-        // merge:true so we never wipe out balance / createdAt / anything
-        // else already on the document.
+        await claimUsername(currentUser.uid, username, previousUsername);
+
         await db.collection("users").doc(currentUser.uid).set({
             username: username,
             email: currentUser.email,
@@ -157,16 +234,20 @@ saveBtn.addEventListener('click', async () => {
             window.location.href = "index.html";
         }, 1200);
 
-    }
-    catch (error) {
-        console.error(error);
-        showMessage(error.message);
-    }
-    finally {
+    } catch (error) {
+        console.error("Save error:", error);
+        
+        if (error.code === "permission-denied" || error.message.includes("permissions")) {
+            showMessage("Permission error. Please make sure you're logged in and try again.", "#ff4444");
+        } else if (error.code === "username-taken") {
+            showMessage(error.message);
+        } else {
+            showMessage("Something went wrong. Please try again.");
+        }
+    } finally {
         saveBtn.disabled = false;
         saveBtn.textContent = "SAVE & CONTINUE";
     }
-
 });
 
 </script>

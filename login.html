@@ -1,305 +1,267 @@
-<!DOCTYPE html>    
-<html lang="en">    
-<head>    
-    <meta charset="UTF-8">    
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">    
-    <title>Aviator Game - Create Account</title>    
-    <link rel="stylesheet" href="style.css">    
-    
-    <!-- Firebase SDK -->    
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>    
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>   
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script> 
-</head>    
-<body>    
-    <div class="login-container">    
-        <div class="top-bar">    
-            <button class="top-btn" onclick="window.location.href='login.html'">    
-                ← Back to Login    
-            </button>    
-        </div>    
-    
-        <div style="margin: 20px 0 25px 0;">    
-            <img src="aviator-logo.png" alt="Aviator Logo" class="logo-circle">    
-        </div>    
-    
-        <h1 style="color:white; margin:0 0 30px 0; font-size:32px; text-align:center;">Create Account</h1>    
-    
-        <div class="login-form">    
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aviator Game - Login</title>
+    <link rel="stylesheet" href="style.css">
 
-            <input type="text" id="username" class="amount-input" placeholder="Username" style="margin-bottom:16px;">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="login-container">
+        <div class="top-bar">
+            <button class="top-btn" onclick="window.location.href='index.html'">
+                ← Back
+            </button>
+        </div>
 
-            <input type="number" id="age" class="amount-input" placeholder="Age" style="margin-bottom:16px;">
+        <div style="margin: 20px 0 25px 0;">
+            <img src="aviator-logo.png" alt="Aviator Logo" class="logo-circle">
+        </div>
 
-            <select id="gender" class="amount-input" style="margin-bottom:16px;">
-                <option value="">Select Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-            </select>
+        <h1 style="color:white; margin:0 0 30px 0; font-size:32px; text-align:center;">Welcome Back</h1>
 
-            <input type="tel" id="phone" class="amount-input" placeholder="Phone Number" style="margin-bottom:16px;">
+        <div class="login-form">
 
-            <input type="email" id="email" class="amount-input" placeholder="Email Address" style="margin-bottom:16px;">    
-    
-            <input type="password" id="password" class="amount-input" placeholder="Password" style="margin-bottom:16px;">    
-    
-            <input type="password" id="confirmPassword" class="amount-input" placeholder="Confirm Password" style="margin-bottom:20px;">    
-    
-            <button id="registerBtn" class="invest-btn" style="width:100%; height:58px; margin-bottom:20px;">    
-                CREATE ACCOUNT    
-            </button>    
-    
-            <button id="googleBtn"    
-                style="width:100%; height:52px; background:#4285F4; color:white; border:none; border-radius:8px; font-size:16px; font-weight:500; cursor:pointer; margin-bottom:25px; display:flex; align-items:center; justify-content:center; gap:10px;">    
-    
-                <img src="https://www.google.com/images/branding/googleg/1x/googleg_standard_color_24dp.png"    
-                     alt="Google"    
-                     width="24"    
-                     height="24"    
-                     style="filter: brightness(0) invert(1);">    
-    
-                Sign up with Google    
-            </button>    
-    
-            <div id="message"    
-                 style="text-align:center; margin:10px 0; font-size:14px; min-height:24px;">    
-            </div>    
-    
-            <div style="text-align:center; margin-top:20px; color:#bbb; font-size:14px;">    
-                Already have an account?    
-                <a href="login.html"    
-                   style="color:#00aa44; text-decoration:none;">    
-                    Login    
-                </a>    
-            </div>    
-        </div>    
-    </div>    
-    
-<script>    
-    
-const firebaseConfig = {    
-    apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",    
-    authDomain: "success-75f95.firebaseapp.com",    
-    projectId: "success-75f95",    
-    storageBucket: "success-75f95.firebasestorage.app",    
-    messagingSenderId: "774097711994",    
-    appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"    
-};    
-    
-firebase.initializeApp(firebaseConfig);    
-    
-const auth = firebase.auth(); 
-const db = firebase.firestore();   
-    
-const registerBtn = document.getElementById('registerBtn');    
-const googleBtn = document.getElementById('googleBtn');    
-const messageDiv = document.getElementById('message');    
-    
-function showMessage(text, color = "#ff4444") {    
-    messageDiv.style.color = color;    
-    messageDiv.textContent = text;    
-}    
-    
-    
-// Email Registration    
-    
-registerBtn.addEventListener('click', async () => {
+            <input type="email" id="email" class="amount-input" placeholder="Email Address" style="margin-bottom:16px;">
 
-    const username = document.getElementById('username').value.trim();
-    const age = parseInt(document.getElementById('age').value);
-    const gender = document.getElementById('gender').value;
-    const phone = document.getElementById('phone').value.trim();
+            <input type="password" id="password" class="amount-input" placeholder="Password" style="margin-bottom:10px;">
+
+            <div style="text-align:right; margin-bottom:20px;">
+                <a href="forgot-password.html" style="color:#bbb; text-decoration:none; font-size:13px;">
+                    Forgot password?
+                </a>
+            </div>
+
+            <button id="loginBtn" class="invest-btn" style="width:100%; height:58px; margin-bottom:20px;">
+                LOGIN
+            </button>
+
+            <button id="googleBtn"
+                style="width:100%; height:52px; background:#4285F4; color:white; border:none; border-radius:8px; font-size:16px; font-weight:500; cursor:pointer; margin-bottom:25px; display:flex; align-items:center; justify-content:center; gap:10px;">
+
+                <img src="https://www.google.com/images/branding/googleg/1x/googleg_standard_color_24dp.png"
+                     alt="Google"
+                     width="24"
+                     height="24"
+                     style="filter: brightness(0) invert(1);">
+
+                Sign in with Google
+            </button>
+
+            <div id="message"
+                 style="text-align:center; margin:10px 0; font-size:14px; min-height:24px;">
+            </div>
+
+            <div style="text-align:center; margin-top:20px; color:#bbb; font-size:14px;">
+                Don't have an account?
+                <a href="register.html"
+                   style="color:#00aa44; text-decoration:none;">
+                    Create Account
+                </a>
+            </div>
+        </div>
+    </div>
+
+<script>
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+    authDomain: "success-75f95.firebaseapp.com",
+    projectId: "success-75f95",
+    storageBucket: "success-75f95.firebasestorage.app",
+    messagingSenderId: "774097711994",
+    appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+const loginBtn = document.getElementById('loginBtn');
+const googleBtn = document.getElementById('googleBtn');
+const messageDiv = document.getElementById('message');
+
+function showMessage(text, color = "#ff4444") {
+    messageDiv.style.color = color;
+    messageDiv.textContent = text;
+}
+
+// Helper: send user to the right place depending on whether
+// their Firestore profile is complete.
+async function routeAfterLogin(user) {
+
+    const userDocRef = db.collection("users").doc(user.uid);
+    const userDoc = await userDocRef.get();
+
+    if (!userDoc.exists) {
+        await userDocRef.set({
+            username: user.displayName || "",
+            email: user.email,
+            balance: 0,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        window.location.href = "complete-profile.html";
+        return;
+    }
+
+    const data = userDoc.data();
+
+    if (!data.username || !data.phone || !data.age || !data.gender) {
+        window.location.href = "complete-profile.html";
+        return;
+    }
+
+    // Save locally for quick access elsewhere in the app
+    localStorage.setItem(
+        "userData",
+        JSON.stringify({
+            username: data.username,
+            dob: data.dob || "",
+            gender: data.gender || "",
+            phone: data.phone || "",
+            email: data.email
+        })
+    );
+
+    window.location.href = "index.html";
+}
+
+// Email/Password Login
+
+loginBtn.addEventListener('click', async () => {
 
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
-    const confirm = document.getElementById('confirmPassword').value;
 
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!username || !age || !gender || !phone || !email || !password || !confirm)
-        return showMessage("All fields required");
-
-    if (age < 18)
-        return showMessage("You must be at least 18");
+    if (!email || !password)
+        return showMessage("Email and password required");
 
     if (!emailPattern.test(email))
         return showMessage("Invalid email format");
 
-    if (password !== confirm)
-        return showMessage("Passwords do not match");
-
-    if (password.length < 6)
-        return showMessage("Password must be at least 6 characters");
-
-    registerBtn.disabled = true;
-    registerBtn.textContent = "CREATING...";
+    loginBtn.disabled = true;
+    loginBtn.textContent = "LOGGING IN...";
 
     try {
 
         const userCredential =
-            await auth.createUserWithEmailAndPassword(email, password);
+            await auth.signInWithEmailAndPassword(email, password);
 
         const user = userCredential.user;
 
-        const avatarURL =
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=00aa44&color=fff&size=200`;
-
-        await user.updateProfile({
-            displayName: username,
-            photoURL: avatarURL
-        });
-
-        // Calculate DOB BEFORE saving it
-        const currentDate = new Date();
-
-        const birthYear = currentDate.getFullYear() - age;
-
-        const dob =
-            `${birthYear}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
-
-        // Save to Firestore
-        await db.collection("users").doc(user.uid).set({
-            username: username,
-            email: user.email,
-            balance: 0,
-            age: age,
-            gender: gender,
-            phone: phone,
-            dob: dob,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        // Save locally
-        localStorage.setItem(
-            "userData",
-            JSON.stringify({
-                username,
-                dob,
-                gender,
-                phone,
-                email
-            })
-        );
-
-        showMessage(
-            "Account created! Redirecting...",
-            "lime"
-        );
+        showMessage("Login successful! Redirecting...", "lime");
 
         setTimeout(() => {
-            window.location.href = "login.html";
-        }, 1500);
+            routeAfterLogin(user);
+        }, 800);
 
     }
     catch (error) {
 
-        console.error(error);
+    console.error(error);
 
-        if (error.code === "auth/email-already-in-use") {
-            showMessage("Email already registered");
+    if (error.code === "auth/invalid-credential" || 
+        error.code === "auth/user-not-found" || 
+        error.code === "auth/wrong-password") {
+        
+        showMessage(`
+            If you signed up with Google, please use the 
+            "Sign in with Google"button.
+        `, "red");
+    }
+    else if (error.code === "auth/invalid-email") {
+        showMessage("Invalid email address");
+    }
+    else if (error.code === "auth/too-many-requests") {
+        showMessage("Too many attempts. Try again later.");
+    }
+    else {
+        showMessage("Login failed. Please try again.");
+    }
+
+}
+    finally {
+
+        loginBtn.disabled = false;
+        loginBtn.textContent = "LOGIN";
+
+    }
+
+});
+
+// Google Login
+
+googleBtn.addEventListener('click', async () => {
+
+    try {
+
+        googleBtn.disabled = true;
+
+        const provider =
+            new firebase.auth.GoogleAuthProvider();
+
+        provider.setCustomParameters({
+            prompt: 'select_account'
+        });
+
+        const result =
+            await auth.signInWithPopup(provider);
+
+        const user = result.user;
+
+        if (!user.photoURL) {
+
+            const firstLetter =
+                user.email.charAt(0).toUpperCase();
+
+            const avatarURL =
+                `https://ui-avatars.com/api/?name=${firstLetter}&background=00aa44&color=fff&size=200`;
+
+            await user.updateProfile({
+                photoURL: avatarURL
+            });
+
         }
-        else if (error.code === "auth/invalid-email") {
-            showMessage("Invalid email address");
-        }
-        else if (error.code === "auth/weak-password") {
-            showMessage("Password is too weak");
-        }
-        else if (error.code === "permission-denied") {
-            showMessage("Database permission denied.");
-        }
-        else {
-            showMessage(error.message);
-        }
+
+        console.log("SUCCESS", result);
+
+        showMessage("Login successful! Redirecting...", "lime");
+
+        await routeAfterLogin(user);
+
+    }
+    catch (error) {
+
+        console.error("GOOGLE ERROR:", error);
+
+        showMessage(error.message);
 
     }
     finally {
 
-        registerBtn.disabled = false;
-        registerBtn.textContent = "CREATE ACCOUNT";
+        googleBtn.disabled = false;
 
     }
 
-});    
-    
-// Google Signup    
-    
-googleBtn.addEventListener('click', async () => {    
-    
-    try{    
-    
-        googleBtn.disabled=true;    
-    
-        const provider =    
-            new firebase.auth.GoogleAuthProvider();    
-    
-        provider.setCustomParameters({    
-            prompt:'select_account'    
-        });    
-    
-        const result =    
-            await auth.signInWithPopup(provider);    
-    
-        const user = result.user;    
-    
-        if(!user.photoURL){    
-    
-            const firstLetter =    
-            user.email.charAt(0).toUpperCase();    
-    
-            const avatarURL =    
-            `https://ui-avatars.com/api/?name=${firstLetter}&background=00aa44&color=fff&size=200`;    
-    
-            await user.updateProfile({    
-                photoURL: avatarURL    
-            });    
-    
-        }    
-    
-        console.log("SUCCESS", result);    
+});
 
-        // Make sure a Firestore doc exists for this user (Google sign-in
-        // skips the manual form fields), then send them to complete
-        // whatever's still missing before they can use the app.
-        const userDocRef = db.collection("users").doc(user.uid);
-        const userDoc = await userDocRef.get();
+// Enter key submits the form from either field
+document.getElementById('password').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') loginBtn.click();
+});
+document.getElementById('email').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') loginBtn.click();
+});
 
-        if (!userDoc.exists) {
-            await userDocRef.set({
-                username: user.displayName || "",
-                email: user.email,
-                balance: 0,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        }
+</script>
 
-        showMessage(    
-            "Account created successfully",    
-            "lime"    
-        );    
-    
-        window.location.href="complete-profile.html";    
-    
-    }    
-    catch(error){    
-    
-        console.error(    
-            "GOOGLE ERROR:",    
-            error    
-        );    
-    
-        showMessage(error.message);    
-    
-    }    
-    finally{    
-    
-        googleBtn.disabled=false;    
-    
-    }    
-    
-});    
-    
-</script>    
-    
-</body>    
+</body>
 </html>
