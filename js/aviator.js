@@ -32,11 +32,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     resetGame();
 
-    isRunning = true;
+   isRunning = true;
+window.animationRunning = true;
 
-    lastTime = 0;
+lastTime = 0;
 
-    requestAnimationFrame(animate);
+requestAnimationFrame(animate);
 
 };
     // ================= RESET =================
@@ -68,6 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ================= CRASH =================
     function crashInstantly() {
         isRunning = false;
+        window.animationRunning = false;
         phase = 3;
 
         helicopter.style.transition =
@@ -153,10 +155,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if (currentStatus !== previousStatus) {
                 previousStatus = currentStatus;
                 console.log("Game Status:", currentStatus);
-
-                if (currentStatus === "flying") {
-                    window.beginRound();
-                }
             }
         }
 
@@ -176,13 +174,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         requestAnimationFrame(animate);
     }
-
-    function startNextRound() {
-
-    if (isHost) {
-        startNewRound();
-    }
-}
 
     //setTimeout(() => startNextRound(), 600);
 });

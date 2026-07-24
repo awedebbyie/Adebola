@@ -81,7 +81,23 @@ function updateGameFromServer(state) {
 
         console.log("🔄 Switched to Round:", state.round_id);
     }
-
+// Start animation when backend enters flying state
+if (
+    state.status === "flying" &&
+    typeof window.beginRound === "function" &&
+    !window.animationRunning
+) {
+    console.log("🚁 Starting frontend animation...");
+    window.beginRound();
+}
+if (
+    state.status === "flying" &&
+    typeof window.beginRound === "function" &&
+    !window.animationRunning
+) {
+    console.log("🚁 Starting animation");
+    window.beginRound();
+}
     console.log("Status:", state.status, "Multiplier:", state.multiplier);
 }
 
