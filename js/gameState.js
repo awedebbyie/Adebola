@@ -88,7 +88,7 @@ if (
     !window.animationRunning
 ) {
     console.log("🚁 Starting frontend animation...");
-    window.beginRound();
+    window.beginRound(state.multiplier);
 }
     console.log("Status:", state.status, "Multiplier:", state.multiplier);
 }

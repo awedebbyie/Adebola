@@ -26,11 +26,52 @@ document.addEventListener("DOMContentLoaded", () => {
     const countdownBarContainer = document.getElementById("countdownBarContainer");
     const countdownBar = document.getElementById("countdownBar");
 
-    window.beginRound = function () {
+    // ================= LATE-JOIN POSITIONING =================
+    // If a browser starts watching a round that is already flying (e.g. it
+    // just refreshed, or just opened the page mid-round), we shouldn't draw
+    // the helicopter at the origin - the round didn't just start for
+    // everyone else. Instead, estimate a start position/phase from the
+    // current server multiplier so the heli visually appears "already in
+    // flight" instead of flashing back to the ground.
+    function computeStartState(currentMultiplier) {
+        const m = Math.max(1, Number(currentMultiplier) || 1);
+
+        // How far along a "typical" round this multiplier represents.
+        // Most rounds crash under ~5x (see generateCrashPoint), so use that
+        // as a soft ceiling for visual progress - this is only cosmetic.
+        const progress = Math.min(1, (m - 1) / 4);
+
+        if (progress <= 0.02) {
+            // Effectively a fresh round - behave exactly as before.
+            return { x: 55, y: 320, phase: 1 };
+        }
+
+        const phase1EndX = 220;
+
+        if (progress < 0.5) {
+            // Still within the climb-out portion of the flight.
+            const localProgress = progress / 0.5;
+            const startX = 55 + localProgress * (phase1EndX - 55);
+            const startY = 320 - (startX - 55) * 0.5; // matches phase 1's -1.4/2.8 slope
+            return { x: startX, y: startY, phase: 1 };
+        }
+
+        // Well into the flight - render already in the cruising phase.
+        const localProgress = (progress - 0.5) / 0.5;
+        const startX = phase1EndX + localProgress * (MAX_X - phase1EndX);
+        const startY = MAX_Y - localProgress * (MAX_Y - MIN_Y) * 0.6;
+        return {
+            x: startX,
+            y: Math.max(MIN_Y, Math.min(startY, MAX_Y)),
+            phase: 2
+        };
+    }
+
+    window.beginRound = function (currentMultiplier) {
 
     console.trace("beginRound() was called");
 
-    resetGame();
+    resetGame(currentMultiplier);
 
    isRunning = true;
 window.animationRunning = true;
@@ -41,32 +82,33 @@ requestAnimationFrame(animate);
 
 };
     // ================= RESET =================
-    function resetGame() {
-        x = 55;
-        y = 320;
-        multiplierValue = 1;
-        phase = 1;
+    function resetGame(currentMultiplier) {
+        const startState = computeStartState(currentMultiplier);
 
-        multiplierEl.textContent = "1.00x";
+        x = startState.x;
+        y = startState.y;
+        multiplierValue = Math.max(1, Number(currentMultiplier) || 1);
+        phase = startState.phase;
+
+        multiplierEl.textContent = multiplierValue.toFixed(2) + "x";
         multiplierEl.style.color = "white";
         multiplierEl.style.opacity = "1";
 
         flightPath.setAttribute("d", "");
         fillArea.setAttribute("d", "");
 
-        helicopter.style.left = "0px";
-        helicopter.style.bottom = "0px";
+        // Position the helicopter at its computed start position rather than
+        // always snapping to the origin (0px, 0px) - for a fresh round these
+        // are the same thing, since x=55,y=320 maps to left:0px, bottom:0px.
+        helicopter.style.left = (x - 55) + "px";
+        helicopter.style.bottom = (320 - y) + "px";
         helicopter.style.opacity = "1";
         helicopter.style.transition = "none";
 
         flewAwayContainer.style.opacity = "0";
         countdownBarContainer.style.opacity = "0";
         preparingText.style.opacity = "0";
-
-        countdownBar.style.transition = "none";
         countdownBar.style.width = "100%";
-        countdownBar.offsetHeight; // force reflow
-        countdownBar.style.transition = "width 4s linear"; // matches the real 4s betting window in engine/gameEngine.js
     }
     window.resetGame = resetGame;   
 
@@ -98,37 +140,15 @@ requestAnimationFrame(animate);
 
             multiplierEl.style.opacity = "0";
 
-            // Snap the bar back to full width with the transition
-            // temporarily off - otherwise the CSS's permanent
-            // "transition: width Ns linear" animates THIS reset too, so by
-            // the time we set width to 0% a moment later, the bar never
-            // actually reached 100% and the countdown looks like it skips/
-            // interrupts itself instead of running a clean countdown.
-            countdownBar.style.transition = "none";
             countdownBar.style.width = "100%";
-
-            countdownBar.offsetHeight; // force reflow
-
-            // 4s, not 5s - this MUST match the actual betting-window length
-            // in engine/gameEngine.js (await sleep(4000) before it flips
-            // status to "flying"). Rounds are driven by that server-side
-            // engine, not by this local timer: gameState.js calls
-            // beginRound()/resetGame() the instant it polls status ===
-            // "flying", regardless of what this countdown is doing. If this
-            // duration is longer than the real betting window, the real
-            // round starts flying - and 1.00x reappears - before this
-            // countdown visually finishes, so the two MUST stay in sync.
-            countdownBar.style.transition = "width 4s linear";
+            countdownBar.offsetHeight;
             countdownBar.style.width = "0%";
 
             setTimeout(() => {
                 countdownBarContainer.style.opacity = "0";
                 preparingText.style.opacity = "0";
-                // Round restarts are driven by the host client in
-                // gameController.js (claimHost() + startRound()), so there's
-                // nothing to do here. This used to call an undefined
-                // startNextRound(), throwing a ReferenceError every round.
-            }, 4000); // matches the real betting-window length above
+                startNextRound();
+            }, 5000);
 
         }, 3000);
     }
