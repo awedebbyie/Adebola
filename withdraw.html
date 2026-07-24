@@ -8,6 +8,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <div class="login-container">
@@ -17,6 +18,11 @@
             <button class="top-btn" onclick="window.location.href='index.html'">
                 ← Back to Game
             </button>
+        </div>
+
+        <!-- Balance (now shown above the logo) -->
+        <div style="color:#00ff88; font-weight:bold; font-size:16px; text-align:center; margin-top:16px;">
+            ₦<span id="balance">0.00</span>
         </div>
 
         <!-- Circular Logo -->
@@ -68,7 +74,7 @@
 
 // ================= FIREBASE =================
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
+    apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
     authDomain: "success-75f95.firebaseapp.com",
     projectId: "success-75f95",
     storageBucket: "success-75f95.firebasestorage.app",

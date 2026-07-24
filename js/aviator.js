@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
         phase = 1;
 
         multiplierEl.textContent = "1.00x";
-        multiplierEl.style.color = "";
+        multiplierEl.style.color = "white";
         multiplierEl.style.opacity = "1";
 
         flightPath.setAttribute("d", "");

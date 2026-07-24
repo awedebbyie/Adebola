@@ -47,18 +47,55 @@
             opacity: 0.9;
         }
 
-        /* Balance display */
+        /* Balance display - takes whatever room the top-bar buttons leave
+           behind. It never pushes them around: fitBalanceDisplay() (in the
+           main script below) measures available space and clips/folds
+           the number itself instead. */
         #balanceContainer {
             display: flex;
             align-items: center;
             justify-content: center;
             min-width: 0;
             overflow: hidden;
+            flex: 1 1 auto;
         }
-        #balance {
-            display: inline-block;
+       #balance {
+    display: inline-block;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+        /* Top-bar buttons. Default (roomy) size is used whenever there's
+           space; .compact is the floor they shrink to - and the ONLY
+           floor, set by fitBalanceDisplay() - they never get smaller than
+           this. Once they're at .compact and the balance still doesn't
+           fit, the number folds into short form instead. */
+        .topbar-btn {
+            flex-shrink: 0;
             white-space: nowrap;
-            transition: font-size 0.25s ease;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            padding: 8px 18px;
+            font-size: 14px;
+            transition: padding 0.15s ease, font-size 0.15s ease;
+        }
+        .topbar-btn.deposit { background: #00aa44; }
+        .topbar-btn.withdraw { background: #ff8800; }
+        .topbar-btn.compact {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        .topbar-icon-btn {
+            flex-shrink: 0;
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            color: white;
+            padding: 4px;
         }
     </style>
 </head>
@@ -179,38 +216,122 @@ const loadingOverlay = document.getElementById('loadingOverlay');
 function showLoading() { loadingOverlay.style.display = 'flex'; }
 function hideLoading() { loadingOverlay.style.display = 'none'; }
 
-// Format balance (shrink when large)
-function formatLargeBalance(amount) {
+// Balance display: buttons shrink first (down to the .compact floor
+// defined in CSS), and only once they're already at that floor - and the
+// number STILL doesn't fit - does the number itself fold into short form
+// (500K+, 1.4M+, etc). This runs on every balance update and on resize,
+// so it always reflects the actual available space rather than guessing
+// from the raw number alone.
+const compactFormatter1dp = new Intl.NumberFormat(undefined, {
+    notation: "compact",
+    maximumFractionDigits: 1
+}); // e.g. 1.4M, 500K, 2.3B, 5.5T
+
+const compactFormatter0dp = new Intl.NumberFormat(undefined, {
+    notation: "compact",
+    maximumFractionDigits: 0
+}); // e.g. 1M, 500K, 2B, 6T - used when 1dp still doesn't fit
+
+function exactBalanceText(num) {
+    return num.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+window.currentBalanceValue = 0;
+
+// New variables for balance reveal feature
+let balanceRevealTimer = null;
+let showingExactBalance = false;
+
+const BALANCE_MIN_FONT_PX = 10; // never shrink smaller than this - the K/M/B/T
+                                 // letter must always stay legible and on-screen,
+                                 // never cut off into "..."
+
+function fitBalanceDisplay() {
+    if (showingExactBalance) return;
+
     const balanceEl = document.getElementById('balance');
-    if (!balanceEl) return;
+    const balanceContainer = document.getElementById('balanceContainer');
+    const depositBtn = document.querySelector('.topbar-btn.deposit');
+    const withdrawBtn = document.querySelector('.topbar-btn.withdraw');
 
-    const num = parseFloat(amount) || 0;
-    let displayText = '';
-    let fontSize = '18px';
+    if (!balanceEl || !balanceContainer || !depositBtn || !withdrawBtn) return;
 
-    if (num >= 1_000_000_000) {
-        displayText = (num / 1_000_000_000).toFixed(1).replace('.0', '') + 'B+';
-        fontSize = '15px';
-    } else if (num >= 10_000_000) {
-        displayText = (num / 1_000_000).toFixed(1).replace('.0', '') + 'M+';
-        fontSize = '15.5px';
-    } else if (num >= 1_000_000) {
-        displayText = (num / 1_000_000).toFixed(2).replace('.00', '') + 'M+';
-        fontSize = '16px';
-    } else if (num >= 100_000) {
-        displayText = Math.round(num / 1000) + 'k+';
-        fontSize = '17px';
-    } else if (num >= 10_000) {
-        displayText = num.toLocaleString();
-        fontSize = '17.5px';
-    } else {
-        displayText = num.toFixed(2);
-        fontSize = '18px';
+    const num = window.currentBalanceValue || 0;
+    const fits = () => balanceEl.scrollWidth <= balanceContainer.clientWidth;
+
+    // Start from the most spacious state: normal-size buttons, exact
+    // (full precision) balance text, normal font.
+    depositBtn.classList.remove('compact');
+    withdrawBtn.classList.remove('compact');
+    balanceEl.style.fontSize = '18px';
+    balanceEl.textContent = '₦' + exactBalanceText(num);
+
+    // Step 1: shrink the buttons to their floor if the exact number
+    // doesn't fit at full button size.
+    if (!fits()) {
+        depositBtn.classList.add('compact');
+        withdrawBtn.classList.add('compact');
     }
 
-    balanceEl.textContent = '₦' + displayText;
-    balanceEl.style.fontSize = fontSize;
+    // Step 2: buttons are already at their smallest - only now does the
+    // price start folding into short form (1 decimal place: 1.4M+).
+    if (!fits() && num >= 1000) {
+        balanceEl.textContent = '₦' + compactFormatter1dp.format(num) + '+';
+    }
+
+    // Step 3: still doesn't fit - drop the decimal too (1M+ instead of 1.4M+).
+    // This keeps the K/M/B/T letter intact rather than letting CSS
+    // ellipsis chop the text down to "...".
+    if (!fits() && num >= 1000) {
+        balanceEl.textContent = '₦' + compactFormatter0dp.format(num) + '+';
+    }
+
+    // Step 4: last resort for extremely narrow screens - shrink the font
+    // one step at a time until it fits, down to a hard floor. The letter
+    // suffix always stays whole; only its size changes.
+    let fontSize = 18;
+    while (!fits() && fontSize > BALANCE_MIN_FONT_PX) {
+    fontSize--;
+    balanceEl.style.fontSize = fontSize + "px";
 }
+
+// If it STILL doesn't fit, always use compact notation.
+// Never allow CSS to display "..."
+if (!fits()) {
+    balanceEl.style.fontSize = BALANCE_MIN_FONT_PX + "px";
+    balanceEl.textContent = "₦" + compactFormatter0dp.format(num) + "+";
+}
+
+balanceEl.title = "₦" + exactBalanceText(num);
+}
+
+function revealExactBalance() {
+    const balanceEl = document.getElementById("balance");
+
+    if (!balanceEl) return;
+
+    clearTimeout(balanceRevealTimer);
+
+    showingExactBalance = true;
+
+    // Show the full balance
+    balanceEl.textContent = "₦" + exactBalanceText(window.currentBalanceValue);
+
+    // Restore compact display after 5 seconds
+    balanceRevealTimer = setTimeout(() => {
+        showingExactBalance = false;
+        fitBalanceDisplay();
+    }, 5000);
+}
+
+let balanceFitResizeTimer = null;
+window.addEventListener('resize', () => {
+    clearTimeout(balanceFitResizeTimer);
+    balanceFitResizeTimer = setTimeout(fitBalanceDisplay, 100);
+});
 
 // Other functions
 function showSettings() { window.location.href = "settings.html"; }
@@ -252,25 +373,33 @@ auth.onAuthStateChanged(async (user) => {
                 return;
             }
 
-            // Render Top Bar
+            // Render Top Bar - buttons use the compact .topbar-btn styling
+            // so they keep a small, fixed footprint and the balance in the
+            // middle gets whatever room is left over.
             topBar.innerHTML = `
-                <div style="display:flex; align-items:center; justify-content:space-between; width:100%; padding:0 12px; box-sizing:border-box; gap:10px;">
-                    <button onclick="deposit()" style="background:#00aa44; color:white; border:none; padding:8px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">DEPOSIT</button>
-                    
-                    <div id="balanceContainer" style="color:#00ff88; font-weight:bold; flex:1; text-align:center;">
+                <div style="display:flex; align-items:center; justify-content:space-between; width:100%; padding:0 12px; box-sizing:border-box; gap:8px;">
+                    <button class="topbar-btn deposit" onclick="deposit()">DEPOSIT</button>
+
+                    <div id="balanceContainer" style="color:#00ff88; font-weight:bold; text-align:center;">
                         <span id="balance" style="font-size:18px;">0.00</span>
                     </div>
 
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <button onclick="withdraw()" style="background:#ff8800; color:white; border:none; padding:8px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">WITHDRAW</button>
-                        <button onclick="showSettings()" style="background:none; border:none; font-size:28px; cursor:pointer; color:white; padding:5px;">⚙️</button>
+                    <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                        <button class="topbar-btn withdraw" onclick="withdraw()">WITHDRAW</button>
+                        <button class="topbar-icon-btn" onclick="showSettings()">⚙️</button>
                     </div>
                 </div>
             `;
 
+            // Attach click listener for exact balance reveal
+            const balanceEl = document.getElementById("balance");
+            if (balanceEl) {
+                balanceEl.addEventListener("click", revealExactBalance);
+            }
+
             updateInvestButtons(true);
 
-            // === BALANCE LISTENER (Improved) ===
+            // === BALANCE LISTENER ===
             window.balanceUnsubscribe = db.collection("users")
                 .doc(user.uid)
                 .onSnapshot((doc) => {
@@ -281,7 +410,8 @@ auth.onAuthStateChanged(async (user) => {
                     const data = doc.data();
                     const balance = Number(data.balance || 0);
                     console.log("✅ Balance updated from Firestore:", balance);
-                    formatLargeBalance(balance);
+                    window.currentBalanceValue = balance;
+                    fitBalanceDisplay();
                 }, (error) => {
                     console.error("❌ Balance listener error:", error);
                 });
@@ -310,7 +440,6 @@ document.getElementById("investBtn2").addEventListener("click", handleInvest);
 <script src="js/crashLogic.js"></script>
 <script src="js/invest.js"></script>
 <script src="js/aviator.js"></script>
-<script src="js/liveBetsPanel.js"></script>
 <script src="js/loadBetHistory.js"></script>
 </body>
 </html>

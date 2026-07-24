@@ -250,14 +250,14 @@ MULTIPLIER
 .multiplier{
     position:absolute;
 
-    top:150px;
+    top:125px;
     left:50%;
 
     transform:translateX(-50%);
 
     color:red;
 
-    font-size:45px;
+    font-size:50px;
     font-weight:bold;
 
     z-index:20;

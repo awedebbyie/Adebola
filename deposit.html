@@ -8,6 +8,7 @@
     <!-- Firebase SDK (optional - only if you want auth protection) -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <div class="login-container">  <!-- Reusing same container class for consistent styling -->
@@ -17,6 +18,9 @@
             <button class="top-btn" onclick="window.location.href='index.html'">
                 ← Back to Game
             </button>
+            <div style="display:none; color:#00ff88; font-weight:bold; font-size:16px; margin-left:auto;">
+                ₦<span id="balance">0.00</span>
+            </div>
         </div>
 
         <!-- Circular Logo -->
@@ -78,6 +82,31 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
+const db = firebase.firestore();
+
+// 🔥 Live balance display - keeps the top bar in sync with Firestore,
+// same pattern as index.html/withdraw.html, so a deposit (or any other
+// balance change) shows up here without needing a page refresh.
+auth.onAuthStateChanged((user) => {
+
+    if (!user) return;
+
+    db.collection("users")
+      .doc(user.uid)
+      .onSnapshot((doc) => {
+
+          if (!doc.exists) return;
+
+          const data = doc.data();
+          const balanceElement = document.getElementById("balance");
+
+          if (balanceElement) {
+              balanceElement.textContent = Number(data.balance || 0).toFixed(2);
+          }
+
+      });
+
+});
 
 
 // ================= SUPABASE =================
@@ -247,10 +276,10 @@ function payWithPaystack(){
 
             }
 
-            document.getElementById(
-    "balance"
-).textContent =
-result.balance.toFixed(2);
+            const balanceElement = document.getElementById("balance");
+            if (balanceElement) {
+                balanceElement.textContent = result.balance.toFixed(2);
+            }
 
             showMessage(
                 "Deposit successful",

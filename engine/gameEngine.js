@@ -4,7 +4,7 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-const MULTIPLIER_INTERVAL = 200;
+const MULTIPLIER_INTERVAL = 0.5;
 
 async function safeUpdate(table, values, column, value) {
     while (true) {
@@ -74,7 +74,15 @@ async function updateMultiplier(roundId, crashPoint) {
     console.log("📈 Multiplier started...");
 
     while (multiplier < crashPoint) {
-        multiplier += 0.01;
+        let increment = 0.05;
+
+if (multiplier >= 2) increment = 0.06;
+if (multiplier >= 5) increment = 0.08;
+if (multiplier >= 10) increment = 0.12;
+if (multiplier >= 20) increment = 0.20;
+if (multiplier >= 50) increment = 0.40;
+
+multiplier += increment;
         multiplier = Number(multiplier.toFixed(2));
 
         await safeUpdate(
@@ -151,7 +159,7 @@ async function runRound() {
     console.log("✅ Game is now in BETTING state.");
     console.log("⏳ Betting open for 10 seconds...");
 
-    await sleep(10000);
+    await sleep(4000);
 
     console.log("✈️ Starting flight...");
 
@@ -178,7 +186,7 @@ async function gameLoop() {
         }
 
         console.log("⏳ Waiting 5 seconds before next round...");
-        await sleep(5000);
+        await sleep(3000);
     }
 }
 
