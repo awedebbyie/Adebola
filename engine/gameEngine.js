@@ -76,13 +76,13 @@ async function updateMultiplier(roundId, crashPoint) {
     while (multiplier < crashPoint) {
         let increment = 0.05;
 
-if (multiplier >= 2) increment = 0.06;
-if (multiplier >= 5) increment = 0.08;
-if (multiplier >= 10) increment = 0.12;
-if (multiplier >= 20) increment = 0.20;
-if (multiplier >= 50) increment = 0.40;
+        if (multiplier >= 2) increment = 0.06;
+        if (multiplier >= 5) increment = 0.08;
+        if (multiplier >= 10) increment = 0.12;
+        if (multiplier >= 20) increment = 0.20;
+        if (multiplier >= 50) increment = 0.40;
 
-multiplier += increment;
+        multiplier += increment;
         multiplier = Number(multiplier.toFixed(2));
 
         await safeUpdate(
@@ -95,7 +95,7 @@ multiplier += increment;
         console.log(multiplier + "x");
 
         await sleep(MULTIPLIER_INTERVAL);
-    } // <-- while loop now properly closed here
+    }
 
     console.log("💥 CRASH!");
 
@@ -157,9 +157,31 @@ async function runRound() {
     );
 
     console.log("✅ Game is now in BETTING state.");
-    console.log("⏳ Betting open for 8 seconds...");
+    console.log("⏳ Betting open for 7 seconds...");
 
     await sleep(7000);
+
+    // Fixed lines below
+    const { data: bets, error } = await supabase
+        .from("bets")
+        .select("amount")
+        .eq("round_id", round.id);
+
+    if (error) {
+        console.error(error);
+    }
+
+    const totalBets = (bets || []).reduce(
+        (sum, bet) => sum + Number(bet.amount),
+        0
+    );
+
+    await supabase
+        .from("rounds")
+        .update({
+            total_bets: totalBets
+        })
+        .eq("id", round.id);
 
     console.log("✈️ Starting flight...");
 
