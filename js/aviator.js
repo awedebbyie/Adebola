@@ -148,7 +148,7 @@ requestAnimationFrame(animate);
                 countdownBarContainer.style.opacity = "0";
                 preparingText.style.opacity = "0";
                 startNextRound();
-            }, 5000);
+            }, 7000);
 
         }, 3000);
     }

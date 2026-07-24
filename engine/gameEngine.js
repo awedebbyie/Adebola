@@ -157,9 +157,9 @@ async function runRound() {
     );
 
     console.log("✅ Game is now in BETTING state.");
-    console.log("⏳ Betting open for 4 seconds...");
+    console.log("⏳ Betting open for 8 seconds...");
 
-    await sleep(4000);
+    await sleep(7000);
 
     console.log("✈️ Starting flight...");
 
