@@ -1,0 +1,12 @@
+{
+  "name": "success",
+  "version": "1.0.0",
+  "description": "Similar to aviator, predict, if you are right, you will earn massively!",
+  "main": "bets.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

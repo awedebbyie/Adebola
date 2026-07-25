@@ -8,9 +8,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let y = 320;
     let multiplierValue = 1;
     let phase = 1;
-    let crashPoint = 0;
     let lastTime = 0;
     let isRunning = false;
+    let previousStatus = null;
 
     const MAX_X = 280; // right limit (ground level)
 
@@ -28,6 +28,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     window.beginRound = function () {
 
+    console.trace("beginRound() was called");
+
     resetGame();
 
     isRunning = true;
@@ -43,10 +45,6 @@ document.addEventListener("DOMContentLoaded", () => {
         y = 320;
         multiplierValue = 1;
         phase = 1;
-
-        crashPoint = window.generateCrashPoint
-            ? window.generateCrashPoint()
-            : 1 + Math.random() * 20;
 
         multiplierEl.textContent = "1.00x";
         multiplierEl.style.color = "";
@@ -65,6 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
         preparingText.style.opacity = "0";
         countdownBar.style.width = "100%";
     }
+    window.resetGame = resetGame;   
 
     // ================= CRASH =================
     function crashInstantly() {
@@ -133,14 +132,33 @@ document.addEventListener("DOMContentLoaded", () => {
             // ✅ FIX: clamp BOTH top and bottom
             y = Math.max(MIN_Y, Math.min(y, MAX_Y));
 
-            if (multiplierValue >= crashPoint) {
+            // ✅ FIX: guard against calling crashInstantly() more than once
+            if (
+                window.currentGameState &&
+                window.currentGameState.status === "crashed" &&
+                phase !== 3
+            ) {
                 crashInstantly();
                 return;
             }
         }
 
-        multiplierValue += 0.018;
-        multiplierEl.textContent = multiplierValue.toFixed(2) + "x";
+        if (window.currentGameState) {
+            multiplierValue = window.currentGameState.multiplier;
+            multiplierEl.textContent =
+                multiplierValue.toFixed(2) + "x";
+
+            const currentStatus = window.currentGameState.status;
+
+            if (currentStatus !== previousStatus) {
+                previousStatus = currentStatus;
+                console.log("Game Status:", currentStatus);
+
+                if (currentStatus === "flying") {
+                    window.beginRound();
+                }
+            }
+        }
 
         helicopter.style.left = (x - 55) + "px";
         helicopter.style.bottom = (320 - y) + "px";
@@ -166,5 +184,5 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 }
 
-    setTimeout(() => startNextRound(), 600);
+    //setTimeout(() => startNextRound(), 600);
 });

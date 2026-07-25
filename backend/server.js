@@ -1,95 +1,130 @@
-const WebSocket = require('ws');
-global.WebSocket = WebSocket;
-
+const admin = require("firebase-admin");
 require("dotenv").config();
 
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
 
-const { createClient } =
-require("@supabase/supabase-js");
+const serviceAccount = require("./firebase-service-account.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+const db = admin.firestore();
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-const supabase = createClient(
-process.env.SUPABASE_URL,
-process.env.SUPABASE_SERVICE_KEY
-);
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
-const PAYSTACK_SECRET_KEY =
-process.env.PAYSTACK_SECRET_KEY;
+app.post("/verify-payment", async (req, res) => {
+  try {
+    const { uid, reference } = req.body;
 
+    if (!uid || !reference) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing uid or reference"
+      });
+    }
 
+    const response = await axios.get(
+      `https://api.paystack.co/transaction/verify/${reference}`,
+      {
+        headers: {
+          Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`
+        }
+      }
+    );
 
-app.post("/verify-payment", async (req,res)=>{
+    const tx = response.data.data;
 
-try{
+    if (tx.status !== "success") {
+      return res.json({ success: false, error: "Payment not successful" });
+    }
 
-const {reference,email}=req.body;
+    // Confirm the payment actually belongs to this uid before touching balances
+    const userRef = db.collection("users").doc(uid);
+    const userSnap = await userRef.get();
 
-const response =
-await axios.get(
-`https://api.paystack.co/transaction/verify/${reference}`,
-{
-headers:{
-Authorization:
-`Bearer ${PAYSTACK_SECRET_KEY}`
-}
-}
-);
+    if (!userSnap.exists) {
+      return res.json({
+        success: false,
+        error: "User not found"
+      });
+    }
 
-const tx=response.data.data;
+    if (tx.customer.email !== userSnap.data().email) {
+      return res.json({
+        success: false,
+        error: "Payment email does not match account"
+      });
+    }
 
-if(tx.status==="success"){
+    const amount = tx.amount / 100;
+    const txRef = db.collection("transactions").doc(reference);
 
-const amount=tx.amount/100;
+    const result = await db.runTransaction(async (transaction) => {
+      const [txSnap, userSnapInTx] = await Promise.all([
+        transaction.get(txRef),
+        transaction.get(userRef)
+      ]);
 
-const {data:user}=await supabase
-.from("users")
-.select("*")
-.eq("email",email)
-.single();
+      if (txSnap.exists) {
+        return { status: "alreadyProcessed" };
+      }
 
-const newBalance=
-(user.balance||0)+amount;
+      if (!userSnapInTx.exists) {
+        return { status: "userNotFound" };
+      }
 
-await supabase
-.from("users")
-.update({
-balance:newBalance
-})
-.eq("email",email);
+      const currentBalance = userSnapInTx.data().balance || 0;
 
-return res.json({
-success:true
+      transaction.update(userRef, {
+        balance: currentBalance + amount
+      });
+
+      transaction.set(txRef, {
+        uid,
+        amount,
+        status: "success",
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      return { status: "credited" };
+    });
+
+    switch (result.status) {
+      case "alreadyProcessed":
+        return res.json({
+          success: true,
+          alreadyProcessed: true,
+          message: "This payment was already verified and credited."
+        });
+
+      case "userNotFound":
+        return res.json({
+          success: false,
+          error: "User not found"
+        });
+
+      case "credited":
+        return res.json({
+          success: true,
+          alreadyProcessed: false,
+          amount
+        });
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Verification failed" });
+  }
 });
 
-}
-
-res.json({
-success:false
-});
-
-}catch(error){
-
-console.log(error);
-
-res.status(500).json({
-error:"Verification failed"
-});
-
-}
-
-});
-
-
-
-app.listen(3000,()=>{
-console.log(
-"Server running on port 3000"
-);
+app.listen(3000, () => {
+  console.log("Server running on port 3000");
 });

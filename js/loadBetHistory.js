@@ -1,6 +1,5 @@
 document.addEventListener("DOMContentLoaded", async () => {
     const container = document.getElementById("betHistoryContainer");
-
     const response = await fetch("bet-history-panel.html");
     container.innerHTML = await response.text();
 
@@ -14,5 +13,5 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     });
 
-    await loadBetHistory();
+    //await loadBetHistory();
 });

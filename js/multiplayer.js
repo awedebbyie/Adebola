@@ -1,6 +1,5 @@
 const betsRef = db.collection("bets");
 const gameStateRef = db.collection("gameState").doc("currentRound");
-
 const hostRef = db.collection("gameControl").doc("host");
 
 let isHost = false;
@@ -31,9 +30,6 @@ gameStateRef.onSnapshot(doc => {
         listenForBets();
 
         // Start the animation for everyone
-        if (window.beginRound) {
-            window.beginRound();
-        }
     }
 });
 

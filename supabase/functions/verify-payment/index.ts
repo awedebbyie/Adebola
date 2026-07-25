@@ -1,176 +1,120 @@
 import { serve } from "https://deno.land/std/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import admin from "npm:firebase-admin";
+
+// Initialize Firebase Admin once (cold start), reused across warm invocations
+const serviceAccountJson = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
+
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(JSON.parse(serviceAccountJson!))
+  });
+}
+
+const db = admin.firestore();
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" }
+  });
+}
 
 serve(async (req) => {
-
   try {
-
     const body = await req.json();
-    const reference = body.reference;
+    const { uid, reference } = body;
 
-    if (!reference) {
-
-      return new Response(
-        JSON.stringify({
-          success:false,
-          error:"Missing reference"
-        }),
-        {
-          status:400,
-          headers:{
-            "Content-Type":"application/json"
-          }
-        }
+    if (!uid || !reference) {
+      return jsonResponse(
+        { success: false, error: "Missing uid or reference" },
+        400
       );
-
     }
 
-    const PAYSTACK_SECRET =
-    Deno.env.get("PAYSTACK_SECRET");
+    const PAYSTACK_SECRET = Deno.env.get("PAYSTACK_SECRET");
 
-    const SUPABASE_URL =
-    Deno.env.get("SUPABASE_URL");
-
-    const SUPABASE_SERVICE_ROLE =
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-    const supabase =
-    createClient(
-      SUPABASE_URL!,
-      SUPABASE_SERVICE_ROLE!
-    );
-
-    // Check if transaction already exists
-    const { data:existing } =
-    await supabase
-    .from("Transactions")
-    .select("*")
-    .eq("reference",reference)
-    .maybeSingle();
-
-    if(existing){
-
-      return new Response(
-        JSON.stringify({
-          success:false,
-          error:"Already processed"
-        }),
-        {
-          headers:{
-            "Content-Type":"application/json"
-          }
-        }
-      );
-
-    }
-
-    const verifyResponse =
-    await fetch(
+    const verifyResponse = await fetch(
       `https://api.paystack.co/transaction/verify/${reference}`,
       {
-        headers:{
-          Authorization:
-          `Bearer ${PAYSTACK_SECRET}`
-        }
+        headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` }
       }
     );
 
-    const verifyData =
-    await verifyResponse.json();
+    const verifyData = await verifyResponse.json();
+    const tx = verifyData.data;
 
-    if(
-      !verifyData.data ||
-      verifyData.data.status !== "success"
-    ){
-
-      return new Response(
-        JSON.stringify({
-          success:false,
-          error:"Payment not completed"
-        }),
-        {
-          headers:{
-            "Content-Type":"application/json"
-          }
-        }
-      );
-
+    if (!tx || tx.status !== "success") {
+      return jsonResponse({ success: false, error: "Payment not completed" });
     }
 
-    const amount =
-verifyData.data.amount / 100;
+    // Confirm the payment belongs to this uid
+    const userRef = db.collection("users").doc(uid);
+    const userSnap = await userRef.get();
 
-const email =
-verifyData.data.customer.email;
+    if (!userSnap.exists) {
+      return jsonResponse({ success: false, error: "User not found" });
+    }
 
-// Save transaction
-await supabase
-.from("Transactions")
-.insert([{
-    reference:reference,
-    email:email,
-    amount:amount
-}]);
+    if (tx.customer.email !== userSnap.data()!.email) {
+      return jsonResponse({
+        success: false,
+        error: "Payment email does not match account"
+      });
+    }
 
-// Get current balance
-const {data:userData} =
-await supabase
-.from("Users")
-.select("Balance")
-.eq("Email",email)
-.maybeSingle();
+    const amount = tx.amount / 100;
+    const txRef = db.collection("transactions").doc(reference);
 
-const currentBalance =
-parseFloat(
-    userData?.Balance || 0
-);
+    const result = await db.runTransaction(async (transaction) => {
+      const [txSnap, userSnapInTx] = await Promise.all([
+        transaction.get(txRef),
+        transaction.get(userRef)
+      ]);
 
-const newBalance =
-currentBalance + amount;
-
-// Update balance
-await supabase
-.from("Users")
-.update({
-    Balance:newBalance
-})
-.eq("Email",email);
-
-return new Response(
-JSON.stringify({
-    success:true,
-    balance:newBalance
-}),
-{
-headers:{
-    "Content-Type":"application/json"
-}
-}
-);
-      {
-        headers:{
-          "Content-Type":"application/json"
-        }
+      if (txSnap.exists) {
+        return { status: "alreadyProcessed" };
       }
-    );
 
-  }
-
-  catch(error:any){
-
-    return new Response(
-      JSON.stringify({
-        success:false,
-        error:error.message
-      }),
-      {
-        status:500,
-        headers:{
-          "Content-Type":"application/json"
-        }
+      if (!userSnapInTx.exists) {
+        return { status: "userNotFound" };
       }
-    );
 
+      const currentBalance = userSnapInTx.data()!.balance || 0;
+      const newBalance = currentBalance + amount;
+
+      transaction.update(userRef, { balance: newBalance });
+
+      transaction.set(txRef, {
+        uid,
+        email: tx.customer.email,
+        amount,
+        status: "success",
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      return { status: "credited", newBalance };
+    });
+
+    switch (result.status) {
+      case "alreadyProcessed":
+        return jsonResponse({
+          success: true,
+          alreadyProcessed: true,
+          message: "This payment was already verified and credited."
+        });
+
+      case "userNotFound":
+        return jsonResponse({ success: false, error: "User not found" });
+
+      case "credited":
+        return jsonResponse({
+          success: true,
+          alreadyProcessed: false,
+          amount,
+          balance: result.newBalance
+        });
+    }
+  } catch (error: any) {
+    return jsonResponse({ success: false, error: error.message }, 500);
   }
-
 });
