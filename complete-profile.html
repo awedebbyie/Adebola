@@ -165,10 +165,16 @@ async function claimUsername(uid, newUsername, previousUsername) {
             tx.delete(db.collection("usernames").doc(usernameKeyFor(previousUsername)));
         }
 
-        tx.set(newRef, {
-            uid: uid,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        // Only create the doc if it doesn't already exist (e.g. reserved at
+        // registration, or kept unchanged from a previous save). Writing to
+        // an existing doc here is treated as an "update" by Firestore, and
+        // the security rules deny all updates to this collection.
+        if (!newDoc.exists) {
+            tx.set(newRef, {
+                uid: uid,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
     });
 }
 

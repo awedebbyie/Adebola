@@ -1,4 +1,5 @@
 const supabase = require("./supabaseClient");
+const crashLogic = require("./crashLogic");
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -61,11 +62,6 @@ async function safeSelect(table, selectCols, orderCol, ascending, limit) {
 
         await sleep(1000);
     }
-}
-
-function generateCrashPoint() {
-    const crashPoint = (1 + Math.random() * 9).toFixed(2);
-    return Number(crashPoint);
 }
 
 async function settleLostBets(roundId) {
@@ -162,13 +158,12 @@ async function runRound() {
     const nextRoundNumber = (lastRound?.round_number || 0) + 1;
     console.log("Next Round Number:", nextRoundNumber);
 
-    const crashPoint = generateCrashPoint();
-    console.log("💥 Crash Point:", crashPoint + "x");
-
+    // Crash point isn't known yet - it depends on this round's total_bets,
+    // which isn't known until betting closes. It's filled in further down.
     const round = await safeInsert("rounds", {
         round_number: nextRoundNumber,
         started_at: new Date().toISOString(),
-        crash_point: crashPoint,
+        crash_point: null,
     });
 
     console.log("Created round:", round.id);
@@ -179,7 +174,7 @@ async function runRound() {
             round_id: round.id,
             status: "betting",
             multiplier: 1,
-            crash_point: crashPoint,
+            crash_point: null,
             started_at: round.started_at
         },
         "id",
@@ -212,6 +207,27 @@ async function runRound() {
             total_bets: totalBets
         })
         .eq("id", round.id);
+
+    console.log("💰 Total Bets:", totalBets);
+
+    // Crash multiplier generation lives entirely in crashLogic.js - the
+    // engine just hands over total_bets and uses whatever comes back.
+    const crashPoint = crashLogic.getCrashMultiplier(totalBets);
+    console.log("💥 Crash Point:", crashPoint + "x");
+
+    await safeUpdate(
+        "rounds",
+        { crash_point: crashPoint },
+        "id",
+        round.id
+    );
+
+    await safeUpdate(
+        "current_round",
+        { crash_point: crashPoint },
+        "id",
+        1
+    );
 
     console.log("✈️ Starting flight...");
 
