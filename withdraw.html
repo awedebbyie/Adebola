@@ -63,11 +63,12 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+
 <script>
 
 // ================= FIREBASE =================
 const firebaseConfig = {
-    apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+    apiKey: "YOUR_API_KEY",
     authDomain: "success-75f95.firebaseapp.com",
     projectId: "success-75f95",
     storageBucket: "success-75f95.firebasestorage.app",
@@ -75,36 +76,16 @@ const firebaseConfig = {
     appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
 };
 
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+
 const auth = firebase.auth();
+const db = firebase.firestore();
 
-// ================= SUPABASE =================
-const supabaseUrl = "https://axojmnizpewbewempaaa.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4b2ptbml6cGV3YmV3ZW1wYWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDk3OTcsImV4cCI6MjA5ODA4NTc5N30._Ib3RhlMpPaUQoUVYDd6dS_gUOiaVsCBPBYEO30A8zc";
-
-const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-
-// ================= SETTINGS =================
-function showSettings() {
-    if (confirm("Do you want to logout?")) {
-        auth.signOut().then(() => location.reload());
-    }
-}
-
-// ================= PAGE REDIRECTS =================
-function deposit() {
-    window.location.href = "deposit.html";
-}
-
-function withdraw() {
-    window.location.href = "withdraw.html";
-}
-
-// ================= MESSAGE (Now shows inside form) =================
+// ================= MESSAGE =================
 function showMessage(text, color = "red") {
     const msg = document.getElementById("message");
-    if (!msg) return;
-
     msg.style.color = color;
     msg.textContent = text;
 
@@ -113,23 +94,52 @@ function showMessage(text, color = "red") {
     }, 4000);
 }
 
-// ================= AUTH STATE =================
-auth.onAuthStateChanged(async (user) => {
-    // Top bar remains simple "Back to Game"
-});
-
-// ================= WITHDRAWAL LOGIC =================
 const amountInput = document.getElementById("amount");
 const withdrawBtn = document.getElementById("withdrawBtn");
 
-async function handleWithdrawal() {
-    const user = auth.currentUser;
+let currentUser = null;
+
+// ================= AUTH =================
+auth.onAuthStateChanged(async (user) => {
+
     if (!user) {
-        showMessage("Please login first", "red");
+        location.href = "register.html";
         return;
     }
 
-    let amount = parseFloat(amountInput.value);
+    currentUser = user;
+
+    // Optional: listen for balance changes
+    db.collection("users")
+      .doc(user.uid)
+      .onSnapshot((doc) => {
+
+        if (!doc.exists) return;
+
+        const data = doc.data();
+
+        const balanceElement =
+        document.getElementById("balance");
+
+        if (balanceElement) {
+            balanceElement.textContent =
+                Number(data.balance || 0).toFixed(2);
+        }
+
+      });
+
+});
+
+// ================= WITHDRAW =================
+async function handleWithdrawal() {
+
+    if (!currentUser) {
+        showMessage("Login required");
+        return;
+    }
+
+    const amount = Number(amountInput.value);
+
     if (!amount || amount < 1000) {
         showMessage("Minimum withdrawal is ₦1000", "#ffaa00");
         return;
@@ -139,55 +149,67 @@ async function handleWithdrawal() {
     withdrawBtn.textContent = "PROCESSING...";
 
     try {
-        let { data: userData, error: fetchError } = await supabaseClient
-            .from("Users")
-            .select("Balance")
-            .eq("Email", user.email)
-            .maybeSingle();
 
-        if (fetchError || !userData) {
-            showMessage("Error fetching balance", "red");
-            resetButton();
-            return;
-        }
+        const idToken =
+        await currentUser.getIdToken();
 
-        const currentBalance = parseFloat(userData.Balance || 0);
+        const response =
+        await fetch("http://localhost:3000/withdraw", {
 
-        if (amount > currentBalance) {
-            showMessage("Insufficient balance", "#ffaa00");
-            resetButton();
-            return;
-        }
+            method: "POST",
 
-        const newBalance = currentBalance - amount;
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${idToken}`
+            },
 
-        const { error: updateError } = await supabaseClient
-            .from("Users")
-            .update({ Balance: newBalance })
-            .eq("Email", user.email);
+            body: JSON.stringify({
+                amount
+            })
 
-        if (updateError) {
-            console.error(updateError);
-            showMessage("Withdrawal failed. Try again.", "red");
+        });
+
+        const result =
+        await response.json();
+
+        if (!result.success) {
+
+            showMessage(
+                result.error || "Withdrawal failed",
+                "red"
+            );
+
         } else {
-            showMessage(`₦${amount} withdrawal request submitted successfully!`, "lime");
+
+            showMessage(
+                "Withdrawal request submitted!",
+                "lime"
+            );
+
             amountInput.value = "";
+
         }
+
     } catch (err) {
+
         console.error(err);
-        showMessage("Something went wrong", "red");
+
+        showMessage(
+            "Server error",
+            "red"
+        );
+
     }
 
-    resetButton();
-}
-
-function resetButton() {
     withdrawBtn.disabled = false;
     withdrawBtn.textContent = "WITHDRAW NOW";
+
 }
 
-// Button Click
-withdrawBtn.addEventListener("click", handleWithdrawal);
+withdrawBtn.addEventListener(
+    "click",
+    handleWithdrawal
+);
 
 </script>
 </body>

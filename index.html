@@ -200,18 +200,40 @@ auth.onAuthStateChanged((user) => {
     const topBar = document.getElementById("topBar");
     
     if (user) {
-        topBar.innerHTML = `
-            <div style="display:flex; align-items:center; justify-content:space-between; width:100%; padding:0 12px; box-sizing:border-box; gap:10px;">
-                <button onclick="deposit()" style="background:#00aa44; color:white; border:none; padding:8px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">DEPOSIT</button>
-                <div style="color:#00ff88; font-weight:bold; font-size:18px; flex:1; text-align:center;">₦<span id="balance">0.00</span></div>
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <button onclick="withdraw()" style="background:#ff8800; color:white; border:none; padding:8px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">WITHDRAW</button>
-                    <button onclick="showSettings()" style="background:none; border:none; font-size:28px; cursor:pointer; color:white; padding:5px;">⚙️</button>
-                </div>
+
+    topBar.innerHTML = `
+        <div style="display:flex; align-items:center; justify-content:space-between; width:100%; padding:0 12px; box-sizing:border-box; gap:10px;">
+            <button onclick="deposit()" style="background:#00aa44; color:white; border:none; padding:8px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">DEPOSIT</button>
+
+            <div style="color:#00ff88; font-weight:bold; font-size:18px; flex:1; text-align:center;">
+                ₦<span id="balance">0.00</span>
             </div>
-        `;
-        updateInvestButtons(true);
-    } else {
+
+            <div style="display:flex; align-items:center; gap:12px;">
+                <button onclick="withdraw()" style="background:#ff8800; color:white; border:none; padding:8px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">WITHDRAW</button>
+
+                <button onclick="showSettings()" style="background:none; border:none; font-size:28px; cursor:pointer; color:white; padding:5px;">⚙️</button>
+            </div>
+        </div>
+    `;
+
+    updateInvestButtons(true);
+
+    // 🔥 Listen for balance changes in Firestore
+    db.collection("users")
+      .doc(user.uid)
+      .onSnapshot((doc) => {
+
+          if (!doc.exists) return;
+
+          const data = doc.data();
+
+          document.getElementById("balance").textContent =
+              Number(data.balance || 0).toFixed(2);
+
+      });
+
+} else {
         topBar.innerHTML = `<button class="top-btn" onclick="window.location.href='login.html'">Login</button>`;
         updateInvestButtons(false);
     }

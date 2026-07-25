@@ -124,7 +124,120 @@ app.post("/verify-payment", async (req, res) => {
     res.status(500).json({ error: "Verification failed" });
   }
 });
+// ================= WITHDRAW =================
+app.post("/withdraw", async (req, res) => {
 
+  try {
+
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        success: false,
+        error: "Unauthorized"
+      });
+    }
+
+    const idToken = authHeader.split("Bearer ")[1];
+
+    const decodedToken =
+      await admin.auth().verifyIdToken(idToken);
+
+    const uid = decodedToken.uid;
+
+    const { amount } = req.body;
+
+    if (!amount || amount < 1000) {
+      return res.json({
+        success: false,
+        error: "Minimum withdrawal is ₦1000"
+      });
+    }
+
+    const userRef =
+      db.collection("users").doc(uid);
+
+    const withdrawalRef =
+      db.collection("withdrawals").doc();
+
+    const result =
+      await db.runTransaction(async (transaction) => {
+
+        const userSnap =
+          await transaction.get(userRef);
+
+        if (!userSnap.exists) {
+          return {
+            status: "userNotFound"
+          };
+        }
+
+        const currentBalance =
+          Number(userSnap.data().balance || 0);
+
+        if (currentBalance < amount) {
+          return {
+            status: "insufficientFunds"
+          };
+        }
+
+        const newBalance =
+          currentBalance - amount;
+
+        transaction.update(userRef, {
+          balance: newBalance
+        });
+
+        transaction.set(withdrawalRef, {
+          uid,
+          amount,
+          status: "pending",
+          createdAt:
+            admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        return {
+          status: "success",
+          balance: newBalance
+        };
+
+      });
+
+    switch (result.status) {
+
+      case "userNotFound":
+        return res.json({
+          success: false,
+          error: "User not found"
+        });
+
+      case "insufficientFunds":
+        return res.json({
+          success: false,
+          error: "Insufficient balance"
+        });
+
+      case "success":
+        return res.json({
+          success: true,
+          balance: result.balance,
+          message: "Withdrawal request submitted"
+        });
+
+    }
+
+  } catch (error) {
+
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Withdrawal failed"
+    });
+
+  }
+
+});
 app.listen(3000, () => {
   console.log("Server running on port 3000");
 });
