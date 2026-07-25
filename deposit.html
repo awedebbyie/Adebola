@@ -49,7 +49,7 @@
             >
 
             <div style="margin-bottom:20px; padding:0 10px; font-size:14px; color:#aaa; text-align:center;">
-                You will be redirected to Paystack to complete your payment securely.
+                You will be redirected to Flutterwave to complete your payment securely.
             </div>
 
             <button id="depositBtn" class="invest-btn" style="width:100%; height:58px; margin-bottom:20px;">
@@ -64,7 +64,7 @@
         </div>
     </div>
 
-    <script src="https://js.paystack.co/v1/inline.js"></script>
+    <script src="https://checkout.flutterwave.com/v3.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -173,7 +173,7 @@ function handleInvest() {
 
 }
 
-// ================= PAYSTACK PAYMENT =================
+// ================= FLUTTERWAVE PAYMENT =================
 
 const amountInput =
 document.getElementById("amount");
@@ -181,7 +181,7 @@ document.getElementById("amount");
 const depositBtn =
 document.getElementById("depositBtn");
 
-function payWithPaystack(){
+function payWithFlutterwave(){
 
     const user =
     auth.currentUser;
@@ -222,18 +222,21 @@ function payWithPaystack(){
     let paymentRef =
     "AVI-" + Date.now();
 
-    let handler =
-    PaystackPop.setup({
+    FlutterwaveCheckout({
 
-        key:"pk_test_ff5168e3103fbd4034574de88fd3be28a623b863",
+        public_key:"FLWPUBK_TEST-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-X",
 
-        email:user.email,
+        tx_ref:paymentRef,
 
-        amount:amount*100,
+        amount:amount,
 
         currency:"NGN",
 
-        ref:paymentRef,
+        payment_options:"card,banktransfer,ussd",
+
+        customer:{
+            email:user.email
+        },
 
         callback: function(response){
 
@@ -258,7 +261,8 @@ function payWithPaystack(){
 
                 body: JSON.stringify({
     uid: user.uid,
-    reference: response.reference
+    transaction_id: response.transaction_id,
+    tx_ref: response.tx_ref
 })
 
             });
@@ -310,7 +314,7 @@ function payWithPaystack(){
 
 },
 
-        onClose: function(){
+        onclose: function(){
 
             showMessage(
                 "Payment cancelled",
@@ -325,12 +329,10 @@ function payWithPaystack(){
         }
 
     });
-
-    handler.openIframe();
 }
 depositBtn.addEventListener(
     "click",
-    payWithPaystack
+    payWithFlutterwave
 );
 
 </script>

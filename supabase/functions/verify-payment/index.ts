@@ -22,28 +22,28 @@ function jsonResponse(body: unknown, status = 200) {
 serve(async (req) => {
   try {
     const body = await req.json();
-    const { uid, reference } = body;
+    const { uid, transaction_id, tx_ref } = body;
 
-    if (!uid || !reference) {
+    if (!uid || !transaction_id || !tx_ref) {
       return jsonResponse(
-        { success: false, error: "Missing uid or reference" },
+        { success: false, error: "Missing uid, transaction_id or tx_ref" },
         400
       );
     }
 
-    const PAYSTACK_SECRET = Deno.env.get("PAYSTACK_SECRET");
+    const FLW_SECRET_KEY = Deno.env.get("FLW_SECRET_KEY");
 
     const verifyResponse = await fetch(
-      `https://api.paystack.co/transaction/verify/${reference}`,
+      `https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`,
       {
-        headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` }
+        headers: { Authorization: `Bearer ${FLW_SECRET_KEY}` }
       }
     );
 
     const verifyData = await verifyResponse.json();
     const tx = verifyData.data;
 
-    if (!tx || tx.status !== "success") {
+    if (!tx || tx.status !== "successful" || tx.tx_ref !== tx_ref) {
       return jsonResponse({ success: false, error: "Payment not completed" });
     }
 
@@ -62,8 +62,8 @@ serve(async (req) => {
       });
     }
 
-    const amount = tx.amount / 100;
-    const txRef = db.collection("transactions").doc(reference);
+    const amount = tx.amount;
+    const txRef = db.collection("transactions").doc(tx_ref);
 
     const result = await db.runTransaction(async (transaction) => {
       const [txSnap, userSnapInTx] = await Promise.all([

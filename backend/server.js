@@ -18,31 +18,31 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+const FLW_SECRET_KEY = process.env.FLW_SECRET_KEY;
 
 app.post("/verify-payment", async (req, res) => {
   try {
-    const { uid, reference } = req.body;
+    const { uid, transaction_id, tx_ref } = req.body;
 
-    if (!uid || !reference) {
+    if (!uid || !transaction_id || !tx_ref) {
       return res.status(400).json({
         success: false,
-        error: "Missing uid or reference"
+        error: "Missing uid, transaction_id or tx_ref"
       });
     }
 
     const response = await axios.get(
-      `https://api.paystack.co/transaction/verify/${reference}`,
+      `https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`,
       {
         headers: {
-          Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`
+          Authorization: `Bearer ${FLW_SECRET_KEY}`
         }
       }
     );
 
     const tx = response.data.data;
 
-    if (tx.status !== "success") {
+    if (tx.status !== "successful" || tx.tx_ref !== tx_ref) {
       return res.json({ success: false, error: "Payment not successful" });
     }
 
@@ -64,8 +64,8 @@ app.post("/verify-payment", async (req, res) => {
       });
     }
 
-    const amount = tx.amount / 100;
-    const txRef = db.collection("transactions").doc(reference);
+    const amount = tx.amount;
+    const txRef = db.collection("transactions").doc(tx_ref);
 
     const result = await db.runTransaction(async (transaction) => {
       const [txSnap, userSnapInTx] = await Promise.all([
