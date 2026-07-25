@@ -68,6 +68,25 @@ function generateCrashPoint() {
     return Number(crashPoint);
 }
 
+async function settleLostBets(roundId) {
+    while (true) {
+        const { error } = await supabase
+            .from("bets")
+            .update({ status: "lost" })
+            .eq("round_id", roundId)
+            .eq("status", "active");
+
+        if (!error) {
+            return true;
+        }
+
+        console.log("⚠️ Connection lost. Retrying in 1 second...");
+        console.log(error.message);
+
+        await sleep(1000);
+    }
+}
+
 async function updateMultiplier(roundId, crashPoint) {
     let multiplier = 1.00;
 
@@ -122,6 +141,17 @@ async function updateMultiplier(roundId, crashPoint) {
         "id",
         roundId
     );
+
+    // Server-side safety net: any bet still "active" for this round never
+    // cashed out before the crash, so it's a loss. The frontend also marks
+    // its own bets "lost" the moment it sees status "crashed", but doing it
+    // here too means a bet isn't stuck "active" forever if the player's tab
+    // was closed/disconnected before the crash. The extra .eq("status",
+    // "active") filter is what keeps this from also clobbering rows that
+    // already made it to "cashed_out".
+    await settleLostBets(roundId);
+
+    console.log("✅ Losing bets settled.");
 }
 
 async function runRound() {

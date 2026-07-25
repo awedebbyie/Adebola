@@ -90,6 +90,19 @@ if (
     console.log("🚁 Starting frontend animation...");
     window.beginRound(state.multiplier);
 }
+
+    // The round just crashed - settle any of my own still-active bets as
+    // losses. Guarded by round_id so this only fires once per round even
+    // though this function runs on every 250ms poll tick.
+    if (
+        state.status === "crashed" &&
+        window.lastCrashedRoundId !== state.round_id &&
+        typeof window.settleLostBets === "function"
+    ) {
+        window.lastCrashedRoundId = state.round_id;
+        window.settleLostBets();
+    }
+
     console.log("Status:", state.status, "Multiplier:", state.multiplier);
 }
 
