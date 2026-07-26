@@ -225,14 +225,27 @@ saveBtn.addEventListener('click', async () => {
 
         await claimUsername(currentUser.uid, username, previousUsername);
 
-        await db.collection("users").doc(currentUser.uid).set({
+        // Re-check right before writing, so we know whether this save is the
+        // one creating the doc (Google/registration flow never ran or was
+        // interrupted) and needs balance/createdAt seeded.
+        const existingSnap = await db.collection("users").doc(currentUser.uid).get();
+        const payload = {
             username: username,
             email: currentUser.email,
             age: age,
             gender: gender,
             phone: phone,
             dob: dob
-        }, { merge: true });
+        };
+
+        if (!existingSnap.exists || existingSnap.data().balance === undefined) {
+            payload.balance = 0;
+        }
+        if (!existingSnap.exists || existingSnap.data().createdAt === undefined) {
+            payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        }
+
+        await db.collection("users").doc(currentUser.uid).set(payload, { merge: true });
 
         showMessage("Profile saved! Redirecting...", "lime");
 
