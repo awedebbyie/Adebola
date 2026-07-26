@@ -1,345 +1,339 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aviator Bet History</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: white;
-            color: #fff;
-            max-width: 100%;
-            margin: 0 auto;
-            height: 100vh;
-            overflow: hidden;
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
-        }
-        
-        .bet-history-panel {
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
-        }
-        
-        .panel-scroll-content {
-            flex: 1;
-            overflow-y: auto;
-            padding-bottom: 70px;
-            scrollbar-width: thin;
-            scrollbar-color: #444 #222;
-        }
-        
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 700;
-            color: #ffd700;
-        }
-        
-        /* Tabs */
-        .history-tabs {
-            display: flex;
-            background: #1f1f2e;
-            border-bottom: 1px solid #333;
-        }
-        
-        .tab-btn {
-            flex: 1;
-            padding: 14px 0;
-            background: none;
-            border: none;
-            color: #aaa;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .tab-btn.active {
-            color: #00ff88;
-            border-bottom: 3px solid #00ff88;
-            position: relative;
-        }
-        
-        /* ALL BETS HEADER */
-        .all-bets-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 16px;
-            background: #1a1a2e;
-            border-bottom: 1px solid #2a2a3a;
-        }
-        
-        .bets-count {
-            font-size: 14px;
-            color: #ddd;
-        }
-        
-        .bets-count span {
-            color: #00ff88;
-            font-weight: 700;
-        }
-        
-        .total-win {
-            text-align: right;
-            font-size: 15px;
-            font-weight: 700;
-        }
-        
-        .total-win span:last-child {
-            font-size: 12px;
-            color: #888;
-            font-weight: 400;
-            display: block;
-        }
-        
-        /* Table Header */
-        .bets-table-header {
-            display: grid;
-            grid-template-columns: 42px 1fr 88px 62px 88px;
-            padding: 10px 16px;
-            background: #25253a;
-            font-size: 13px;
-            color: #999;
-            border-bottom: 1px solid #333;
-            font-weight: 500;
-        }
-        
-        .bets-table-header div:last-child {
-            text-align: right;
-        }
-        
-        /* History List */
-        .history-list {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .bet-row {
-            display: grid;
-            grid-template-columns: 42px 1fr 88px 62px 88px;
-            padding: 12px 16px;
-            border-bottom: 1px solid #2a2a3a;
-            align-items: center;
-            font-size: 14px;
-            transition: background 0.2s;
-        }
-        
-        .bet-row:hover {
-            background: rgba(0, 255, 136, 0.06);
-        }
-        
-        .bet-row:last-child {
-            border-bottom: none;
-        }
-        
-        .avatar {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #3a3a5a, #1f1f3a);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            overflow: hidden;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        }
-        
-        .player-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .player-name {
-            font-size: 14.5px;
-            color: #ddd;
-            font-weight: 500;
-        }
-        
-        .bet-amount {
-            color: #fff;
-            font-weight: 600;
-        }
-        
-        .multiplier {
-            color: #00ff88;
-            font-weight: 700;
-        }
-        
-        .multiplier.lost {
-            color: #ff6666;
-        }
-        
-        .win-amount {
-            text-align: right;
-            font-weight: 700;
-            color: #00ff88;
-        }
-        
-        .win-amount.lost {
-            color: #888;
-        }
-        
-        /* Highlight for big wins */
-        .bet-row.highlight {
-            background: rgba(255, 215, 0, 0.1);
-            border-left: 3px solid #ffd700;
-        }
-        
-        /* Placeholder styles */
-        .placeholder {
-            opacity: 0.6;
-        }
-        
-        .progress-bar {
-            height: 3px;
-            background: linear-gradient(to right, #00ff88, #00cc66);
-            margin-top: 6px;
-            border-radius: 2px;
-        }
-    </style>
-</head>
-<body>
+<!--
+    This file is a fragment, not a standalone page: js/loadBetHistory.js
+    fetches it and injects the raw text into #betHistoryContainer via
+    innerHTML, directly into index.html's live DOM. Because of that:
+
+    - No <html>/<head>/<body>/<!DOCTYPE> here - there's nowhere for a
+      second one of those to go, it's already inside index.html's.
+    - Every CSS selector below is scoped under .bet-history-panel so
+      nothing here can ever leak out and restyle the rest of the page.
+      (A previous version used bare selectors like `.multiplier` and
+      `body` - since <style> tags DO run when injected via innerHTML,
+      that silently redefined index.html's global `.multiplier` class
+      used for the big flight-multiplier display, making every cashed
+      -out bet row in this panel render as a second, absolutely
+      -positioned multiplier stacked on top of the real one. Keep every
+      rule below scoped to avoid that ever happening again.)
+    - No inline <script> - inserted via innerHTML, it would never run.
+      All real behavior (tab switching, live rendering) lives in
+      js/loadBetHistory.js and js/bets.js, which query this markup by
+      id/class after it's injected.
+-->
+<style>
+    .bet-history-panel, .bet-history-panel * {
+        box-sizing: border-box;
+    }
+
+    .bet-history-panel {
+        display: flex;
+        flex-direction: column;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        color: #fff;
+        background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+        border-radius: 12px;
+        border: 1px solid #444;
+        overflow: hidden;
+    }
+
+    .bet-history-panel .panel-scroll-content {
+        flex: 1;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: #444 #222;
+    }
+
+    /* Tabs */
+    .bet-history-panel .history-tabs {
+        display: flex;
+        background: #1f1f2e;
+        border-bottom: 1px solid #333;
+        flex-shrink: 0;
+    }
+
+    .bet-history-panel .tab-btn {
+        flex: 1;
+        padding: 14px 4px;
+        background: none;
+        border: none;
+        color: #aaa;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+    .bet-history-panel .tab-btn .tab-count {
+        color: inherit;
+        opacity: 0.75;
+        font-weight: 500;
+    }
+
+    .bet-history-panel .tab-btn.active {
+        color: #00ff88;
+        border-bottom: 3px solid #00ff88;
+        position: relative;
+    }
+
+    /* Slim stat line */
+    .bet-history-panel .stat-line {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 6px 12px;
+        padding: 8px 16px;
+        background: #1a1a2e;
+        border-bottom: 1px solid #2a2a3a;
+        font-size: 12px;
+        color: #999;
+    }
+
+    .bet-history-panel .stat-line strong {
+        color: #00ff88;
+        font-weight: 700;
+    }
+
+    /* Table Header */
+    .bet-history-panel .bets-table-header {
+        display: grid;
+        grid-template-columns: 1fr 84px 62px 96px;
+        padding: 10px 16px;
+        background: #25253a;
+        font-size: 12.5px;
+        color: #999;
+        border-bottom: 1px solid #333;
+        font-weight: 500;
+        gap: 6px;
+    }
+
+    .bet-history-panel .bets-table-header.with-avatar {
+        grid-template-columns: 36px 1fr 84px 18px 96px;
+    }
+
+    .bet-history-panel .bets-table-header div:nth-child(2) {
+        text-align: left;
+        margin-left:-55px
+    }
+
+     .bet-history-panel .bets-table-header div:nth-child(3) {
+        margin-left:20px
+    }
+
+     .bet-history-panel .bets-table-header div:nth-child(4) {
+        margin-left:20px
+    }
+
+    .bet-history-panel .bets-table-header div:last-child {
+        text-align: right;
+    }
+
+    /* History List */
+    .bet-history-panel .history-list {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .bet-history-panel .bet-row {
+        display: grid;
+        grid-template-columns: 1fr 84px 62px 96px;
+        gap: 6px;
+        padding: 11px 16px;
+        border-bottom: 1px solid #2a2a3a;
+        align-items: center;
+        font-size: 13.5px;
+        transition: background 0.2s;
+    }
+
+    .bet-history-panel .bet-row.with-avatar {
+        grid-template-columns: 36px 1fr 84px 18px 96px;
+    }
+
+    .bet-history-panel .bet-row:hover {
+        background: rgba(0, 255, 136, 0.06);
+    }
+
+    .bet-history-panel .bet-row:last-child {
+        border-bottom: none;
+    }
+
+    .bet-history-panel .avatar {
+        width: 30px;
+        height: 30px;
+        margin-left: -15px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #3a3a5a, #1f1f3a);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 700;
+        overflow: hidden;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        flex-shrink: 0;
+    }
+
+    .bet-history-panel .avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+
+    .bet-history-panel .player-name {
+        color: #ddd;
+        display: block;
+        opacity:1;
+        visibility: visible;
+        margin-left:-20px
+    }
+
+    .bet-history-panel .bet-amount {
+        color: #fff;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* NOTE: intentionally named .bet-coeff, NOT .multiplier - style.css
+       already defines a page-wide .multiplier rule (the big absolutely
+       -positioned flight display) and reusing that name here caused the
+       stacked-numbers bug. Keep this name distinct. */
+    .bet-history-panel .bet-coeff {
+        color: #00ff88;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    .bet-history-panel .bet-coeff.lost {
+        color: #ff6666;
+    }
+
+    .bet-history-panel .win-amount {
+        text-align: right;
+        font-weight: 700;
+        color: #00ff88;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .bet-history-panel .win-amount.lost {
+        color: #888;
+    }
+
+    /* Auto-shrink for long numbers so they never wrap or clip - applied
+       by js/bets.js based on the formatted string length. */
+    .bet-history-panel .value-md {
+        font-size: 12.5px;
+    }
+
+    .bet-history-panel .value-sm {
+        font-size: 11px;
+        letter-spacing: -0.2px;
+    }
+
+    /* Highlight for big wins */
+    .bet-history-panel .bet-row.highlight {
+        background: rgba(255, 215, 0, 0.1);
+        border-left: 3px solid #ffd700;
+    }
+
+    .bet-history-panel .placeholder {
+        opacity: 0.6;
+    }
+
+    /* Tab panels - loadBetHistory.js toggles the .active class */
+    .bet-history-panel .tab-content {
+        display: none;
+    }
+
+    .bet-history-panel .tab-content.active {
+        display: block;
+    }
+
+    .bet-history-panel .empty-state {
+        padding: 24px 16px;
+        text-align: center;
+        color: #777;
+        font-size: 14px;
+    }
+</style>
 
 <div class="bet-history-panel">
 
-        <!-- Tabs -->
-        <div class="history-tabs">
-            <button class="tab-btn active" data-tab="all">All Bets</button>
-            <button class="tab-btn" data-tab="my">My Bets</button>
-            <button class="tab-btn" data-tab="top">Top Wins</button>
-        </div>
+    <!-- Tabs -->
+    <div class="history-tabs">
+        <button class="tab-btn active" data-tab="all">All Bets <span class="tab-count" id="allBetsTabCount">(0)</span></button>
+        <button class="tab-btn" data-tab="my">My Bets</button>
+        <button class="tab-btn" data-tab="top">Top Wins</button>
+    </div>
+
+    <div class="panel-scroll-content">
 
         <!-- ALL BETS TAB -->
-        <div class="panel-scroll-content">
-            <div id="tab-all">
-                <div class="all-bets-header">
-                    <div>
-                        <div class="bets-count">
-                            <span id="betCount">0</span> Bets
-                        </div>
-                        <div class="progress-bar"></div>
-                    </div>
+        <div id="tab-all" class="tab-content active">
+            <div class="stat-line">
+                <span><strong id="totalBets">0</strong> Total Bets</span>
+                <span><strong id="playerCount">0</strong> Players Invested</span>
+                <span>₦<strong id="totalWin">0.00</strong> Total Win</span>
+            </div>
 
-                    <div class="total-win">
-                        ₦<span id="totalWin">0.00</span><br>
-                        <span>Total Win NGN</span>
-                    </div>
-                </div>
+            <div class="bets-table-header with-avatar">
+                <div></div>
+                <div>Name</div>
+                <div>Bet</div>
+                <div>Coeff</div>
+                <div>Win</div>
+            </div>
 
-                <div class="bets-table-header">
-                    <div></div>
-                    <div>Player</div>
-                    <div>Bet NGN</div>
-                    <div>X</div>
-                    <div>Win NGN</div>
-                </div>
-
-                <div class="history-list" id="all-bets-list">
-                    <!-- Populated by JavaScript -->
-                </div>
+            <div class="history-list" id="all-bets-list">
+                <!-- Populated by js/bets.js: listenForBets() -->
             </div>
         </div>
+
+        <!-- MY BETS TAB -->
+        <div id="tab-my" class="tab-content">
+            <div class="stat-line">
+                <span><strong id="myBetCount">0</strong> Total Bets</span>
+                <span>₦<strong id="myTotalWin">0.00</strong> Total Win</span>
+            </div>
+
+            <div class="bets-table-header with-avatar">
+                <div></div>
+                <div>Round ID</div>
+                <div>Bet</div>
+                <div>Coeff</div>
+                <div>Win</div>
+            </div>
+
+            <div class="history-list" id="my-bets-list">
+                <!-- Populated by js/bets.js: listenForMyBetHistory() -->
+            </div>
+        </div>
+
+        <!-- TOP WINS TAB -->
+        <div id="tab-top" class="tab-content">
+            <div class="stat-line">
+                <span>Biggest cash-outs recently</span>
+            </div>
+
+            <div class="bets-table-header with-avatar">
+                <div></div>
+                <div>Name</div>
+                <div>Bet</div>
+                <div>Coeff</div>
+                <div>Win</div>
+            </div>
+
+            <div class="history-list" id="top-wins-list">
+                <!-- Populated by js/bets.js: listenForTopWins() -->
+            </div>
+        </div>
+
+    </div>
 </div>
-
-    <script>
-        // Sample placeholder data (for demonstration only - replace with real data in production)
-        const sampleBets = [
-            {
-                avatar: "🦅",
-                name: "J***R",
-                bet: "500000",
-                coeff: "6.3x",
-                win: "3150000",
-                highlight: true
-            },
-            {
-                avatar: "🐬",
-                name: "H***O",
-                bet: "25000",
-                coeff: "122.72x",
-                win: "3068000",
-                highlight: true
-            },
-            {
-                avatar: "🦈",
-                name: "J***O",
-                bet: "500000",
-                coeff: "6x",
-                win: "3000000",
-                highlight: true
-            },
-            {
-                avatar: "🐟",
-                name: "b***o",
-                bet: "250000",
-                coeff: "--",
-                win: "0",
-                lost: true
-            }
-        ];
-
-        function createBetRow(bet) {
-            const row = document.createElement('div');
-            row.className = `bet-row ${bet.highlight ? 'highlight' : ''} ${bet.lost ? 'placeholder' : ''}`;
-            
-            row.innerHTML = `
-                <div class="avatar">${bet.avatar}</div>
-                <div class="player-info">
-                    <div class="player-name">${bet.name}</div>
-                </div>
-                <div class="bet-amount">${bet.bet}</div>
-                <div class="multiplier ${bet.lost ? 'lost' : ''}">${bet.coeff}</div>
-                <div class="win-amount ${bet.lost ? 'lost' : ''}">${bet.win}</div>
-            `;
-            return row;
-        }
-
-        // Populate sample data
-        function populateBets() {
-            const container = document.getElementById('all-bets-list');
-            container.innerHTML = '';
-            
-            sampleBets.forEach(bet => {
-                container.appendChild(createBetRow(bet));
-            });
-        }
-
-        // Tab functionality
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
-                // For demo purposes only
-                if (btn.dataset.tab === 'all') {
-                    document.getElementById('tab-all').style.display = 'block';
-                }
-            });
-        });
-
-        // Initialize
-        window.onload = () => {
-            populateBets();
-            
-            // Set placeholder totals
-            document.getElementById('betCount').textContent = "783";
-            document.getElementById('totalWin').textContent = "0.00";
-        };
-    </script>
-</body>
-</html>

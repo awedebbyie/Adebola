@@ -19,6 +19,31 @@ const sb = window.supabaseClient;
 let myBetsPollTimer = null;
 let allBetsPollTimer = null;
 
+// Tracks whether the `bets` table actually has the username/photo_url
+// columns yet (added by the supabase/migrations/*_add_username_to_bets.sql
+// and *_add_photo_url_to_bets.sql migrations). Starts optimistic; flips to
+// false the first time Postgres/PostgREST reports either column missing,
+// so every insert/select after that just stops asking for them instead of
+// failing outright. This is the fix for bets you place not showing up
+// anywhere: previously, if those columns weren't migrated yet, the INSERT
+// in createBet() would error out completely (bet never placed, balance
+// refunded) with only a generic alert - and separately, every SELECT in
+// listenForBets()/listenForMyBetHistory() would also error and silently
+// leave the list empty, no matter whose bets they were.
+let profileColumnsAvailable = true;
+
+function isMissingColumnError(error) {
+    if (!error) return false;
+    const code = String(error.code || "");
+    const text = `${error.message || ""} ${error.details || ""} ${error.hint || ""}`.toLowerCase();
+    return (
+        code === "42703" || // Postgres: undefined_column
+        code === "PGRST204" || // PostgREST: column not found in schema cache
+        text.includes("schema cache") ||
+        (text.includes("column") && (text.includes("does not exist") || text.includes("could not find")))
+    );
+}
+
 window.mySlotState = window.mySlotState || {}; // { [slot]: { id, status, amount, cashOutMultiplier, profit } }
 window.isProcessingCashOut = window.isProcessingCashOut || {}; // { [slot]: true } while a cash-out request is in flight
 window.isPlacingBet = window.isPlacingBet || {};               // { [slot]: true } while an insert is in flight
@@ -133,18 +158,51 @@ async function createBet(amount, betSlot) {
             balance: balance - amount
         });
 
-        const { data: bet, error: insertError } = await sb
+        const username = userDoc.data().username || user.displayName || user.email;
+        // NOTE: photoURL only ever gets written to Firebase Auth's own
+        // profile (user.updateProfile({photoURL: ...}) in register.html /
+        // login.html / profile.html) - the Firestore "users" doc never
+        // stores it. Reading userDoc.data().photoURL here was always
+        // undefined, which is why every avatar fell back to a plain
+        // initial. auth.currentUser.photoURL is the actual source of truth.
+        const photoUrl = user.photoURL || null;
+
+        const basePayload = {
+            user_id: user.uid,
+            email: user.email,
+            round_id: roundId,
+            amount: Number(amount),
+            placed_at: new Date().toISOString(),
+            status: "active"
+        };
+
+        const insertPayload = profileColumnsAvailable
+            ? { ...basePayload, username, photo_url: photoUrl }
+            : basePayload;
+
+        let { data: bet, error: insertError } = await sb
             .from("bets")
-            .insert({
-                user_id: user.uid,
-                email: user.email,
-                round_id: roundId,
-                amount: Number(amount),
-                placed_at: new Date().toISOString(),
-                status: "active"
-            })
+            .insert(insertPayload)
             .select()
             .single();
+
+        // The username/photo_url migrations (supabase/migrations/*.sql)
+        // haven't been applied/refreshed yet - retry once without those
+        // columns instead of losing the bet entirely.
+        if (insertError && profileColumnsAvailable && isMissingColumnError(insertError)) {
+            console.warn(
+                "bets.username/photo_url column not found - have the migrations in " +
+                "supabase/migrations been run (and the PostgREST schema cache reloaded)? " +
+                "Falling back to placing bets without them for now."
+            );
+            profileColumnsAvailable = false;
+
+            ({ data: bet, error: insertError } = await sb
+                .from("bets")
+                .insert(basePayload)
+                .select()
+                .single());
+        }
 
         if (insertError) {
             // Bet never actually got placed - refund.
@@ -166,6 +224,22 @@ async function createBet(amount, betSlot) {
 
         if (typeof window.refreshAllBetButtons === "function") {
             window.refreshAllBetButtons();
+        }
+
+        // Show it in the panel right away rather than waiting up to 1s for
+        // the next listenForBets()/listenForMyBetHistory() poll tick.
+        if (typeof window.renderOptimisticBet === "function") {
+            window.renderOptimisticBet({
+                user_id: user.uid,
+                username,
+                email: user.email,
+                photo_url: photoUrl,
+                round_id: roundId,
+                amount: Number(amount),
+                status: "active",
+                cash_out_multiplier: null,
+                profit: 0
+            });
         }
 
     } catch (error) {
@@ -419,7 +493,194 @@ auth.onAuthStateChanged((user) => {
 });
 
 // =========================
-// ALL BETS (public bet list panel, if present in the DOM)
+// FORMATTING HELPERS
+// =========================
+function formatNaira(amount) {
+    return Number(amount || 0).toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+// Picks a font-size class based on how long the formatted number is, so
+// big values (e.g. "4,531,740.54") shrink to fit their column instead of
+// wrapping or getting clipped.
+function shrinkClassFor(text) {
+    const len = String(text).length;
+    if (len > 10) return "value-sm";
+    if (len > 6) return "value-md";
+    return "";
+}
+
+function maskUsername(name) {
+    // Same "J***R" style masking already used in the panel's placeholder
+    // data, applied to whatever the row actually has (username, falling
+    // back to the email local-part for older rows).
+    const clean = String(name || "Player").trim();
+    if (clean.length <= 2) return clean;
+    return clean[0] + "***" + clean[clean.length - 1];
+}
+
+function nameForBet(bet) {
+    return bet.username || (bet.email ? bet.email.split("@")[0] : "Player");
+}
+
+function avatarInitial(name) {
+    return String(name || "P").trim().charAt(0).toUpperCase() || "P";
+}
+
+// Shortens a round_id (int or uuid) down to something that fits a narrow
+// column, the same way the reference panel shows a compact "Round ID".
+function shortRoundId(roundId) {
+    const str = String(roundId || "");
+    return str.length > 9 ? str.slice(-8) : str;
+}
+
+// Builds the leading avatar element for a row: the player's real profile
+// picture (bet.photo_url, copied from their Firestore users doc at bet
+// time - see register.html/login.html for where photoURL first gets set)
+// when we have one, falling back to a plain initial otherwise. Uses real
+// DOM methods (not innerHTML) so a bad/broken image URL can swap itself
+// out for the fallback via a proper "error" listener, and so a username
+// can never inject markup into the page.
+function buildAvatarEl(bet) {
+    const el = document.createElement("div");
+    el.className = "avatar";
+
+    const initial = avatarInitial(nameForBet(bet));
+
+    if (bet.photo_url) {
+        const img = document.createElement("img");
+        img.src = bet.photo_url;
+        img.alt = "";
+        img.addEventListener("error", () => {
+            el.innerHTML = "";
+            el.textContent = initial;
+        });
+        el.appendChild(img);
+    } else {
+        el.textContent = initial;
+    }
+
+    return el;
+}
+
+// Builds one .bet-row. Every tab shows the player's profile picture by
+// default now - pass { withAvatar: false } to opt out.
+function createBetRowEl(bet, options) {
+    options = options || {};
+    const withAvatar = options.withAvatar !== false;
+    const firstColumnText = options.firstColumnText || maskUsername(nameForBet(bet));
+
+    const cashedOut = bet.status === "cashed_out";
+    const lost = bet.status === "lost";
+
+    const multiplierText = cashedOut
+        ? `${Number(bet.cash_out_multiplier).toFixed(2)}x`
+        : "--";
+
+    const betText = formatNaira(bet.amount);
+    const winText = cashedOut ? formatNaira(bet.profit) : "0";
+
+    const row = document.createElement("div");
+    row.className = `bet-row with-avatar ${cashedOut ? "highlight" : ""} ${lost ? "placeholder" : ""}`;
+
+    if (withAvatar) {
+        row.appendChild(buildAvatarEl(bet));
+    }
+
+    const nameEl = document.createElement("div");
+    nameEl.className = "player-name";
+    nameEl.textContent = firstColumnText;
+    row.appendChild(nameEl);
+
+    const betEl = document.createElement("div");
+    betEl.className = `bet-amount ${shrinkClassFor(betText)}`;
+    betEl.textContent = betText;
+    row.appendChild(betEl);
+
+    const coeffEl = document.createElement("div");
+    coeffEl.className = `bet-coeff ${lost ? "lost" : ""}`;
+    coeffEl.textContent = multiplierText;
+    row.appendChild(coeffEl);
+
+    const winEl = document.createElement("div");
+    winEl.className = `win-amount ${lost || !cashedOut ? "lost" : ""} ${shrinkClassFor(winText)}`;
+    winEl.textContent = winText;
+    row.appendChild(winEl);
+
+    return row;
+}
+
+// The full profile-aware column list, with a fallback that drops
+// username/photo_url if those migrations haven't been applied yet (see
+// isMissingColumnError() above) so the panel still populates instead of
+// silently staying empty.
+const BET_COLUMNS_FULL = "user_id, username, photo_url, email, round_id, amount, status, cash_out_multiplier, profit, placed_at";
+const BET_COLUMNS_FALLBACK = "user_id, email, round_id, amount, status, cash_out_multiplier, profit, placed_at";
+
+async function selectBetsResilient(applyQuery) {
+    const columns = profileColumnsAvailable ? BET_COLUMNS_FULL : BET_COLUMNS_FALLBACK;
+
+    let { data, error } = await applyQuery(sb.from("bets").select(columns));
+
+    if (error && profileColumnsAvailable && isMissingColumnError(error)) {
+        console.warn(
+            "bets.username/photo_url column not found on SELECT either - " +
+            "same missing-migration issue as the insert path. Retrying without them."
+        );
+        profileColumnsAvailable = false;
+        ({ data, error } = await applyQuery(sb.from("bets").select(BET_COLUMNS_FALLBACK)));
+    }
+
+    if (error) {
+        console.error("Bets query error:", error);
+        return null;
+    }
+
+    return data || [];
+}
+
+// =========================
+// OPTIMISTIC RENDER (called by createBet() right after a successful
+// insert, so a bet you place shows up immediately instead of waiting for
+// the next 1s poll tick)
+// =========================
+function bumpStat(id, delta) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const current = parseInt(el.textContent.replace(/[^\d]/g, ""), 10) || 0;
+    el.textContent = String(current + delta);
+}
+
+function renderOptimisticBet(bet) {
+    const allList = document.getElementById("all-bets-list");
+    if (allList) {
+        allList.insertBefore(createBetRowEl(bet), allList.firstChild);
+    }
+
+    const tabCountEl = document.getElementById("allBetsTabCount");
+    if (tabCountEl) {
+        const current = parseInt(tabCountEl.textContent.replace(/[^\d]/g, ""), 10) || 0;
+        tabCountEl.textContent = `(${current + 1})`;
+    }
+
+    bumpStat("totalBets", 1);
+
+    const myList = document.getElementById("my-bets-list");
+    if (myList) {
+        myList.insertBefore(
+            createBetRowEl(bet, { firstColumnText: shortRoundId(bet.round_id) }),
+            myList.firstChild
+        );
+        bumpStat("myBetCount", 1);
+    }
+}
+
+window.renderOptimisticBet = renderOptimisticBet;
+
+// =========================
+// ALL BETS (public bet list panel - current round, every player)
 // =========================
 function listenForBets() {
 
@@ -428,45 +689,152 @@ function listenForBets() {
         allBetsPollTimer = null;
     }
 
-    if (!window.currentGameState) return;
-
-    const roundId = window.currentGameState.round_id;
-
     const render = (rows) => {
         const list = document.getElementById("all-bets-list");
-        if (!list) return;
+        if (list) {
+            list.innerHTML = "";
+            rows.forEach((bet) => list.appendChild(createBetRowEl(bet)));
+        }
 
-        list.innerHTML = "";
+        // Stats: total bets placed (also mirrored into the tab label,
+        // matching the reference's "All Bets (777)" style), distinct
+        // players who invested, and the total amount won this round.
+        const tabCountEl = document.getElementById("allBetsTabCount");
+        const totalBetsEl = document.getElementById("totalBets");
+        const playerCountEl = document.getElementById("playerCount");
+        const totalWinEl = document.getElementById("totalWin");
 
-        rows.forEach((bet) => {
-            const row = document.createElement("div");
-            row.className = "bet-item";
-            row.innerHTML = `
-                <span>${bet.email || ""}</span>
-                <span>₦${bet.amount}</span>
-                <span>${bet.status}</span>
-            `;
-            list.appendChild(row);
-        });
+        if (tabCountEl) tabCountEl.textContent = `(${rows.length})`;
+        if (totalBetsEl) totalBetsEl.textContent = rows.length;
+
+        if (playerCountEl) {
+            const uniquePlayers = new Set(rows.map((b) => b.user_id)).size;
+            playerCountEl.textContent = uniquePlayers;
+        }
+
+        if (totalWinEl) {
+            const totalCashedOut = rows
+                .filter((b) => b.status === "cashed_out")
+                .reduce((sum, b) => sum + Number(b.profit || 0), 0);
+            totalWinEl.textContent = formatNaira(totalCashedOut);
+        }
     };
 
     const poll = async () => {
-        const { data, error } = await sb
-            .from("bets")
-            .select("email, amount, status, placed_at")
-            .eq("round_id", roundId)
-            .order("placed_at", { ascending: false });
+        const roundId = window.currentGameState && window.currentGameState.round_id;
+        if (!roundId) return; // gameState.js hasn't polled yet - try again next tick
 
-        if (error) {
-            console.error("listenForBets error:", error);
-            return;
-        }
+        const rows = await selectBetsResilient((query) =>
+            query.eq("round_id", roundId).order("placed_at", { ascending: false })
+        );
 
-        render(data || []);
+        if (rows === null) return; // query failed - error already logged, leave current UI as-is
+
+        render(rows);
     };
 
     poll();
     allBetsPollTimer = setInterval(poll, 1000);
+}
+
+// =========================
+// MY BETS TAB (this player's own bet history, across rounds)
+// =========================
+let myBetHistoryPollTimer = null;
+
+function listenForMyBetHistory() {
+
+    if (myBetHistoryPollTimer) {
+        clearInterval(myBetHistoryPollTimer);
+        myBetHistoryPollTimer = null;
+    }
+
+    const list = document.getElementById("my-bets-list");
+    if (!list) return; // "My Bets" tab isn't in the DOM (yet)
+
+    const render = (rows) => {
+        list.innerHTML = "";
+        rows.forEach((bet) => list.appendChild(
+            createBetRowEl(bet, { firstColumnText: shortRoundId(bet.round_id) })
+        ));
+
+        const betCountEl = document.getElementById("myBetCount");
+        const totalWinEl = document.getElementById("myTotalWin");
+
+        if (betCountEl) betCountEl.textContent = rows.length;
+
+        if (totalWinEl) {
+            const totalCashedOut = rows
+                .filter((b) => b.status === "cashed_out")
+                .reduce((sum, b) => sum + Number(b.profit || 0), 0);
+            totalWinEl.textContent = formatNaira(totalCashedOut);
+        }
+    };
+
+    const poll = async () => {
+        const user = auth.currentUser;
+
+        if (!user) {
+            render([]);
+            return;
+        }
+
+        const rows = await selectBetsResilient((query) =>
+            query.eq("user_id", user.uid).order("placed_at", { ascending: false }).limit(50)
+        );
+
+        if (rows === null) return;
+
+        render(rows);
+    };
+
+    poll();
+    myBetHistoryPollTimer = setInterval(poll, 1000);
+}
+
+// =========================
+// TOP WINS TAB (biggest recent cash-outs, across rounds and players)
+// =========================
+let topWinsPollTimer = null;
+
+function listenForTopWins() {
+
+    if (topWinsPollTimer) {
+        clearInterval(topWinsPollTimer);
+        topWinsPollTimer = null;
+    }
+
+    const list = document.getElementById("top-wins-list");
+    if (!list) return; // "Top Wins" tab isn't in the DOM (yet)
+
+    const render = (rows) => {
+        list.innerHTML = "";
+
+        if (rows.length === 0) {
+            const empty = document.createElement("div");
+            empty.className = "empty-state";
+            empty.textContent = "No big wins yet.";
+            list.appendChild(empty);
+            return;
+        }
+
+        rows.forEach((bet) => list.appendChild(createBetRowEl(bet)));
+    };
+
+    const poll = async () => {
+        const rows = await selectBetsResilient((query) =>
+            query.eq("status", "cashed_out").order("profit", { ascending: false }).limit(20)
+        );
+
+        if (rows === null) return;
+
+        render(rows);
+    };
+
+    poll();
+    // Leaderboard-style data changes far less often than a live round -
+    // no need to hammer the DB every second.
+    topWinsPollTimer = setInterval(poll, 5000);
 }
 
 window.createBet = createBet;
@@ -474,3 +842,5 @@ window.cashOut = cashOut;
 window.settleLostBets = settleLostBets;
 window.listenForBets = listenForBets;
 window.listenForMyBets = listenForMyBets;
+window.listenForMyBetHistory = listenForMyBetHistory;
+window.listenForTopWins = listenForTopWins;

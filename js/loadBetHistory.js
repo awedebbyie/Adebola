@@ -13,5 +13,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     });
 
-    //await loadBetHistory();
+    // The panel markup (all-bets-list, my-bets-list, betCount, etc.) only
+    // exists in the DOM from this point on, so kick off the live renderers
+    // here rather than relying on gameState.js's round-change trigger,
+    // which may have already fired before this fetch finished.
+    if (typeof window.listenForBets === "function") {
+        window.listenForBets();
+    }
+
+    if (typeof window.listenForMyBetHistory === "function") {
+        window.listenForMyBetHistory();
+    }
+
+    if (typeof window.listenForTopWins === "function") {
+        window.listenForTopWins();
+    }
 });
