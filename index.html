@@ -155,6 +155,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+window.currentGameState = null;
+window.lastRoundId = null;
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
 const loadingOverlay = document.getElementById('loadingOverlay');
@@ -258,11 +260,10 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 </script>
 <script src="js/supabase.js"></script>
 <script src="js/gameState.js"></script>
+<script src="js/bets.js"></script>
 <script src="js/host.js"></script>
 <script src="js/gameController.js"></script>
-<script src="js/game.js"></script>
 <script src="js/crashLogic.js"></script>
-<script src="js/multiplayer.js"></script>
 <script src="js/invest.js"></script>
 <script src="js/aviator.js"></script>
 <script src="js/loadBetHistory.js"></script>

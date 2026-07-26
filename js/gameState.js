@@ -1,3 +1,9 @@
+// =========================
+// GAME STATE POLLING (Supabase)
+// =========================
+
+window.myQueuedBets = window.myQueuedBets || {}; // { [slot]: amount } - bets waiting for the next betting window
+
 async function getCurrentGameState() {
 
     const { data, error } = await window.supabaseClient
@@ -10,28 +16,173 @@ async function getCurrentGameState() {
         return;
     }
 
-    console.log("Current round:", data);
-
     updateGameFromServer(data);
 }
-
 
 setInterval(getCurrentGameState, 250);
 
 function updateGameFromServer(state) {
 
+    // Save latest game state globally
+    window.currentGameState = state;
+
+    // Re-render every invest button from current round state + Firestore bet state
+    refreshAllBetButtons();
+
+    // Update multiplier display
     const multiplierEl = document.querySelector(".multiplier");
 
     if (multiplierEl) {
-        multiplierEl.textContent =
-            Number(state.multiplier).toFixed(2) + "x";
+        multiplierEl.textContent = Number(state.multiplier).toFixed(2) + "x";
     }
 
+    // Detect when a new round starts
+    if (window.lastRoundId !== state.round_id) {
 
-    console.log(
-        "Status:",
-        state.status,
-        "Multiplier:",
-        state.multiplier
-    );
+        window.lastRoundId = state.round_id;
+
+        if (typeof listenForBets === "function") {
+            listenForBets();
+        }
+
+        if (typeof listenForMyBets === "function") {
+            listenForMyBets();
+        }
+
+        // Auto-place any bets that were queued while the previous round
+        // was flying/settling, now that a fresh betting window is open.
+        // NOTE: these are placed sequentially (awaited one at a time) -
+        // firing them concurrently would let both calls read the same
+        // stale balance and race each other on the deduction.
+        if (state.status === "betting") {
+
+            const queuedSlots = Object.keys(window.myQueuedBets);
+
+            (async () => {
+
+                for (const slot of queuedSlots) {
+
+                    const amount = window.myQueuedBets[slot];
+                    delete window.myQueuedBets[slot];
+
+                    if (typeof createBet === "function") {
+                        try {
+                            await createBet(amount, Number(slot));
+                        } catch (err) {
+                            console.error("Queued bet failed:", err);
+                        }
+                    }
+                }
+
+                refreshAllBetButtons();
+
+            })();
+        }
+
+        console.log("🔄 Switched to Round:", state.round_id);
+    }
+
+    console.log("Status:", state.status, "Multiplier:", state.multiplier);
 }
+
+// =========================
+// SINGLE SOURCE OF TRUTH FOR BUTTON UI
+// (Every other file should call updateBetButton / refreshAllBetButtons
+// instead of writing to button.innerHTML directly.)
+// =========================
+
+function updateBetButton(slot, uiState, payload) {
+
+    const investButtons = document.querySelectorAll(".invest-btn");
+    const btn = investButtons[slot - 1];
+
+    if (!btn) return;
+
+    btn.disabled = false;
+
+    switch (uiState) {
+
+        case "INVEST":
+            btn.innerHTML = "<span>INVEST</span>";
+            btn.style.backgroundColor = "";
+            break;
+
+        case "BET_PLACED":
+            btn.innerHTML = "<span>BET PLACED</span>";
+            btn.style.backgroundColor = "";
+            break;
+
+        case "CASH_OUT": {
+            const amount = Number((payload && payload.amount) || 0);
+            const multiplier = Number((payload && payload.multiplier) || 1);
+            const potential = amount * multiplier;
+
+            btn.innerHTML = `
+                <span>CASH OUT</span>
+                <small>(₦${potential.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })})</small>
+            `;
+            btn.style.backgroundColor = "#ff8800";
+            break;
+        }
+
+        case "QUEUED":
+            btn.innerHTML = `
+                <span>QUEUED</span>
+                <small>(₦${Number((payload && payload.amount) || 0).toFixed(2)})</small>
+            `;
+            btn.style.backgroundColor = "";
+            break;
+
+        default:
+            btn.innerHTML = "<span>INVEST</span>";
+            btn.style.backgroundColor = "";
+            break;
+    }
+}
+
+function refreshAllBetButtons() {
+
+    if (!window.currentGameState) return;
+
+    const status = window.currentGameState.status;
+    const investButtons = document.querySelectorAll(".invest-btn");
+    const mySlotState = window.mySlotState || {};
+    const myQueuedBets = window.myQueuedBets || {};
+
+    investButtons.forEach((btn, index) => {
+
+        const slot = index + 1;
+        const myBet = mySlotState[slot];
+        const hasPending = myBet && myBet.status === "Pending";
+
+        if (hasPending) {
+
+            if (status === "flying") {
+                updateBetButton(slot, "CASH_OUT", {
+                    amount: myBet.amount,
+                    multiplier: window.currentGameState.multiplier
+                });
+            } else {
+                updateBetButton(slot, "BET_PLACED");
+            }
+
+        } else if (myQueuedBets[slot] != null) {
+
+            updateBetButton(slot, "QUEUED", { amount: myQueuedBets[slot] });
+
+        } else {
+
+            // No active bet, no queued bet - always shows INVEST and is
+            // always clickable. invest.js decides whether that click places
+            // a bet now or queues it for the next round.
+            updateBetButton(slot, "INVEST");
+        }
+
+    });
+}
+
+window.updateBetButton = updateBetButton;
+window.refreshAllBetButtons = refreshAllBetButtons;

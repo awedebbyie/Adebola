@@ -27,7 +27,17 @@ async function loadCurrentRound() {
         return;
     }
 
+    const previousRoundId = window.currentGameState?.round_id;
+
     window.currentGameState = data;
+
+    if (
+        previousRoundId !== data.round_id &&
+        typeof listenForBets === "function"
+    ) {
+        console.log("New round detected. Reloading bets...");
+        listenForBets();
+    }
 
     // Detect status changes
     if (previousStatus !== data.status) {
