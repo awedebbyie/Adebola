@@ -18,6 +18,35 @@ document.addEventListener("DOMContentLoaded", () => {
     const MIN_Y = 140; // top limit
     const MAX_Y = 320; // bottom limit (ground level)
 
+    // ================= TAIL ANCHOR =================
+    // The flight-path line used to be drawn straight to (x, y) - the same
+    // point used to place the helicopter <img>'s top-left corner via
+    // `left`/`bottom`. That point is just the sprite's bounding-box corner,
+    // not the actual tail of the helicopter drawn inside helicopter.png, so
+    // the line would end up trailing under the tail by a noticeable margin.
+    //
+    // helicopter.png is 660x519, and the visual center of the tail rotor in
+    // that image sits at roughly (645, 310) - i.e. ~97.7% across and ~59.7%
+    // down. HELI_WIDTH must stay in sync with the `.helicopter { width }`
+    // rule in style.css; height is derived from the image's own aspect
+    // ratio since no CSS height is set.
+    const HELI_WIDTH = 70;
+    const HELI_NATURAL_W = 660;
+    const HELI_NATURAL_H = 519;
+    const HELI_HEIGHT = HELI_WIDTH * (HELI_NATURAL_H / HELI_NATURAL_W);
+    const TAIL_FRACTION_X = 645 / HELI_NATURAL_W;
+    const TAIL_FRACTION_Y = 310 / HELI_NATURAL_H;
+
+    // Converts the helicopter's positioning anchor (x, y - same coordinate
+    // space as the SVG path) into the exact pixel the tail sits at, so the
+    // trail can lock onto it instead of the sprite's bounding box.
+    function getTailPoint(anchorX, anchorY) {
+        return {
+            x: (anchorX - 55) + TAIL_FRACTION_X * HELI_WIDTH,
+            y: (anchorY - HELI_HEIGHT) + TAIL_FRACTION_Y * HELI_HEIGHT
+        };
+    }
+
     // ================= STATIC OVERLAY ELEMENTS =================
     // These now live directly in index.html and are styled via style.css,
     // so we just grab them instead of creating them dynamically.
@@ -147,7 +176,18 @@ requestAnimationFrame(animate);
             setTimeout(() => {
                 countdownBarContainer.style.opacity = "0";
                 preparingText.style.opacity = "0";
-                startNextRound();
+
+                // startNextRound() was never defined anywhere in this
+                // project - gameState.js's own 250ms poll already detects
+                // the next round and calls window.beginRound() itself, so
+                // this was dead code left over from an earlier version.
+                // Guarded the same way the rest of the codebase guards
+                // optional cross-file calls, instead of deleting it
+                // outright, in case a real implementation gets wired in
+                // later.
+                if (typeof startNextRound === "function") {
+                    startNextRound();
+                }
             }, 8000);
 
         }, 3000);
@@ -207,14 +247,16 @@ requestAnimationFrame(animate);
         helicopter.style.left = (x - 55) + "px";
         helicopter.style.bottom = (320 - y) + "px";
 
+        const tail = getTailPoint(x, y);
+
         if (flightPath) {
-            flightPath.setAttribute("d", `M 0 320 L ${x} ${y}`);
+            flightPath.setAttribute("d", `M 0 320 L ${tail.x} ${tail.y}`);
         }
 
         if (fillArea) {
             fillArea.setAttribute(
                 "d",
-                `M 0 320 L ${x} ${y} L ${x} 320 L 0 320 Z`
+                `M 0 320 L ${tail.x} ${tail.y} L ${tail.x} 320 L 0 320 Z`
             );
         }
 
