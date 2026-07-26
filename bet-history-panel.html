@@ -157,6 +157,11 @@
         border-bottom: none;
     }
 
+    .bet-history-panel .bet-row > *,
+    .bet-history-panel .bets-table-header > * {
+        min-width: 0;
+    }
+
     .bet-history-panel .avatar {
         width: 30px;
         height: 30px;
@@ -188,13 +193,20 @@
         margin-left:-20px
     }
 
+    .bet-history-panel .bet-amount,
+    .bet-history-panel .bet-coeff,
+    .bet-history-panel .win-amount {
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: clip;
+        font-variant-numeric: tabular-nums;
+    }
+
     .bet-history-panel .bet-amount {
         color: #fff;
         font-weight: 600;
-        font-variant-numeric: tabular-nums;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }
 
     /* NOTE: intentionally named .bet-coeff, NOT .multiplier - style.css
@@ -204,8 +216,6 @@
     .bet-history-panel .bet-coeff {
         color: #00ff88;
         font-weight: 700;
-        font-variant-numeric: tabular-nums;
-        white-space: nowrap;
     }
 
     .bet-history-panel .bet-coeff.lost {
@@ -213,13 +223,9 @@
     }
 
     .bet-history-panel .win-amount {
-        text-align: right;
-        font-weight: 700;
         color: #00ff88;
-        font-variant-numeric: tabular-nums;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        font-weight: 700;
+        text-align: right;
     }
 
     .bet-history-panel .win-amount.lost {
@@ -229,12 +235,22 @@
     /* Auto-shrink for long numbers so they never wrap or clip - applied
        by js/bets.js based on the formatted string length. */
     .bet-history-panel .value-md {
-        font-size: 12.5px;
+        font-size: 12px;
     }
 
     .bet-history-panel .value-sm {
-        font-size: 11px;
-        letter-spacing: -0.2px;
+        font-size: 10px;
+        letter-spacing: -0.3px;
+    }
+
+    .bet-history-panel .value-xs {
+        font-size: 9px;
+        letter-spacing: -0.4px;
+    }
+
+    .bet-history-panel .value-xxs {
+        font-size: 8px;
+        letter-spacing: -0.5px;
     }
 
     /* Highlight for big wins */

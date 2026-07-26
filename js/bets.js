@@ -507,8 +507,10 @@ function formatNaira(amount) {
 // wrapping or getting clipped.
 function shrinkClassFor(text) {
     const len = String(text).length;
-    if (len > 10) return "value-sm";
-    if (len > 6) return "value-md";
+    if (len >= 14) return "value-xxs";
+    if (len >= 12) return "value-xs";
+    if (len >= 10) return "value-sm";
+    if (len >= 8)  return "value-md";
     return "";
 }
 
@@ -600,7 +602,7 @@ function createBetRowEl(bet, options) {
     row.appendChild(betEl);
 
     const coeffEl = document.createElement("div");
-    coeffEl.className = `bet-coeff ${lost ? "lost" : ""}`;
+    coeffEl.className = `bet-coeff ${lost ? "lost" : ""} ${shrinkClassFor(multiplierText)}`;
     coeffEl.textContent = multiplierText;
     row.appendChild(coeffEl);
 
