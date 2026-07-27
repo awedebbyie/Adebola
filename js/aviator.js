@@ -65,7 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // between the helicopter and the edge at the peak of the swing,
     // decrease it. This is the one number to adjust - nothing else in
     // this block needs to change.
-    const EDGE_SAFETY_MARGIN = 20;
+    const EDGE_SAFETY_MARGIN = 60;
 
     const EDGE_TOUCH_X = GRAPH_WIDTH - (HELI_WIDTH - 55) - EDGE_SAFETY_MARGIN;
     const EDGE_TOUCH_Y = HELI_HEIGHT + EDGE_SAFETY_MARGIN;
