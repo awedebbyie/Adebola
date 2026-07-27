@@ -115,6 +115,39 @@
          Populated/managed by js/roundHistory.js -->
     <div class="round-history" id="roundHistory"></div>
 
+    <!-- CHAT: just an icon trigger here - clicking it opens a floating
+         dropdown (position:absolute, see .chat-dropdown in style.css) that
+         overlays the page. It never sits in normal document flow, so no
+         matter how many messages pile up, it can't push the graph or
+         anything below it down.
+         Numbers are not allowed in chat - not as digits, not spelled out -
+         enforced client-side in js/chat.js and again server-side by a
+         Postgres trigger (see
+         supabase/migrations/20260727000000_create_chat_messages.sql). -->
+    <div class="chat-backdrop" id="chatBackdrop"></div>
+
+    <div class="chat-widget" id="chatWidget">
+        <button type="button" class="chat-icon-btn" id="chatIconBtn" aria-label="Open chat">
+            <svg class="chat-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 4h16a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H9l-4.5 4v-4H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" fill="currentColor"/>
+            </svg>
+            <span class="chat-unread-dot" id="chatUnreadDot"></span>
+        </button>
+
+        <div class="chat-dropdown" id="chatDropdown">
+            <div class="chat-header">
+                <span>Chat</span>
+                <button type="button" class="chat-close-btn" id="chatCloseBtn" aria-label="Close chat">✕</button>
+            </div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-error" id="chatError"></div>
+            <form class="chat-input-row" id="chatForm">
+                <input type="text" id="chatInput" class="chat-input" placeholder="Login to chat" maxlength="300" autocomplete="off" disabled />
+                <button type="submit" class="chat-send-btn" id="chatSendBtn" disabled>Send</button>
+            </form>
+        </div>
+    </div>
+
     <!-- GRAPH AREA -->
     <div class="graph-area">
         <div class="multiplier">1.00x</div>
@@ -409,6 +442,7 @@ document.getElementById("investBtn2").addEventListener("click", handleInvest);
 </script>
 
 <script src="js/supabase.js"></script>
+<script src="js/chat.js"></script>
 <script src="js/roundHistory.js"></script>
 <script src="js/gameState.js"></script>
 <script src="js/bets.js"></script>

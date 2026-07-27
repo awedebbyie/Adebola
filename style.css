@@ -15,6 +15,9 @@ body{
     max-width:420px;
     height:100vh;
 
+    position:relative; /* anchors .chat-dropdown (position:absolute) so it
+                           floats over the page instead of shifting layout */
+
     background:#555;
     border-radius:0;
 
@@ -274,6 +277,221 @@ ROUND HISTORY STRIP
     display:flex;
     flex-wrap:wrap;
     gap:10px 14px;
+}
+
+/* =========================
+CHAT (icon trigger + floating overlay dropdown)
+========================= */
+
+/* The icon sits in normal flow (small, fixed size, never squeezed - see
+   flex-shrink:0), but the dropdown itself is position:absolute anchored
+   to this wrapper. That's the whole point: no matter how many messages
+   are in it, the dropdown floats OVER the page and never pushes the
+   graph/controls/anything else down. */
+.chat-widget{
+    position:relative;
+
+    display:flex;
+    justify-content:flex-end;
+
+    flex-shrink:0;
+    margin-bottom:8px;
+
+    z-index:1001;
+}
+
+.chat-icon-btn{
+    position:relative;
+
+    width:36px;
+    height:36px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    background:#1a1a1a;
+    border:none;
+    border-radius:50%;
+
+    color:#00ff88;
+    cursor:pointer;
+}
+
+.chat-icon-svg{
+    width:19px;
+    height:19px;
+}
+
+/* Red "new messages" dot, top-right of the icon. Hidden until the icon
+   gets .has-unread (toggled from js/chat.js when a message arrives while
+   the dropdown is closed). */
+.chat-unread-dot{
+    position:absolute;
+    top:1px;
+    right:1px;
+
+    width:10px;
+    height:10px;
+    border-radius:50%;
+
+    background:#ff3b30;
+    border:2px solid #1a1a1a;
+
+    display:none;
+}
+
+.chat-icon-btn.has-unread .chat-unread-dot{
+    display:block;
+}
+
+/* Dims the page behind the dropdown and closes it on click-away. */
+.chat-backdrop{
+    position:fixed;
+    inset:0;
+
+    background:rgba(0,0,0,0.5);
+    z-index:1000;
+
+    display:none;
+}
+
+.chat-backdrop.chat-open{
+    display:block;
+}
+
+.chat-dropdown{
+    position:absolute;
+    top:calc(100% + 8px);
+    right:0;
+
+    width:280px;
+    max-width:80vw;
+    max-height:60vh;
+
+    display:flex;
+    flex-direction:column;
+
+    background:#1a1a1a;
+    border-radius:12px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.5);
+
+    overflow:hidden;
+    z-index:1001;
+
+    opacity:0;
+    transform:translateY(-8px);
+    pointer-events:none;
+    transition:opacity 0.15s ease, transform 0.15s ease;
+}
+
+.chat-dropdown.chat-dropdown-open{
+    opacity:1;
+    transform:translateY(0);
+    pointer-events:auto;
+}
+
+.chat-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    padding:10px 12px;
+    flex-shrink:0;
+
+    background:#222;
+    color:#00ff88;
+    font-weight:bold;
+    font-size:13px;
+}
+
+.chat-close-btn{
+    background:none;
+    border:none;
+    color:#ccc;
+    font-size:14px;
+    cursor:pointer;
+    padding:2px 6px;
+}
+
+.chat-messages{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+
+    padding:8px 12px;
+
+    overflow-y:auto;
+    min-height:0; /* so this - not the header/input - is what scrolls */
+}
+
+.chat-message{
+    font-size:13px;
+    line-height:1.4;
+    word-break:break-word;
+}
+
+.chat-message-user{
+    color:#4da6ff;
+    font-weight:bold;
+    margin-right:6px;
+}
+
+.chat-message-text{
+    color:#eee;
+}
+
+.chat-error{
+    padding:0 12px;
+    color:#ff5555;
+    font-size:12px;
+    min-height:0;
+    display:none;
+    flex-shrink:0;
+}
+
+.chat-input-row{
+    display:flex;
+    gap:8px;
+    padding:8px 12px;
+    flex-shrink:0;
+    border-top:1px solid #2a2a2a;
+}
+
+.chat-input{
+    flex:1 1 auto;
+    min-width:0;
+
+    background:#111;
+    color:#fff;
+    border:1px solid #333;
+    border-radius:6px;
+
+    padding:8px 10px;
+    font-size:13px;
+}
+
+.chat-input:disabled{
+    opacity:0.5;
+}
+
+.chat-send-btn{
+    flex-shrink:0;
+
+    background:#00aa44;
+    color:#fff;
+    border:none;
+    border-radius:6px;
+
+    padding:8px 16px;
+    font-weight:bold;
+    font-size:13px;
+    cursor:pointer;
+}
+
+.chat-send-btn:disabled{
+    background:#333;
+    cursor:not-allowed;
 }
 
 .top-btn:hover{
