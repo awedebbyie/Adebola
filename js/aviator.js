@@ -13,25 +13,76 @@ document.addEventListener("DOMContentLoaded", () => {
     let previousStatus = null;
 
     // The "hover" trajectory the cruise phase eases toward - keeps easing
-    // closer to the top-right corner (MAX_X, MIN_Y) the longer the round
-    // runs, instead of settling at a fixed spot. x/y each frame are this
-    // baseline plus a small diagonal wobble (see phase 2 in animate()).
+    // closer to the real top-right corner of the container (see
+    // EDGE_TOUCH_X/Y below) the longer the round runs, instead of
+    // settling at a fixed spot. x/y each frame are this baseline plus a
+    // one-sided diagonal swing (see phase 2 in animate()).
     let baseX = x;
     let baseY = y;
 
-    const MAX_X = 280; // right limit (ground level)
+    const MAX_X = 280; // right limit (ground level) - used for the climb-out/late-join math further down, untouched.
 
     // ✅ FIX: vertical boundaries
-    const MIN_Y = 140; // top limit
+    const MIN_Y = 140; // top limit - also only used for the climb-out/late-join math further down.
     const MAX_Y = 320; // bottom limit (ground level)
 
-    // How quickly the cruise baseline eases toward the top-right corner
-    // each frame, and the size/speed of the diagonal to-and-fro wobble
-    // layered on top of it once it's up there.
+    // ================= REAL CONTAINER + SPRITE GEOMETRY =================
+    // Everything below is computed from actual measured values instead of
+    // picked by eye, so the cruise swing always lines up with the real
+    // container/sprite regardless of future tweaks to either:
+    //   - GRAPH_WIDTH/GRAPH_HEIGHT are the .curve-svg viewBox in
+    //     index.html ("0 0 400 320") - the coordinate space the
+    //     helicopter's left/bottom and the SVG path both already share.
+    //   - HELI_WIDTH matches the `.helicopter { width }` rule in
+    //     style.css; HELI_HEIGHT is derived from helicopter.png's own
+    //     660x519 pixel dimensions (no CSS height is set, so the browser
+    //     scales it to the same aspect ratio).
+    const GRAPH_WIDTH = 400;
+    const GRAPH_HEIGHT = 320;
+
+    const HELI_WIDTH = 70;
+    const HELI_NATURAL_W = 660;
+    const HELI_NATURAL_H = 519;
+    const HELI_HEIGHT = HELI_WIDTH * (HELI_NATURAL_H / HELI_NATURAL_W);
+
+    // The helicopter div is positioned with `left = x - 55` and
+    // `bottom` measured from the container's bottom, which (see
+    // getTailPoint() below) works out to the div's BOTTOM edge sitting
+    // at y and its top edge at (y - HELI_HEIGHT). So the div's right
+    // edge is (x - 55 + HELI_WIDTH), and solving for the anchor that
+    // puts that right edge exactly on the container's right edge
+    // (GRAPH_WIDTH) gives the true "touching the edge" x. Same for the
+    // div's top edge against the container's top edge (0).
+    //
+    // ⚠️ TUNE THIS SIDE: `.graph-area` is sized responsively in CSS
+    // (width:100%, height:50%), so its actual on-screen pixel size isn't
+    // guaranteed to be exactly 400x320 (GRAPH_WIDTH x GRAPH_HEIGHT) - the
+    // SVG stretches to fit whatever size it actually renders at, but the
+    // helicopter's left/bottom are plain pixels assuming that 1:1 match.
+    // If the helicopter still pokes outside the container on your
+    // screen, increase EDGE_SAFETY_MARGIN below (pulls the touch point
+    // further in from the true edge); if there's noticeable empty gap
+    // between the helicopter and the edge at the peak of the swing,
+    // decrease it. This is the one number to adjust - nothing else in
+    // this block needs to change.
+    const EDGE_SAFETY_MARGIN = 60;
+
+    const EDGE_TOUCH_X = GRAPH_WIDTH - (HELI_WIDTH - 55) - EDGE_SAFETY_MARGIN;
+    const EDGE_TOUCH_Y = HELI_HEIGHT + EDGE_SAFETY_MARGIN;
+
+    // How quickly the cruise baseline eases toward that real edge-touch
+    // point each frame. Once it's there, that point IS the "touch" -
+    // the swing only ever moves away from it diagonally down-left and
+    // back, never past it, so the top of every swing actually makes
+    // contact with the container's edge instead of hovering near an
+    // arbitrary guessed spot. The swing's own reach is sized as a
+    // proportion of the real container dimensions (12% of width, 20% of
+    // height) rather than picked pixel counts, so it stays proportional
+    // if the viewBox itself ever changes.
     const BASE_EASE_RATE = 0.006;
-    const WOBBLE_SPEED = 0.0018;
-    const WOBBLE_AMPLITUDE_X = 12;
-    const WOBBLE_AMPLITUDE_Y = 14;
+    const SWING_SPEED = 0.0014;
+    const SWING_DISTANCE_X = GRAPH_WIDTH * 0.12;
+    const SWING_DISTANCE_Y = GRAPH_HEIGHT * 0.2;
 
     // ================= TAIL ANCHOR =================
     // The flight-path line used to be drawn straight to (x, y) - the same
@@ -42,13 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
     //
     // helicopter.png is 660x519, and the visual center of the tail rotor in
     // that image sits at roughly (645, 310) - i.e. ~97.7% across and ~59.7%
-    // down. HELI_WIDTH must stay in sync with the `.helicopter { width }`
-    // rule in style.css; height is derived from the image's own aspect
-    // ratio since no CSS height is set.
-    const HELI_WIDTH = 70;
-    const HELI_NATURAL_W = 660;
-    const HELI_NATURAL_H = 519;
-    const HELI_HEIGHT = HELI_WIDTH * (HELI_NATURAL_H / HELI_NATURAL_W);
+    // down.
     const TAIL_FRACTION_X = 645 / HELI_NATURAL_W;
     const TAIL_FRACTION_Y = 310 / HELI_NATURAL_H;
 
@@ -254,24 +299,29 @@ requestAnimationFrame(animate);
                 baseY = y;
             }
         } else if (phase === 2) {
-            // Keep drifting the hover baseline toward the top-right corner
-            // the longer the round runs (never quite reaching it), then
-            // sway back and forth along that same diagonal - x and y move
-            // together (same sign on x, opposite on y) so it reads as
-            // one diagonal to-and-fro motion instead of x sitting still
-            // while y independently bounces across the whole graph.
-            baseX += (MAX_X - baseX) * BASE_EASE_RATE;
-            baseY += (MIN_Y - baseY) * BASE_EASE_RATE;
+            // Keep drifting the touch-point baseline toward the real
+            // edge-touch coordinate (EDGE_TOUCH_X/Y, computed above from
+            // the actual container + sprite geometry) the longer the
+            // round runs, then swing between that point and one
+            // diagonally down-left of it. The swing is one-sided (0 at
+            // the top, -1 at the bottom) so it always peaks exactly ON
+            // the baseline itself - the sprite's real bounding-box edge
+            // actually touching the container's real edge - then sweeps
+            // diagonally down-left before swinging back, repeating
+            // continuously.
+            baseX += (EDGE_TOUCH_X - baseX) * BASE_EASE_RATE;
+            baseY += (EDGE_TOUCH_Y - baseY) * BASE_EASE_RATE;
 
-            const wobble =
-                Math.sin(timestamp * WOBBLE_SPEED) + (Math.random() - 0.5) * 0.15;
+            const swing = (Math.sin(timestamp * SWING_SPEED) - 1) / 2; // 0..-1
 
-            x = baseX + wobble * WOBBLE_AMPLITUDE_X;
-            y = baseY - wobble * WOBBLE_AMPLITUDE_Y;
+            x = baseX + swing * SWING_DISTANCE_X;
+            y = baseY - swing * SWING_DISTANCE_Y;
 
-            // ✅ FIX: clamp BOTH top and bottom
-            y = Math.max(MIN_Y, Math.min(y, MAX_Y));
-            x = Math.max(220, Math.min(x, MAX_X + 10));
+            // Clamp against the real container edges themselves - x can
+            // never push the div's right edge past GRAPH_WIDTH, y can
+            // never push the div's top edge above 0.
+            y = Math.max(EDGE_TOUCH_Y, Math.min(y, MAX_Y));
+            x = Math.max(220, Math.min(x, EDGE_TOUCH_X));
 
             // ✅ FIX: guard against calling crashInstantly() more than once
             if (
