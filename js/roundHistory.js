@@ -180,6 +180,8 @@
                 currentRoundId = current.round_id;
             }
 
+            console.log("Round history debug - currentRoundId:", currentRoundId);
+
             const { data: rounds, error: roundsError } = await window.supabaseClient
                 .from("rounds")
                 .select("id, crash_point")
@@ -188,7 +190,17 @@
                 .order("round_number", { ascending: false })
                 .limit(MAX_ENTRIES);
 
-            if (roundsError || !rounds) return;
+            console.log("Round history debug - roundsError:", roundsError);
+            console.log("Round history debug - raw rounds:", rounds);
+
+            if (roundsError || !rounds) {
+                console.error("Round history load failed - rounds query returned:", roundsError);
+                return;
+            }
+
+            if (rounds.length === 0) {
+                console.warn("Round history debug - query succeeded but returned zero rows.");
+            }
 
             history = rounds
                 .filter((row) => row.id !== currentRoundId)
