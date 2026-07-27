@@ -12,11 +12,26 @@ document.addEventListener("DOMContentLoaded", () => {
     let isRunning = false;
     let previousStatus = null;
 
+    // The "hover" trajectory the cruise phase eases toward - keeps easing
+    // closer to the top-right corner (MAX_X, MIN_Y) the longer the round
+    // runs, instead of settling at a fixed spot. x/y each frame are this
+    // baseline plus a small diagonal wobble (see phase 2 in animate()).
+    let baseX = x;
+    let baseY = y;
+
     const MAX_X = 280; // right limit (ground level)
 
     // ✅ FIX: vertical boundaries
     const MIN_Y = 140; // top limit
     const MAX_Y = 320; // bottom limit (ground level)
+
+    // How quickly the cruise baseline eases toward the top-right corner
+    // each frame, and the size/speed of the diagonal to-and-fro wobble
+    // layered on top of it once it's up there.
+    const BASE_EASE_RATE = 0.006;
+    const WOBBLE_SPEED = 0.0018;
+    const WOBBLE_AMPLITUDE_X = 12;
+    const WOBBLE_AMPLITUDE_Y = 14;
 
     // ================= TAIL ANCHOR =================
     // The flight-path line used to be drawn straight to (x, y) - the same
@@ -45,6 +60,23 @@ document.addEventListener("DOMContentLoaded", () => {
             x: (anchorX - 55) + TAIL_FRACTION_X * HELI_WIDTH,
             y: (anchorY - HELI_HEIGHT) + TAIL_FRACTION_Y * HELI_HEIGHT
         };
+    }
+
+    // Draws the trail as a single curve computed fresh every frame from
+    // just two points: the fixed origin and the helicopter's current tail
+    // position. Nothing about the curve is stored/accumulated from past
+    // frames - the origin and the live position are what shape it, every
+    // time. That's what actually produces the classic crash-game look:
+    // a quadratic Bezier with its control point pinned to (end.x,
+    // start.y) stays flat while x grows, then sweeps up sharply near the
+    // end - exactly like the accelerating curve real crash games draw,
+    // and unlike a literal recording of this game's own point-to-point
+    // motion (which is close to a straight line/random walk and doesn't
+    // look curved at all).
+    function buildCrashCurve(start, end) {
+        const controlX = end.x;
+        const controlY = start.y;
+        return `M ${start.x} ${start.y} Q ${controlX} ${controlY}, ${end.x} ${end.y}`;
     }
 
     // ================= STATIC OVERLAY ELEMENTS =================
@@ -118,6 +150,10 @@ requestAnimationFrame(animate);
         y = startState.y;
         multiplierValue = Math.max(1, Number(currentMultiplier) || 1);
         phase = startState.phase;
+
+        // Cruise hover starts from wherever the round actually begins.
+        baseX = x;
+        baseY = y;
 
         multiplierEl.textContent = multiplierValue.toFixed(2) + "x";
         multiplierEl.style.color = "white";
@@ -210,15 +246,32 @@ requestAnimationFrame(animate);
         if (phase === 1) {
             x += 2.8;
             y -= 1.4;
-            if (x >= 220) phase = 2;
+            if (x >= 220) {
+                phase = 2;
+                // Cruise picks up exactly where the climb left off, then
+                // eases from there toward the top-right corner.
+                baseX = x;
+                baseY = y;
+            }
         } else if (phase === 2) {
-            if (x < MAX_X - 35) x += 2.45;
-            else x += (Math.random() - 0.5) * 2;
+            // Keep drifting the hover baseline toward the top-right corner
+            // the longer the round runs (never quite reaching it), then
+            // sway back and forth along that same diagonal - x and y move
+            // together (same sign on x, opposite on y) so it reads as
+            // one diagonal to-and-fro motion instead of x sitting still
+            // while y independently bounces across the whole graph.
+            baseX += (MAX_X - baseX) * BASE_EASE_RATE;
+            baseY += (MIN_Y - baseY) * BASE_EASE_RATE;
 
-            y += (Math.random() - 0.5) * 6;
+            const wobble =
+                Math.sin(timestamp * WOBBLE_SPEED) + (Math.random() - 0.5) * 0.15;
+
+            x = baseX + wobble * WOBBLE_AMPLITUDE_X;
+            y = baseY - wobble * WOBBLE_AMPLITUDE_Y;
 
             // ✅ FIX: clamp BOTH top and bottom
             y = Math.max(MIN_Y, Math.min(y, MAX_Y));
+            x = Math.max(220, Math.min(x, MAX_X + 10));
 
             // ✅ FIX: guard against calling crashInstantly() more than once
             if (
@@ -247,16 +300,18 @@ requestAnimationFrame(animate);
         helicopter.style.left = (x - 55) + "px";
         helicopter.style.bottom = (320 - y) + "px";
 
+        const origin = { x: 0, y: 320 };
         const tail = getTailPoint(x, y);
+        const curve = buildCrashCurve(origin, tail);
 
         if (flightPath) {
-            flightPath.setAttribute("d", `M 0 320 L ${tail.x} ${tail.y}`);
+            flightPath.setAttribute("d", curve);
         }
 
         if (fillArea) {
             fillArea.setAttribute(
                 "d",
-                `M 0 320 L ${tail.x} ${tail.y} L ${tail.x} 320 L 0 320 Z`
+                `${curve} L ${tail.x} 320 L ${origin.x} 320 Z`
             );
         }
 
