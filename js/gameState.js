@@ -123,10 +123,19 @@ function updateBetButton(slot, uiState, payload) {
 
     switch (uiState) {
 
-        case "INVEST":
-            btn.innerHTML = "<span>INVEST</span>";
+        case "INVEST": {
+            const amount = payload && payload.amount;
+            if (amount != null) {
+                btn.innerHTML = `
+                    <span>INVEST</span>
+                    <small>(₦${Number(amount).toFixed(2)})</small>
+                `;
+            } else {
+                btn.innerHTML = "<span>INVEST</span>";
+            }
             btn.style.backgroundColor = "";
             break;
+        }
 
         case "BET_PLACED":
             btn.innerHTML = "<span>BET PLACED</span>";
@@ -170,6 +179,7 @@ function refreshAllBetButtons() {
 
     const status = window.currentGameState.status;
     const investButtons = document.querySelectorAll(".invest-btn");
+    const investRows = document.querySelectorAll(".invest-row");
     const mySlotState = window.mySlotState || {};
     const myQueuedBets = window.myQueuedBets || {};
 
@@ -198,8 +208,17 @@ function refreshAllBetButtons() {
 
             // No active bet, no queued bet - always shows INVEST and is
             // always clickable. invest.js decides whether that click places
-            // a bet now or queues it for the next round.
-            updateBetButton(slot, "INVEST");
+            // a bet now or queues it for the next round. Keep showing
+            // whatever amount is currently sitting in this row's input (from
+            // typing or a quick price button) in brackets, so it doesn't
+            // flash away on the next 250ms poll tick - it only clears once
+            // the row itself clears the input (bet placed/queued).
+            const row = investRows[slot - 1];
+            const input = row && row.querySelector(".amount-input");
+            const typedValue = input ? Number(input.value) : NaN;
+            const amount = !isNaN(typedValue) && typedValue >= 10 ? typedValue : null;
+
+            updateBetButton(slot, "INVEST", { amount });
         }
 
     });

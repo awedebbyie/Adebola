@@ -111,13 +111,21 @@ async function createBet(amount, betSlot) {
             return;
         }
 
+        const userRef = db.collection("users").doc(user.uid);
+
         // Always re-check the authoritative round straight from
         // current_round right before inserting - window.currentGameState
         // is only refreshed by a 250ms poll and can be briefly stale.
-        const { data: round, error: roundError } = await sb
-            .from("current_round")
-            .select("*")
-            .single();
+        // This read and the user balance read below don't depend on each
+        // other, so fire them together instead of waiting on one before
+        // starting the other - that's a full network round-trip saved off
+        // every bet placed (manual or auto-placed from the queue).
+        const [roundResult, userDoc] = await Promise.all([
+            sb.from("current_round").select("*").single(),
+            userRef.get()
+        ]);
+
+        const { data: round, error: roundError } = roundResult;
 
         if (roundError || !round) {
             console.error("Failed to read current round:", roundError);
@@ -138,9 +146,6 @@ async function createBet(amount, betSlot) {
             return;
         }
 
-        const userRef = db.collection("users").doc(user.uid);
-        const userDoc = await userRef.get();
-
         if (!userDoc.exists) {
             alert("User account not found.");
             return;
@@ -152,11 +157,6 @@ async function createBet(amount, betSlot) {
             alert("Insufficient balance.");
             return;
         }
-
-        // Deduct balance up front, same as before.
-        await userRef.update({
-            balance: balance - amount
-        });
 
         const username = userDoc.data().username || user.displayName || user.email;
         // NOTE: photoURL only ever gets written to Firebase Auth's own
@@ -180,11 +180,16 @@ async function createBet(amount, betSlot) {
             ? { ...basePayload, username, photo_url: photoUrl }
             : basePayload;
 
-        let { data: bet, error: insertError } = await sb
-            .from("bets")
-            .insert(insertPayload)
-            .select()
-            .single();
+        // Deduct the balance and insert the bet together instead of one
+        // after the other - two independent writes to two different
+        // systems, and if the insert fails the refund below already puts
+        // the balance back regardless of which write finished first.
+        const [, insertResult] = await Promise.all([
+            userRef.update({ balance: balance - amount }),
+            sb.from("bets").insert(insertPayload).select().single()
+        ]);
+
+        let { data: bet, error: insertError } = insertResult;
 
         // The username/photo_url migrations (supabase/migrations/*.sql)
         // haven't been applied/refreshed yet - retry once without those
