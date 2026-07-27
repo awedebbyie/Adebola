@@ -89,13 +89,13 @@ async function updateMultiplier(roundId, crashPoint) {
     console.log("📈 Multiplier started...");
 
     while (multiplier < crashPoint) {
-        let increment = 0.05;
+        let increment = 0.08;
 
-        if (multiplier >= 2) increment = 0.06;
-        if (multiplier >= 5) increment = 0.08;
-        if (multiplier >= 10) increment = 0.12;
-        if (multiplier >= 20) increment = 0.20;
-        if (multiplier >= 50) increment = 0.40;
+        if (multiplier >= 2) increment = 0.10;
+        if (multiplier >= 5) increment = 0.6;
+        if (multiplier >= 10) increment = 1.5;
+        if (multiplier >= 20) increment = 4;
+        if (multiplier >= 50) increment = 10;
 
         multiplier += increment;
         multiplier = Number(multiplier.toFixed(2));

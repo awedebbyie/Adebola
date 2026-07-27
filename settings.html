@@ -222,6 +222,17 @@
             <div class="menu-item" onclick="comingSoon()">Notification Settings <span style="font-size:20px;">›</span></div>
 
             
+            <div class="section-title">Audio</div>
+            <div class="menu-item" onclick="toggleSoundSetting()">
+                Sound
+                <span id="soundToggleLabel" style="font-size:14px; font-weight:600; color:#00ff88;"></span>
+            </div>
+            <div class="menu-item" onclick="toggleMusicSetting()">
+                Music
+                <span id="musicToggleLabel" style="font-size:14px; font-weight:600; color:#00ff88;"></span>
+            </div>
+
+            
             <div class="section-title">Safety & Security</div>
             
             <div class="popup-banner">
@@ -276,6 +287,62 @@ const auth = firebase.auth();
         function comingSoon() {
             alert("Coming soon!");
         }
+
+        // Audio > Sound toggle (round-start / crash effects). Same
+        // pattern as Music, but its own independent "soundMuted" key -
+        // effects only actually play on index.html (js/sfx.js), since
+        // that's the only page with the flight animation, but the mute
+        // preference lives here so it applies whenever you're back there.
+        function isSoundMuted() {
+            return localStorage.getItem("soundMuted") === "true";
+        }
+
+        function updateSoundToggleLabel() {
+            const label = document.getElementById("soundToggleLabel");
+            if (label) {
+                label.textContent = isSoundMuted() ? "Unmute" : "Mute";
+            }
+        }
+
+        function toggleSoundSetting() {
+            localStorage.setItem("soundMuted", !isSoundMuted());
+            updateSoundToggleLabel();
+        }
+
+        updateSoundToggleLabel();
+
+        // Audio > Music toggle. The label shows the action tapping it
+        // will take: "Mute" while music is currently playing, "Unmute"
+        // while it's currently muted. The actual play/pause happens on
+        // index.html (js/music.js) - this page just reads/writes the
+        // shared "musicMuted" preference in localStorage.
+        function isMusicMuted() {
+            return localStorage.getItem("musicMuted") === "true";
+        }
+
+        function updateMusicToggleLabel() {
+            const label = document.getElementById("musicToggleLabel");
+            if (label) {
+                label.textContent = isMusicMuted() ? "Unmute" : "Mute";
+            }
+        }
+
+        function toggleMusicSetting() {
+            const muted = !isMusicMuted();
+            localStorage.setItem("musicMuted", muted);
+            updateMusicToggleLabel();
+
+            // 'storage' events only fire in OTHER tabs, not this one, so
+            // update this page's own playing instance directly.
+            if (typeof backgroundMusic !== "undefined") {
+                backgroundMusic.muted = muted;
+                if (!muted && backgroundMusic.paused) {
+                    backgroundMusic.play().catch(() => {});
+                }
+            }
+        }
+
+        updateMusicToggleLabel();
 
         // Strong Logout
         async function logoutUser() {
@@ -481,5 +548,6 @@ el.style.color=
         applyTheme();
 
     </script>
+<script src="js/music.js"></script>
 </body>
 </html>

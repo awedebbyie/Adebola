@@ -20,14 +20,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let baseX = x;
     let baseY = y;
 
-    // Timestamp the cruise swing is measured relative to - set the
-    // instant phase 2 actually begins (see animate()), NOT left as the
-    // raw rAF timestamp. Without this, the swing's phase depended on
-    // whatever moment in real wall-clock time cruise happened to start,
-    // so it would occasionally begin near its trough and yank x/y down
-    // immediately - an intermittent dip right as cruise kicked in.
-    let cruiseStartTime = null;
-
     const MAX_X = 280; // right limit (ground level) - used for the climb-out/late-join math further down, untouched.
 
     // ✅ FIX: vertical boundaries
@@ -73,7 +65,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // between the helicopter and the edge at the peak of the swing,
     // decrease it. This is the one number to adjust - nothing else in
     // this block needs to change.
-    const EDGE_SAFETY_MARGIN = 60;
+    const EDGE_SAFETY_MARGIN = 20;
 
     const EDGE_TOUCH_X = GRAPH_WIDTH - (HELI_WIDTH - 55) - EDGE_SAFETY_MARGIN;
     const EDGE_TOUCH_Y = HELI_HEIGHT + EDGE_SAFETY_MARGIN;
@@ -187,6 +179,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     resetGame(currentMultiplier);
 
+    if (typeof playRoundStartSound === "function") {
+        playRoundStartSound();
+    }
+
    isRunning = true;
 window.animationRunning = true;
 
@@ -207,7 +203,6 @@ requestAnimationFrame(animate);
         // Cruise hover starts from wherever the round actually begins.
         baseX = x;
         baseY = y;
-        cruiseStartTime = null;
 
         multiplierEl.textContent = multiplierValue.toFixed(2) + "x";
         multiplierEl.style.color = "white";
@@ -236,6 +231,10 @@ requestAnimationFrame(animate);
         isRunning = false;
         window.animationRunning = false;
         phase = 3;
+
+        if (typeof playCrashSound === "function") {
+            playCrashSound();
+        }
 
         helicopter.style.transition =
             "left 90ms linear, bottom 90ms linear, opacity 70ms linear";
@@ -306,7 +305,6 @@ requestAnimationFrame(animate);
                 // eases from there toward the top-right corner.
                 baseX = x;
                 baseY = y;
-                cruiseStartTime = timestamp;
             }
         } else if (phase === 2) {
             // Keep drifting the touch-point baseline toward the real
@@ -322,19 +320,7 @@ requestAnimationFrame(animate);
             baseX += (EDGE_TOUCH_X - baseX) * BASE_EASE_RATE;
             baseY += (EDGE_TOUCH_Y - baseY) * BASE_EASE_RATE;
 
-            // Covers a late-joiner whose round starts directly in phase
-            // 2 (see computeStartState()) without ever passing through
-            // the phase-1 transition above.
-            if (cruiseStartTime === null) cruiseStartTime = timestamp;
-
-            const elapsed = timestamp - cruiseStartTime;
-
-            // Phase-shifted (+ PI/2) so at elapsed=0 the swing is
-            // exactly 0 - matching baseX/baseY with zero jump the
-            // instant cruise begins, instead of snapping to wherever a
-            // raw sine happened to be at that moment.
-            const swing =
-                (Math.sin(elapsed * SWING_SPEED + Math.PI / 2) - 1) / 2; // 0..-1
+            const swing = (Math.sin(timestamp * SWING_SPEED) - 1) / 2; // 0..-1
 
             x = baseX + swing * SWING_DISTANCE_X;
             y = baseY - swing * SWING_DISTANCE_Y;
@@ -372,7 +358,7 @@ requestAnimationFrame(animate);
         helicopter.style.left = (x - 55) + "px";
         helicopter.style.bottom = (320 - y) + "px";
 
-        const origin = { x: 0, y: 310 };
+        const origin = { x: 0, y: 320 };
         const tail = getTailPoint(x, y);
         const curve = buildCrashCurve(origin, tail);
 
