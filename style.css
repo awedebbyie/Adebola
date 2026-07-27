@@ -677,6 +677,7 @@ CRASH GAME OVERLAYS (absolute, locked to .graph-area)
     font-weight:900;
     color:red;
     letter-spacing:2px;
+    white-space:nowrap;
 }
 
 #countdownBarContainer{

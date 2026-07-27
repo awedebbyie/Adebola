@@ -103,7 +103,7 @@ if (
         window.settleLostBets();
 
         if (typeof window.recordRoundHistory === "function") {
-            window.recordRoundHistory(state.crash_point);
+            window.recordRoundHistory(state.crash_point, state.round_id);
         }
     }
 
