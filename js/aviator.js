@@ -20,6 +20,13 @@ document.addEventListener("DOMContentLoaded", () => {
     let baseX = x;
     let baseY = y;
 
+    // Set whenever the cruise (phase 2) swing starts, so the sine wave
+    // below always begins at swing = 0 - exactly matching baseX/baseY,
+    // the point the climb (or late-join) just left off at - instead of
+    // wherever the raw page-load-relative timestamp happens to put it.
+    // See where phase flips to 2, both in animate() and resetGame().
+    let swingPhaseOffset = 0;
+
     const MAX_X = 280; // right limit (ground level) - used for the climb-out/late-join math further down, untouched.
 
     // ✅ FIX: vertical boundaries
@@ -27,16 +34,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const MAX_Y = 320; // bottom limit (ground level)
 
     // ================= REAL CONTAINER + SPRITE GEOMETRY =================
-    // Everything below is computed from actual measured values instead of
-    // picked by eye, so the cruise swing always lines up with the real
-    // container/sprite regardless of future tweaks to either:
-    //   - GRAPH_WIDTH/GRAPH_HEIGHT are the .curve-svg viewBox in
-    //     index.html ("0 0 400 320") - the coordinate space the
-    //     helicopter's left/bottom and the SVG path both already share.
-    //   - HELI_WIDTH matches the `.helicopter { width }` rule in
-    //     style.css; HELI_HEIGHT is derived from helicopter.png's own
-    //     660x519 pixel dimensions (no CSS height is set, so the browser
-    //     scales it to the same aspect ratio).
     const GRAPH_WIDTH = 400;
     const GRAPH_HEIGHT = 320;
 
@@ -45,30 +42,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const HELI_NATURAL_H = 519;
     const HELI_HEIGHT = HELI_WIDTH * (HELI_NATURAL_H / HELI_NATURAL_W);
 
-    // The helicopter div is positioned with `left = x - 55` and
-    // `bottom` measured from the container's bottom, which (see
-    // getTailPoint() below) works out to the div's BOTTOM edge sitting
-    // at y and its top edge at (y - HELI_HEIGHT). So the div's right
-    // edge is (x - 55 + HELI_WIDTH), and solving for the anchor that
-    // puts that right edge exactly on the container's right edge
-    // (GRAPH_WIDTH) gives the true "touching the edge" x. Same for the
-    // div's top edge against the container's top edge (0).
-    //
-    // ⚠️ TUNE THIS SIDE: `.graph-area` is sized responsively in CSS
-    // (width:100%, height:50%), so its actual on-screen pixel size isn't
-    // guaranteed to be exactly 400x320 (GRAPH_WIDTH x GRAPH_HEIGHT) - the
-    // SVG stretches to fit whatever size it actually renders at, but the
-    // helicopter's left/bottom are plain pixels assuming that 1:1 match.
-    // If the helicopter still pokes outside the container on your
-    // screen, increase EDGE_SAFETY_MARGIN below (pulls the touch point
-    // further in from the true edge); if there's noticeable empty gap
-    // between the helicopter and the edge at the peak of the swing,
-    // decrease it. This is the one number to adjust - nothing else in
-    // this block needs to change.
-    const EDGE_SAFETY_MARGIN = 60;
+    const EDGE_SAFETY_MARGIN_X = 60;
+    const EDGE_SAFETY_MARGIN_Y = 29;
 
-    const EDGE_TOUCH_X = GRAPH_WIDTH - (HELI_WIDTH - 55) - EDGE_SAFETY_MARGIN;
-    const EDGE_TOUCH_Y = HELI_HEIGHT + EDGE_SAFETY_MARGIN;
+    const EDGE_TOUCH_X = GRAPH_WIDTH - (HELI_WIDTH - 55) - EDGE_SAFETY_MARGIN_X;
+    const EDGE_TOUCH_Y = HELI_HEIGHT + EDGE_SAFETY_MARGIN_Y;
 
     // How quickly the cruise baseline eases toward that real edge-touch
     // point each frame. Once it's there, that point IS the "touch" -
@@ -85,21 +63,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const SWING_DISTANCE_Y = GRAPH_HEIGHT * 0.2;
 
     // ================= TAIL ANCHOR =================
-    // The flight-path line used to be drawn straight to (x, y) - the same
-    // point used to place the helicopter <img>'s top-left corner via
-    // `left`/`bottom`. That point is just the sprite's bounding-box corner,
-    // not the actual tail of the helicopter drawn inside helicopter.png, so
-    // the line would end up trailing under the tail by a noticeable margin.
-    //
-    // helicopter.png is 660x519, and the visual center of the tail rotor in
-    // that image sits at roughly (645, 310) - i.e. ~97.7% across and ~59.7%
-    // down.
     const TAIL_FRACTION_X = 645 / HELI_NATURAL_W;
     const TAIL_FRACTION_Y = 310 / HELI_NATURAL_H;
 
-    // Converts the helicopter's positioning anchor (x, y - same coordinate
-    // space as the SVG path) into the exact pixel the tail sits at, so the
-    // trail can lock onto it instead of the sprite's bounding box.
     function getTailPoint(anchorX, anchorY) {
         return {
             x: (anchorX - 55) + TAIL_FRACTION_X * HELI_WIDTH,
@@ -107,17 +73,6 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     }
 
-    // Draws the trail as a single curve computed fresh every frame from
-    // just two points: the fixed origin and the helicopter's current tail
-    // position. Nothing about the curve is stored/accumulated from past
-    // frames - the origin and the live position are what shape it, every
-    // time. That's what actually produces the classic crash-game look:
-    // a quadratic Bezier with its control point pinned to (end.x,
-    // start.y) stays flat while x grows, then sweeps up sharply near the
-    // end - exactly like the accelerating curve real crash games draw,
-    // and unlike a literal recording of this game's own point-to-point
-    // motion (which is close to a straight line/random walk and doesn't
-    // look curved at all).
     function buildCrashCurve(start, end) {
         const controlX = end.x;
         const controlY = start.y;
@@ -125,44 +80,29 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ================= STATIC OVERLAY ELEMENTS =================
-    // These now live directly in index.html and are styled via style.css,
-    // so we just grab them instead of creating them dynamically.
     const flewAwayContainer = document.getElementById("flewAwayContainer");
     const preparingText = document.getElementById("preparingText");
     const countdownBarContainer = document.getElementById("countdownBarContainer");
     const countdownBar = document.getElementById("countdownBar");
 
     // ================= LATE-JOIN POSITIONING =================
-    // If a browser starts watching a round that is already flying (e.g. it
-    // just refreshed, or just opened the page mid-round), we shouldn't draw
-    // the helicopter at the origin - the round didn't just start for
-    // everyone else. Instead, estimate a start position/phase from the
-    // current server multiplier so the heli visually appears "already in
-    // flight" instead of flashing back to the ground.
     function computeStartState(currentMultiplier) {
         const m = Math.max(1, Number(currentMultiplier) || 1);
-
-        // How far along a "typical" round this multiplier represents.
-        // Most rounds crash under ~5x (see generateCrashPoint), so use that
-        // as a soft ceiling for visual progress - this is only cosmetic.
         const progress = Math.min(1, (m - 1) / 4);
 
         if (progress <= 0.02) {
-            // Effectively a fresh round - behave exactly as before.
             return { x: 55, y: 320, phase: 1 };
         }
 
         const phase1EndX = 220;
 
         if (progress < 0.5) {
-            // Still within the climb-out portion of the flight.
             const localProgress = progress / 0.5;
             const startX = 55 + localProgress * (phase1EndX - 55);
-            const startY = 320 - (startX - 55) * 0.5; // matches phase 1's -1.4/2.8 slope
+            const startY = 320 - (startX - 55) * 0.5;
             return { x: startX, y: startY, phase: 1 };
         }
 
-        // Well into the flight - render already in the cruising phase.
         const localProgress = (progress - 0.5) / 0.5;
         const startX = phase1EndX + localProgress * (MAX_X - phase1EndX);
         const startY = MAX_Y - localProgress * (MAX_Y - MIN_Y) * 0.6;
@@ -200,9 +140,12 @@ requestAnimationFrame(animate);
         multiplierValue = Math.max(1, Number(currentMultiplier) || 1);
         phase = startState.phase;
 
-        // Cruise hover starts from wherever the round actually begins.
         baseX = x;
         baseY = y;
+
+        if (phase === 2) {
+            swingPhaseOffset = Math.PI / 2 - performance.now() * SWING_SPEED;
+        }
 
         multiplierEl.textContent = multiplierValue.toFixed(2) + "x";
         multiplierEl.style.color = "white";
@@ -211,9 +154,6 @@ requestAnimationFrame(animate);
         flightPath.setAttribute("d", "");
         fillArea.setAttribute("d", "");
 
-        // Position the helicopter at its computed start position rather than
-        // always snapping to the origin (0px, 0px) - for a fresh round these
-        // are the same thing, since x=55,y=320 maps to left:0px, bottom:0px.
         helicopter.style.left = (x - 55) + "px";
         helicopter.style.bottom = (320 - y) + "px";
         helicopter.style.opacity = "1";
@@ -266,14 +206,6 @@ requestAnimationFrame(animate);
                 countdownBarContainer.style.opacity = "0";
                 preparingText.style.opacity = "0";
 
-                // startNextRound() was never defined anywhere in this
-                // project - gameState.js's own 250ms poll already detects
-                // the next round and calls window.beginRound() itself, so
-                // this was dead code left over from an earlier version.
-                // Guarded the same way the rest of the codebase guards
-                // optional cross-file calls, instead of deleting it
-                // outright, in case a real implementation gets wired in
-                // later.
                 if (typeof startNextRound === "function") {
                     startNextRound();
                 }
@@ -301,29 +233,29 @@ requestAnimationFrame(animate);
             y -= 1.4;
             if (x >= 220) {
                 phase = 2;
-                // Cruise picks up exactly where the climb left off, then
-                // eases from there toward the top-right corner.
                 baseX = x;
                 baseY = y;
+                swingPhaseOffset = Math.PI / 2 - timestamp * SWING_SPEED;
             }
         } else if (phase === 2) {
-            // Keep drifting the touch-point baseline toward the real
-            // edge-touch coordinate (EDGE_TOUCH_X/Y, computed above from
-            // the actual container + sprite geometry) the longer the
-            // round runs, then swing between that point and one
-            // diagonally down-left of it. The swing is one-sided (0 at
-            // the top, -1 at the bottom) so it always peaks exactly ON
-            // the baseline itself - the sprite's real bounding-box edge
-            // actually touching the container's real edge - then sweeps
-            // diagonally down-left before swinging back, repeating
-            // continuously.
+            // Ease the baseline toward the real edge-touch point.
             baseX += (EDGE_TOUCH_X - baseX) * BASE_EASE_RATE;
             baseY += (EDGE_TOUCH_Y - baseY) * BASE_EASE_RATE;
 
-            const swing = (Math.sin(timestamp * SWING_SPEED) - 1) / 2; // 0..-1
+            // One-sided swing: sin() drives a factor that is 0 at its peak
+            // (sin = 1, by construction of swingPhaseOffset above/below)
+            // and 1 at its trough (sin = -1), so the swing only ever pulls
+            // x/y away from the baseline toward the down-left, and back -
+            // it never pushes past the baseline itself. Since baseX/Y ease
+            // all the way to EDGE_TOUCH_X/Y, "swing = 0" is exactly the
+            // helicopter touching the container's edge, and the swing then
+            // carries it diagonally down-left and back to that same touch
+            // point every cycle.
+            const swing = Math.sin(timestamp * SWING_SPEED + swingPhaseOffset);
+            const swingFactor = (1 - swing) / 2; // 0..1, 0 at the touch point
 
-            x = baseX + swing * SWING_DISTANCE_X;
-            y = baseY - swing * SWING_DISTANCE_Y;
+            x = baseX - swingFactor * SWING_DISTANCE_X;
+            y = baseY - swingFactor * SWING_DISTANCE_Y;
 
             // Clamp against the real container edges themselves - x can
             // never push the div's right edge past GRAPH_WIDTH, y can
@@ -358,7 +290,7 @@ requestAnimationFrame(animate);
         helicopter.style.left = (x - 55) + "px";
         helicopter.style.bottom = (320 - y) + "px";
 
-        const origin = { x: 0, y: 320 };
+        const origin = { x: 0, y: 310 };
         const tail = getTailPoint(x, y);
         const curve = buildCrashCurve(origin, tail);
 
