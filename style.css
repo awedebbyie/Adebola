@@ -185,6 +185,97 @@ TOP BAR
     cursor:pointer;
 }
 
+/* =========================
+ROUND HISTORY STRIP
+========================= */
+
+.round-history{
+    width:100%;
+    box-sizing:border-box;
+
+    display:flex;
+    align-items:center;
+    gap:10px;
+
+    padding:6px 12px;
+    margin-bottom:8px;
+
+    overflow:hidden;
+    white-space:nowrap;
+
+    background:#1a1a1a;
+}
+
+.history-chip{
+    flex-shrink:0;
+    font-weight:bold;
+    font-size:14px;
+}
+
+.history-chip-more{
+    color:#ccc;
+    cursor:pointer;
+    padding:2px 8px;
+    border-radius:12px;
+    background:#333;
+}
+
+.round-history-modal-overlay{
+    position:fixed;
+    top:0; left:0; right:0; bottom:0;
+
+    background:rgba(0,0,0,0.7);
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    z-index:9998;
+}
+
+.round-history-modal-panel{
+    width:85%;
+    max-width:400px;
+    max-height:70vh;
+
+    background:#1a1a2e;
+    border:1px solid #444;
+    border-radius:12px;
+
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+}
+
+.round-history-modal-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    padding:12px 16px;
+    color:#fff;
+    font-weight:bold;
+
+    border-bottom:1px solid #333;
+}
+
+.round-history-modal-close{
+    background:none;
+    border:none;
+    color:#fff;
+    font-size:16px;
+    cursor:pointer;
+}
+
+.round-history-modal-list{
+    padding:12px 16px;
+    overflow-y:auto;
+
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px 14px;
+}
+
 .top-btn:hover{
     background:#333;
 }

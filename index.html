@@ -111,6 +111,9 @@
 <div class="game-container">
     <!-- Top Bar -->
     <div class="top-bar" id="topBar"></div>
+    <!-- Round history strip: shows past crash multipliers, oldest to newest.
+         Populated/managed by js/roundHistory.js -->
+    <div class="round-history" id="roundHistory"></div>
 
     <!-- GRAPH AREA -->
     <div class="graph-area">
@@ -406,6 +409,7 @@ document.getElementById("investBtn2").addEventListener("click", handleInvest);
 </script>
 
 <script src="js/supabase.js"></script>
+<script src="js/roundHistory.js"></script>
 <script src="js/gameState.js"></script>
 <script src="js/bets.js"></script>
 <script src="js/crashLogic.js"></script>
