@@ -123,28 +123,41 @@
          Numbers are not allowed in chat - not as digits, not spelled out -
          enforced client-side in js/chat.js and again server-side by a
          Postgres trigger (see
-         supabase/migrations/20260727000000_create_chat_messages.sql). -->
+         supabase/migrations/20260727000000_create_chat_messages.sql).
+
+         Live location: the icon itself is relocated into the top bar
+         by the auth handler below, since #topBar's innerHTML is fully
+         re-rendered on login/logout. It lands just left of the settings
+         icon when logged in, and in the equivalent right-hand spot of
+         the logged-out top bar otherwise - so its on-screen position
+         never jumps between the two states. #chatWidgetSlot below is
+         only a placeholder for the brief moment before auth state
+         resolves on first page load; the node itself (#chatWidget) is
+         moved, not cloned, so its listeners (js/chat.js) keep working
+         wherever it ends up. -->
     <div class="chat-backdrop" id="chatBackdrop"></div>
 
-    <div class="chat-widget" id="chatWidget">
-        <button type="button" class="chat-icon-btn" id="chatIconBtn" aria-label="Open chat">
-            <svg class="chat-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M4 4h16a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H9l-4.5 4v-4H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" fill="currentColor"/>
-            </svg>
-            <span class="chat-unread-dot" id="chatUnreadDot"></span>
-        </button>
+    <div class="chat-widget-slot" id="chatWidgetSlot">
+        <div class="chat-widget" id="chatWidget">
+            <button type="button" class="chat-icon-btn" id="chatIconBtn" aria-label="Open chat">
+                <svg class="chat-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 4h16a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H9l-4.5 4v-4H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" fill="currentColor"/>
+                </svg>
+                <span class="chat-unread-dot" id="chatUnreadDot"></span>
+            </button>
 
-        <div class="chat-dropdown" id="chatDropdown">
-            <div class="chat-header">
-                <span>Chat</span>
-                <button type="button" class="chat-close-btn" id="chatCloseBtn" aria-label="Close chat">✕</button>
+            <div class="chat-dropdown" id="chatDropdown">
+                <div class="chat-header">
+                    <span>Chat</span>
+                    <button type="button" class="chat-close-btn" id="chatCloseBtn" aria-label="Close chat">✕</button>
+                </div>
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="chat-error" id="chatError"></div>
+                <form class="chat-input-row" id="chatForm">
+                    <input type="text" id="chatInput" class="chat-input" placeholder="Login to chat" maxlength="300" autocomplete="off" disabled />
+                    <button type="submit" class="chat-send-btn" id="chatSendBtn" disabled>Send</button>
+                </form>
             </div>
-            <div class="chat-messages" id="chatMessages"></div>
-            <div class="chat-error" id="chatError"></div>
-            <form class="chat-input-row" id="chatForm">
-                <input type="text" id="chatInput" class="chat-input" placeholder="Login to chat" maxlength="300" autocomplete="off" disabled />
-                <button type="submit" class="chat-send-btn" id="chatSendBtn" disabled>Send</button>
-            </form>
         </div>
     </div>
 
@@ -393,9 +406,9 @@ auth.onAuthStateChanged(async (user) => {
                         <span id="balance" style="font-size:18px;">0.00</span>
                     </div>
 
-                    <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                    <div id="topBarRightGroup" style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
                         <button class="topbar-btn withdraw" onclick="withdraw()">WITHDRAW</button>
-                        <button class="topbar-icon-btn" onclick="showSettings()">⚙️</button>
+                        <button class="topbar-icon-btn" id="settingsBtn" onclick="showSettings()">⚙️</button>
                     </div>
                 </div>
             `;
@@ -404,6 +417,16 @@ auth.onAuthStateChanged(async (user) => {
             const balanceEl = document.getElementById("balance");
             if (balanceEl) {
                 balanceEl.addEventListener("click", revealExactBalance);
+            }
+
+            // Relocate the chat icon into the top bar, just left of the
+            // settings icon. This moves the existing #chatWidget node
+            // (insertBefore, not a copy) so its click handlers - wired up
+            // by js/chat.js on page load - stay attached.
+            const chatWidgetForTopBar = document.getElementById("chatWidget");
+            const settingsBtn = document.getElementById("settingsBtn");
+            if (chatWidgetForTopBar && settingsBtn && settingsBtn.parentNode) {
+                settingsBtn.parentNode.insertBefore(chatWidgetForTopBar, settingsBtn);
             }
 
             updateInvestButtons(true);
@@ -429,8 +452,26 @@ auth.onAuthStateChanged(async (user) => {
             console.error("Auth error:", err);
         }
     } else {
-        topBar.innerHTML = `<button class="top-btn" onclick="window.location.href='login.html'">Login</button>`;
+        // Logged-out top bar mirrors the same layout shape as the
+        // logged-in one (flex row, right-hand group on the far side) so
+        // the chat icon lands in the exact same spot on screen either
+        // way - it never jumps position on login/logout.
+        topBar.innerHTML = `
+            <div style="display:flex; align-items:center; justify-content:space-between; width:100%; padding:0 12px; box-sizing:border-box; gap:8px;">
+                <button class="top-btn" onclick="window.location.href='login.html'">Login</button>
+                <div id="topBarRightGroupLoggedOut" style="display:flex; align-items:center; gap:8px; flex-shrink:0;"></div>
+            </div>
+        `;
         updateInvestButtons(false);
+
+        // Move the chat icon into that right-hand group (same node,
+        // same listeners - see the login branch above) instead of back
+        // into #chatWidgetSlot, so its on-screen position stays put.
+        const chatWidgetEl = document.getElementById("chatWidget");
+        const rightGroupLoggedOut = document.getElementById("topBarRightGroupLoggedOut");
+        if (chatWidgetEl && rightGroupLoggedOut) {
+            rightGroupLoggedOut.appendChild(chatWidgetEl);
+        }
     }
 
     hideLoading();

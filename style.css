@@ -122,7 +122,7 @@ GRAPH AREA
     flex-shrink:0;
 
     border-radius:18px;
-    margin-bottom:10px;
+    margin-bottom:5.5px;
 
     overflow:hidden;
 
@@ -201,11 +201,11 @@ ROUND HISTORY STRIP
     gap:10px;
 
     padding:6px 12px;
-    margin-bottom:8px;
+    margin-bottom:2px;
 
     overflow:hidden;
     white-space:nowrap;
-
+    margin-top:-6px;
     background:#1a1a1a;
 }
 
@@ -300,11 +300,27 @@ CHAT (icon trigger + floating overlay dropdown)
     z-index:1001;
 }
 
+/* When the chat icon lives in its fallback slot (logged out - see
+   #chatWidgetSlot), that slot keeps the 8px gap above the round-history
+   strip that .chat-widget used to provide on its own. Once the icon is
+   living inside .top-bar instead (moved there next to the settings
+   icon whenever a user is logged in), that bottom margin would just add
+   unwanted space inside the bar, so it's zeroed there. */
+.top-bar .chat-widget{
+    margin-bottom:0;
+}
+
+.chat-widget-slot{
+    flex-shrink:0;
+}
+
+/* Sized to match .topbar-icon-btn (the settings icon) - same footprint,
+   so the two sit flush next to each other in the top bar. */
 .chat-icon-btn{
     position:relative;
 
-    width:36px;
-    height:36px;
+    width:32px;
+    height:32px;
 
     display:flex;
     align-items:center;
@@ -319,8 +335,8 @@ CHAT (icon trigger + floating overlay dropdown)
 }
 
 .chat-icon-svg{
-    width:19px;
-    height:19px;
+    width:16px;
+    height:16px;
 }
 
 /* Red "new messages" dot, top-right of the icon. Hidden until the icon
@@ -331,12 +347,12 @@ CHAT (icon trigger + floating overlay dropdown)
     top:1px;
     right:1px;
 
-    width:10px;
-    height:10px;
+    width:8px;
+    height:8px;
     border-radius:50%;
 
     background:#ff3b30;
-    border:2px solid #1a1a1a;
+    border:1.5px solid #1a1a1a;
 
     display:none;
 }
@@ -705,7 +721,7 @@ CONTROLS
 
     box-sizing:border-box;
 
-    margin-top:12px;
+    margin-top:2px;
 }
 
 .invest-row{
@@ -794,7 +810,7 @@ CONTROLS
 }
 
 .bet-history-panel{
-    margin-top:25px;
+    margin-top:8px;
     background:rgba(0,0,0,0.7);
     border-radius:12px;
     border:1px solid #444;
