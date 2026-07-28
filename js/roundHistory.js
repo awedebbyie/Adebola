@@ -6,12 +6,13 @@
 // - New rounds enter on the LEFT. Every existing chip shifts right to
 //   make room (array-wise this just means new values are unshifted to
 //   the front, then re-rendered in order).
-// - Once 50 rounds have been recorded, history clears and starts over
-//   from empty.
-// - The strip itself never scrolls. Once the chips no longer fit in the
-//   available width, the ones that don't fit are hidden and a "..."
-//   chip is shown at the end instead. Clicking "..." opens a popup
-//   listing every stored round (newest first).
+// - At most 50 rounds are kept. When a new one is added past that limit,
+//   the oldest entry (rightmost) is dropped so the new value has room
+//   on the left — a sliding window, never a full clear.
+// - The strip itself never scrolls. A "..." chip is always shown at the
+//   end of the strip (when there is any history). Chips that don't fit
+//   are hidden; clicking "..." opens a popup listing every stored round
+//   (up to 50, newest first).
 //
 // gameState.js already detects "a round just crashed" (guarded by
 // round_id so it only fires once) - that's where recordRoundHistory
@@ -60,23 +61,22 @@
 
         container.innerHTML = "";
 
-        // Render every stored round first (newest already at the front
-        // since history is newest-first), then trim from the end until
-        // it fits, leaving room for the "..." chip if anything was cut.
+        if (history.length === 0) return;
+
+        // Always show "..." at the end so the user can open the full
+        // list (up to MAX_ENTRIES) even when every chip already fits.
+        const ellipsis = makeEllipsisChip();
+
+        // Render newest-first chips, then the ellipsis, then trim from
+        // the oldest end until the strip fits (ellipsis stays fixed).
         const chipEls = history.map(makeChip);
         chipEls.forEach((el) => container.appendChild(el));
-
-        if (container.scrollWidth <= container.clientWidth) {
-            return; // everything fits, no "..." needed
-        }
-
-        const ellipsis = makeEllipsisChip();
         container.appendChild(ellipsis);
 
         while (
             container.scrollWidth > container.clientWidth &&
-            container.lastChild &&
-            container.lastChild !== ellipsis
+            container.childNodes.length > 1 &&
+            container.lastChild === ellipsis
         ) {
             // Remove the chip just before the ellipsis (the oldest
             // visible one), not the ellipsis itself.
@@ -129,8 +129,9 @@
     }
 
     // Adds a finished round's crash multiplier to the strip, entering at
-    // the front (left). Once more than MAX_ENTRIES have been recorded,
-    // history clears and starts over from empty.
+    // the front (left). If the list is already at MAX_ENTRIES (50), the
+    // oldest entry is dropped first so the new value has room — the strip
+    // stays a sliding window of the most recent rounds.
     //
     // roundId is optional but should be passed whenever the caller has it
     // (gameState.js passes state.round_id). It's used purely to stop the
@@ -150,8 +151,10 @@
             lastRecordedRoundId = roundId;
         }
 
+        // Sliding window: at 50, drop the oldest (rightmost) so the new
+        // crash can enter on the left without wiping the whole strip.
         if (history.length >= MAX_ENTRIES) {
-            history = [];
+            history.pop();
         }
 
         history.unshift(value);
@@ -202,11 +205,30 @@
                 console.warn("Round history debug - query succeeded but returned zero rows.");
             }
 
-            history = rounds
+            // Keep id alongside crash_point so we can seed lastRecordedRoundId
+            // from the newest finished round. That stops a concurrent
+            // "crashed" poll from double-adding a round that load just
+            // excluded (or included) while the async query was in flight.
+            const finished = rounds
                 .filter((row) => row.id !== currentRoundId)
-                .map((row) => Number(row.crash_point))
-                .filter((value) => Number.isFinite(value))
+                .map((row) => ({
+                    id: row.id,
+                    value: Number(row.crash_point)
+                }))
+                .filter((row) => Number.isFinite(row.value))
                 .slice(0, MAX_ENTRIES);
+
+            // Preserve any crash(es) that recordRoundHistory already pushed
+            // while this async query was in flight. Replacing history wholesale
+            // used to drop those live values (or, combined with the old
+            // clear-on-max logic, wipe the whole strip right after a refresh).
+            const livePrefix = history.slice();
+            const fromDb = finished.map((row) => row.value);
+            history = livePrefix.concat(fromDb).slice(0, MAX_ENTRIES);
+
+            if (finished.length > 0 && lastRecordedRoundId == null) {
+                lastRecordedRoundId = finished[0].id;
+            }
 
             render();
         } catch (err) {
