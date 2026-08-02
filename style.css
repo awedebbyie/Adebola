@@ -161,7 +161,7 @@ TOP BAR
     background:#ff0000;
 
     display:flex;
-    gap:10px;
+    gap:0px;
 
     box-sizing:border-box;
 
