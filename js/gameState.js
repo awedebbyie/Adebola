@@ -36,6 +36,13 @@ function updateGameFromServer(state) {
         multiplierEl.textContent = Number(state.multiplier).toFixed(2) + "x";
     }
 
+    // Provably-fair live hash indicator - defined in js/fairnessPanel.js.
+    // Kept as an optional hook (typeof check) so this file doesn't break
+    // if that script isn't loaded on a given page.
+    if (typeof window.updateFairnessDisplay === "function") {
+        window.updateFairnessDisplay(state);
+    }
+
     // Detect when a new round starts
     if (window.lastRoundId !== state.round_id) {
 

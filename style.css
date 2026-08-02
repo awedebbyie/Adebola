@@ -280,6 +280,115 @@ ROUND HISTORY STRIP
 }
 
 /* =========================
+PROVABLY FAIR (live hash bar + verify modal)
+========================= */
+
+.fairness-bar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+
+    padding:6px 10px;
+    margin:6px 0;
+
+    background:#1a1a2e;
+    border:1px solid #333;
+    border-radius:8px;
+}
+
+.fairness-hash{
+    font-size:12px;
+    color:#aaa;
+    font-family:monospace;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.fairness-verify-btn{
+    flex-shrink:0;
+    font-size:12px;
+    padding:4px 10px;
+    border-radius:12px;
+    border:1px solid #555;
+    background:#2a2a40;
+    color:#fff;
+    cursor:pointer;
+}
+
+/* Overrides the default flex-wrap/row layout inherited from
+   .round-history-modal-list (built for chips) - fairness content is
+   vertical rows of label/value pairs instead. */
+.fairness-modal-body{
+    display:block;
+}
+
+.fairness-lookup-bar{
+    display:flex;
+    gap:8px;
+    margin-bottom:14px;
+}
+
+.fairness-lookup-input{
+    flex:1;
+    padding:6px 8px;
+    border-radius:6px;
+    border:1px solid #444;
+    background:#0f0f1a;
+    color:#fff;
+}
+
+.fairness-lookup-btn{
+    padding:6px 12px;
+    border-radius:6px;
+    border:1px solid #555;
+    background:#2a2a40;
+    color:#fff;
+    cursor:pointer;
+}
+
+.fairness-row{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+
+    padding:6px 0;
+    border-bottom:1px solid #2a2a2a;
+
+    font-size:13px;
+}
+
+.fairness-row-label{
+    color:#999;
+}
+
+.fairness-row-value{
+    color:#fff;
+    font-family:monospace;
+    text-align:right;
+    word-break:break-all;
+}
+
+.fairness-result{
+    margin:10px 0;
+    padding:8px 10px;
+    border-radius:6px;
+    font-size:13px;
+    font-weight:bold;
+}
+
+.fairness-pass{
+    background:rgba(0,200,100,0.15);
+    color:#3ddc84;
+}
+
+.fairness-fail{
+    background:rgba(220,50,50,0.15);
+    color:#ff5c5c;
+}
+
+/* =========================
 CHAT (icon trigger + floating overlay dropdown)
 ========================= */
 

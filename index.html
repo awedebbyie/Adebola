@@ -115,6 +115,16 @@
          Populated/managed by js/roundHistory.js -->
     <div class="round-history" id="roundHistory"></div>
 
+    <!-- Provably-fair live indicator + verify entry point.
+         Text populated by js/fairnessPanel.js (window.updateFairnessDisplay),
+         fed from js/gameState.js's existing 250ms poll. Clicking opens a
+         modal (also from fairnessPanel.js) showing the current round's
+         seed/hash and a lookup box for verifying any past round. -->
+    <div class="fairness-bar">
+        <span class="fairness-hash" id="fairnessHashPreview">Provably fair</span>
+        <button class="fairness-verify-btn" id="fairnessVerifyBtn">Verify</button>
+    </div>
+
     <!-- CHAT: just an icon trigger here - clicking it opens a floating
          dropdown (position:absolute, see .chat-dropdown in style.css) that
          overlays the page. It never sits in normal document flow, so no
@@ -485,6 +495,8 @@ document.getElementById("investBtn2").addEventListener("click", handleInvest);
 <script src="js/supabase.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/roundHistory.js"></script>
+<script src="js/verifyFairness.js"></script>
+<script src="js/fairnessPanel.js"></script>
 <script src="js/gameState.js"></script>
 <script src="js/bets.js"></script>
 <script src="js/crashLogic.js"></script>

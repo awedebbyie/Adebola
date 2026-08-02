@@ -83,7 +83,7 @@ async function settleLostBets(roundId) {
     }
 }
 
-async function updateMultiplier(roundId, crashPoint) {
+async function updateMultiplier(roundId, crashPoint, serverSeed) {
     let multiplier = 1.00;
 
     console.log("📈 Multiplier started...");
@@ -116,23 +116,33 @@ async function updateMultiplier(roundId, crashPoint) {
 
     const crashedAt = new Date().toISOString();
 
+    // Reveal the raw server seed now that the round is over. Anyone can
+    // now take (serverSeed, client_seed, nonce, server_seed_hash) - all
+    // public at this point - and independently confirm:
+    //   1. hashing serverSeed reproduces server_seed_hash (nothing was
+    //      swapped after the hash was published pre-round)
+    //   2. crashLogic.generateCrashPoint(serverSeed, clientSeed, nonce)
+    //      reproduces this exact crashPoint
     await safeUpdate(
         "current_round",
         {
             status: "crashed",
             multiplier: crashPoint,
-            crashed_at: crashedAt
+            crashed_at: crashedAt,
+            server_seed: serverSeed
         },
         "id",
         1
     );
 
     console.log("✅ Round crashed.");
+    console.log("🔓 Server seed revealed:", serverSeed);
 
     await safeUpdate(
         "rounds",
         {
-            crashed_at: crashedAt
+            crashed_at: crashedAt,
+            server_seed: serverSeed
         },
         "id",
         roundId
@@ -158,15 +168,34 @@ async function runRound() {
     const nextRoundNumber = (lastRound?.round_number || 0) + 1;
     console.log("Next Round Number:", nextRoundNumber);
 
-    // Crash point isn't known yet - it depends on this round's total_bets,
-    // which isn't known until betting closes. It's filled in further down.
+    // ---- Provably fair commit step -------------------------------------
+    // Generate + hash the server seed BEFORE betting opens, and pick a
+    // public client seed + nonce, all before anyone can bet. Only the
+    // hash (never the raw server seed) goes out during betting - that's
+    // what makes this a real commitment instead of "trust us": the
+    // house can't change its mind about the result after seeing bets,
+    // because the hash was already published and can't be un-published.
+    // The raw server seed is revealed only after the round crashes (see
+    // below), at which point anyone can hash it themselves and confirm
+    // it matches, then feed (serverSeed, clientSeed, nonce) into
+    // crashLogic.generateCrashPoint() and confirm the same crash point
+    // comes out.
+    const serverSeed = crashLogic.generateServerSeed();
+    const serverSeedHash = crashLogic.hashServerSeed(serverSeed);
+    const clientSeed = crashLogic.generateServerSeed().slice(0, 16); // public - doesn't need to stay secret
+    const nonce = nextRoundNumber;
+
     const round = await safeInsert("rounds", {
         round_number: nextRoundNumber,
         started_at: new Date().toISOString(),
         crash_point: null,
+        server_seed_hash: serverSeedHash,
+        client_seed: clientSeed,
+        nonce: nonce,
     });
 
     console.log("Created round:", round.id);
+    console.log("🔒 Server seed hash (published now):", serverSeedHash);
 
     await safeUpdate(
         "current_round",
@@ -175,7 +204,11 @@ async function runRound() {
             status: "betting",
             multiplier: 1,
             crash_point: null,
-            started_at: round.started_at
+            started_at: round.started_at,
+            server_seed_hash: serverSeedHash,
+            client_seed: clientSeed,
+            nonce: nonce,
+            server_seed: null
         },
         "id",
         1
@@ -210,9 +243,12 @@ async function runRound() {
 
     console.log("💰 Total Bets:", totalBets);
 
-    // Crash multiplier generation lives entirely in crashLogic.js - the
-    // engine just hands over total_bets and uses whatever comes back.
-    const crashPoint = crashLogic.getCrashMultiplier(totalBets);
+    // Resolve using the SAME seed/clientSeed/nonce that were committed
+    // (and hashed, and published) before betting even opened. totalBets
+    // is intentionally not passed in anywhere here - the result was
+    // already fixed the moment the hash went out, long before this
+    // point, regardless of how much action came in during betting.
+    const crashPoint = crashLogic.generateCrashPoint(serverSeed, clientSeed, nonce);
     console.log("💥 Crash Point:", crashPoint + "x");
 
     await safeUpdate(
@@ -240,7 +276,7 @@ async function runRound() {
 
     console.log("✅ Flight started.");
 
-    await updateMultiplier(round.id, crashPoint);
+    await updateMultiplier(round.id, crashPoint, serverSeed);
 }
 
 async function gameLoop() {
