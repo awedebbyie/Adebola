@@ -283,18 +283,36 @@ ROUND HISTORY STRIP
 PROVABLY FAIR (live hash bar + verify modal)
 ========================= */
 
+/* Shared row: fairness-bar shrinks/scrolls its hash text as needed,
+   chat icon stays a fixed size outside of it, at the end of the row. */
+.fairness-row-outer{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin:6px 0;
+}
+
 .fairness-bar{
     display:flex;
     align-items:center;
     justify-content:space-between;
     gap:10px;
 
+    flex:1;
+    min-width:0; /* lets .fairness-hash's ellipsis actually kick in inside a flex child */
+
     padding:6px 10px;
-    margin:6px 0;
+    margin:0;
 
     background:#1a1a2e;
     border:1px solid #333;
     border-radius:8px;
+}
+
+/* Chat icon sits outside the fairness-bar box now, so it never gets
+   squeezed by the hash text or the box's own padding. */
+.fairness-row-outer .chat-widget{
+    flex-shrink:0;
 }
 
 .fairness-hash{
@@ -368,6 +386,11 @@ PROVABLY FAIR (live hash bar + verify modal)
     font-family:monospace;
     text-align:right;
     word-break:break-all;
+}
+
+.fairness-row-copyable{
+    cursor:pointer;
+    text-decoration:underline dotted;
 }
 
 .fairness-result{

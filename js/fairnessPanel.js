@@ -35,7 +35,7 @@
         if (modal) modal.remove();
     }
 
-    function row(label, value) {
+    function row(label, value, copyable) {
         const wrap = document.createElement("div");
         wrap.className = "fairness-row";
         const l = document.createElement("span");
@@ -44,6 +44,21 @@
         const v = document.createElement("span");
         v.className = "fairness-row-value";
         v.textContent = value;
+
+        if (copyable && value) {
+            v.classList.add("fairness-row-copyable");
+            v.title = "Tap to copy";
+            v.addEventListener("click", () => {
+                navigator.clipboard.writeText(String(value)).then(() => {
+                    const original = v.textContent;
+                    v.textContent = "Copied!";
+                    setTimeout(() => {
+                        v.textContent = original;
+                    }, 900);
+                });
+            });
+        }
+
         wrap.appendChild(l);
         wrap.appendChild(v);
         return wrap;
@@ -58,8 +73,11 @@
         }
 
         container.appendChild(row("Round #", roundData.round_number));
-        container.appendChild(row("Hash (published pre-round)", shortHash(roundData.server_seed_hash)));
-        container.appendChild(row("Client seed", roundData.client_seed || "—"));
+        // Full hash here, not truncated - this is the modal where someone
+        // is actually trying to verify, so they need the real value to
+        // copy/paste, not a shortened display version.
+        container.appendChild(row("Hash (published pre-round)", roundData.server_seed_hash, true));
+        container.appendChild(row("Client seed", roundData.client_seed || "—", true));
         container.appendChild(row("Nonce", roundData.nonce));
         container.appendChild(
             row("Crash point (stored)", roundData.crash_point != null ? roundData.crash_point + "x" : "—")
@@ -70,7 +88,7 @@
             return;
         }
 
-        container.appendChild(row("Server seed (revealed)", roundData.server_seed));
+        container.appendChild(row("Server seed (revealed)", roundData.server_seed, true));
 
         const verifying = row("Verifying…", "");
         container.appendChild(verifying);

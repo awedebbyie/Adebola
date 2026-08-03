@@ -128,6 +128,7 @@ async function updateMultiplier(roundId, crashPoint, serverSeed) {
         {
             status: "crashed",
             multiplier: crashPoint,
+            crash_point: crashPoint,
             crashed_at: crashedAt,
             server_seed: serverSeed
         },
@@ -141,6 +142,7 @@ async function updateMultiplier(roundId, crashPoint, serverSeed) {
     await safeUpdate(
         "rounds",
         {
+            crash_point: crashPoint,
             crashed_at: crashedAt,
             server_seed: serverSeed
         },
@@ -251,19 +253,14 @@ async function runRound() {
     const crashPoint = crashLogic.generateCrashPoint(serverSeed, clientSeed, nonce);
     console.log("💥 Crash Point:", crashPoint + "x");
 
-    await safeUpdate(
-        "rounds",
-        { crash_point: crashPoint },
-        "id",
-        round.id
-    );
-
-    await safeUpdate(
-        "current_round",
-        { crash_point: crashPoint },
-        "id",
-        1
-    );
+    // IMPORTANT: crash_point is intentionally NOT written to the database
+    // here. current_round/rounds are readable by anyone (anon key, polled
+    // every 250ms by every browser) - writing the real value now, before
+    // the plane has actually flown up to it, would let anyone query it
+    // directly and cash out with perfect timing every round. It's kept
+    // only in this function's local memory and written to the DB for the
+    // first time inside updateMultiplier(), at the moment the round
+    // actually crashes - never earlier.
 
     console.log("✈️ Starting flight...");
 

@@ -115,39 +115,30 @@
          Populated/managed by js/roundHistory.js -->
     <div class="round-history" id="roundHistory"></div>
 
-    <!-- Provably-fair live indicator + verify entry point.
+    <!-- Provably-fair live indicator + verify entry point, plus the chat
+         icon beside it (outside the fairness-bar box itself, so the bar
+         shrinks to make room rather than the icon living inside it).
          Text populated by js/fairnessPanel.js (window.updateFairnessDisplay),
-         fed from js/gameState.js's existing 250ms poll. Clicking opens a
-         modal (also from fairnessPanel.js) showing the current round's
-         seed/hash and a lookup box for verifying any past round. -->
-    <div class="fairness-bar">
-        <span class="fairness-hash" id="fairnessHashPreview">Provably fair</span>
-        <button class="fairness-verify-btn" id="fairnessVerifyBtn">Verify</button>
-    </div>
+         fed from js/gameState.js's existing 250ms poll. Clicking Verify
+         opens a modal (also from fairnessPanel.js) showing the current
+         round's seed/hash and a lookup box for verifying any past round.
 
-    <!-- CHAT: just an icon trigger here - clicking it opens a floating
-         dropdown (position:absolute, see .chat-dropdown in style.css) that
-         overlays the page. It never sits in normal document flow, so no
-         matter how many messages pile up, it can't push the graph or
-         anything below it down.
-         Numbers are not allowed in chat - not as digits, not spelled out -
+         CHAT: lives here now instead of the top bar, so the balance gets
+         more room up there. Clicking it opens a floating dropdown
+         (position:absolute, see .chat-dropdown in style.css) that overlays
+         the page - it never sits in normal document flow, so no matter how
+         many messages pile up, it can't push anything else down. Numbers
+         are not allowed in chat - not as digits, not spelled out -
          enforced client-side in js/chat.js and again server-side by a
          Postgres trigger (see
-         supabase/migrations/20260727000000_create_chat_messages.sql).
+         supabase/migrations/20260727000000_create_chat_messages.sql). -->
+    <div class="fairness-row-outer">
+        <div class="fairness-bar">
+            <span class="fairness-hash" id="fairnessHashPreview">Provably fair</span>
+            <button class="fairness-verify-btn" id="fairnessVerifyBtn">Verify</button>
+        </div>
 
-         Live location: the icon itself is relocated into the top bar
-         by the auth handler below, since #topBar's innerHTML is fully
-         re-rendered on login/logout. It lands just left of the settings
-         icon when logged in, and in the equivalent right-hand spot of
-         the logged-out top bar otherwise - so its on-screen position
-         never jumps between the two states. #chatWidgetSlot below is
-         only a placeholder for the brief moment before auth state
-         resolves on first page load; the node itself (#chatWidget) is
-         moved, not cloned, so its listeners (js/chat.js) keep working
-         wherever it ends up. -->
-    <div class="chat-backdrop" id="chatBackdrop"></div>
-
-    <div class="chat-widget-slot" id="chatWidgetSlot">
+        <div class="chat-backdrop" id="chatBackdrop"></div>
         <div class="chat-widget" id="chatWidget">
             <button type="button" class="chat-icon-btn" id="chatIconBtn" aria-label="Open chat">
                 <svg class="chat-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -429,16 +420,6 @@ auth.onAuthStateChanged(async (user) => {
                 balanceEl.addEventListener("click", revealExactBalance);
             }
 
-            // Relocate the chat icon into the top bar, just left of the
-            // settings icon. This moves the existing #chatWidget node
-            // (insertBefore, not a copy) so its click handlers - wired up
-            // by js/chat.js on page load - stay attached.
-            const chatWidgetForTopBar = document.getElementById("chatWidget");
-            const settingsBtn = document.getElementById("settingsBtn");
-            if (chatWidgetForTopBar && settingsBtn && settingsBtn.parentNode) {
-                settingsBtn.parentNode.insertBefore(chatWidgetForTopBar, settingsBtn);
-            }
-
             updateInvestButtons(true);
 
             // === BALANCE LISTENER ===
@@ -462,26 +443,12 @@ auth.onAuthStateChanged(async (user) => {
             console.error("Auth error:", err);
         }
     } else {
-        // Logged-out top bar mirrors the same layout shape as the
-        // logged-in one (flex row, right-hand group on the far side) so
-        // the chat icon lands in the exact same spot on screen either
-        // way - it never jumps position on login/logout.
         topBar.innerHTML = `
             <div style="display:flex; align-items:center; justify-content:space-between; width:100%; padding:0 12px; box-sizing:border-box; gap:8px;">
                 <button class="top-btn" onclick="window.location.href='login.html'">Login</button>
-                <div id="topBarRightGroupLoggedOut" style="display:flex; align-items:center; gap:8px; flex-shrink:0;"></div>
             </div>
         `;
         updateInvestButtons(false);
-
-        // Move the chat icon into that right-hand group (same node,
-        // same listeners - see the login branch above) instead of back
-        // into #chatWidgetSlot, so its on-screen position stays put.
-        const chatWidgetEl = document.getElementById("chatWidget");
-        const rightGroupLoggedOut = document.getElementById("topBarRightGroupLoggedOut");
-        if (chatWidgetEl && rightGroupLoggedOut) {
-            rightGroupLoggedOut.appendChild(chatWidgetEl);
-        }
     }
 
     hideLoading();
