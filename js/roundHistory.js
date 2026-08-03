@@ -39,11 +39,27 @@
         return "#ff4dd8";                  // pink/magenta
     }
 
-    function makeChip(value) {
+    // entry = { value, roundNumber }. Chips are clickable whenever
+    // roundNumber is known - opens the Provably Fair panel (js/fairnessPanel.js)
+    // pre-loaded to that exact round, so anyone (including someone who
+    // joined late and missed it happen live) can confirm it wasn't
+    // tampered with.
+    function makeChip(entry) {
         const chip = document.createElement("span");
         chip.className = "history-chip";
-        chip.style.color = colorForMultiplier(value);
-        chip.textContent = value.toFixed(2) + "x";
+        chip.style.color = colorForMultiplier(entry.value);
+        chip.textContent = entry.value.toFixed(2) + "x";
+
+        if (entry.roundNumber != null) {
+            chip.classList.add("history-chip-clickable");
+            chip.title = "Tap to verify round " + entry.roundNumber;
+            chip.addEventListener("click", () => {
+                if (typeof window.openFairnessModalForRound === "function") {
+                    window.openFairnessModalForRound(entry.roundNumber);
+                }
+            });
+        }
+
         return chip;
     }
 
@@ -114,12 +130,8 @@
 
         const list = document.createElement("div");
         list.className = "round-history-modal-list";
-        history.forEach((value) => {
-            const item = document.createElement("span");
-            item.className = "history-chip";
-            item.style.color = colorForMultiplier(value);
-            item.textContent = value.toFixed(2) + "x";
-            list.appendChild(item);
+        history.forEach((entry) => {
+            list.appendChild(makeChip(entry));
         });
 
         panel.appendChild(header);
@@ -140,7 +152,10 @@
     // fires for it (since this is a fresh page, it hasn't seen that round
     // crash before), and it's already the newest row the initial
     // DB-backed history load will pick up.
-    window.recordRoundHistory = function (crashPoint, roundId) {
+    //
+    // roundNumber is also optional, and is what makes the chip clickable
+    // for verification (js/fairnessPanel.js looks rounds up by number).
+    window.recordRoundHistory = function (crashPoint, roundId, roundNumber) {
         const value = Number(crashPoint);
         if (!Number.isFinite(value)) return;
 
@@ -157,7 +172,7 @@
             history.pop();
         }
 
-        history.unshift(value);
+        history.unshift({ value, roundNumber: roundNumber != null ? roundNumber : null });
         render();
     };
 
@@ -187,7 +202,7 @@
 
             const { data: rounds, error: roundsError } = await window.supabaseClient
                 .from("rounds")
-                .select("id, crash_point")
+                .select("id, round_number, crash_point")
                 .not("crash_point", "is", null)
                 .not("crashed_at", "is", null)
                 .order("round_number", { ascending: false })
@@ -213,7 +228,8 @@
                 .filter((row) => row.id !== currentRoundId)
                 .map((row) => ({
                     id: row.id,
-                    value: Number(row.crash_point)
+                    value: Number(row.crash_point),
+                    roundNumber: row.round_number
                 }))
                 .filter((row) => Number.isFinite(row.value))
                 .slice(0, MAX_ENTRIES);
@@ -223,7 +239,7 @@
             // used to drop those live values (or, combined with the old
             // clear-on-max logic, wipe the whole strip right after a refresh).
             const livePrefix = history.slice();
-            const fromDb = finished.map((row) => row.value);
+            const fromDb = finished.map((row) => ({ value: row.value, roundNumber: row.roundNumber }));
             history = livePrefix.concat(fromDb).slice(0, MAX_ENTRIES);
 
             if (finished.length > 0 && lastRecordedRoundId == null) {

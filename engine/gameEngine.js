@@ -203,6 +203,7 @@ async function runRound() {
         "current_round",
         {
             round_id: round.id,
+            round_number: nextRoundNumber,
             status: "betting",
             multiplier: 1,
             crash_point: null,

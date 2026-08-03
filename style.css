@@ -215,6 +215,12 @@ ROUND HISTORY STRIP
     font-size:14px;
 }
 
+.history-chip-clickable{
+    cursor:pointer;
+    text-decoration:underline dotted;
+    text-underline-offset:2px;
+}
+
 .history-chip-more{
     color:#ccc;
     cursor:pointer;
@@ -432,22 +438,7 @@ CHAT (icon trigger + floating overlay dropdown)
     z-index:1001;
 }
 
-/* When the chat icon lives in its fallback slot (logged out - see
-   #chatWidgetSlot), that slot keeps the 8px gap above the round-history
-   strip that .chat-widget used to provide on its own. Once the icon is
-   living inside .top-bar instead (moved there next to the settings
-   icon whenever a user is logged in), that bottom margin would just add
-   unwanted space inside the bar, so it's zeroed there. */
-.top-bar .chat-widget{
-    margin-bottom:0;
-}
-
-.chat-widget-slot{
-    flex-shrink:0;
-}
-
-/* Sized to match .topbar-icon-btn (the settings icon) - same footprint,
-   so the two sit flush next to each other in the top bar. */
+/* Sized to match .topbar-icon-btn (the settings icon). */
 .chat-icon-btn{
     position:relative;
 

@@ -122,6 +122,16 @@
     }
 
     async function fetchRoundByNumber(roundNumber) {
+        // Check the live state first - if it's the round currently in
+        // progress, this avoids a DB round-trip entirely (and any lag in
+        // that round becoming visible via a fresh query, which is what
+        // caused "Round not Found" to show up mid-round even though the
+        // round very much existed).
+        const live = currentRoundFromLiveState();
+        if (live && Number(live.round_number) === Number(roundNumber)) {
+            return live;
+        }
+
         if (!window.supabaseClient) return null;
         const { data, error } = await window.supabaseClient
             .from("rounds")
@@ -135,22 +145,26 @@
         return data;
     }
 
-    async function fetchCurrentRound() {
-        if (!window.currentGameState || !window.currentGameState.round_id) return null;
-        if (!window.supabaseClient) return null;
-        const { data, error } = await window.supabaseClient
-            .from("rounds")
-            .select("round_number, server_seed_hash, client_seed, nonce, crash_point, server_seed")
-            .eq("id", window.currentGameState.round_id)
-            .maybeSingle();
-        if (error) {
-            console.error("Current round lookup failed:", error);
-            return null;
-        }
-        return data;
+    // Builds a roundData-shaped object straight from window.currentGameState
+    // (already kept live by gameState.js's existing 250ms poll of
+    // current_round) instead of querying the DB separately. This is what
+    // fixes rounds mid-flight showing "Round not Found": there's no extra
+    // fetch to lag behind or get blocked by, so an ongoing round always
+    // correctly shows "not revealed yet" instead.
+    function currentRoundFromLiveState() {
+        const state = window.currentGameState;
+        if (!state) return null;
+        return {
+            round_number: state.round_number,
+            server_seed_hash: state.server_seed_hash,
+            client_seed: state.client_seed,
+            nonce: state.nonce,
+            crash_point: state.crash_point,
+            server_seed: state.server_seed,
+        };
     }
 
-    function openFairnessModal() {
+    function openFairnessModal(initialRoundNumber) {
         closeFairnessModal();
 
         const overlay = document.createElement("div");
@@ -211,18 +225,29 @@
         overlay.appendChild(panel);
         document.body.appendChild(overlay);
 
-        // Default view on open: the current/most recent round.
-        (async () => {
-            resultArea.appendChild(row("Status", "Loading current round…"));
-            const data = await fetchCurrentRound();
-            await renderRoundResult(resultArea, data);
-        })();
+        if (initialRoundNumber != null) {
+            // Opened from a history chip - jump straight to that round
+            // and reflect it in the lookup box too, for context.
+            input.value = initialRoundNumber;
+            resultArea.appendChild(row("Status", "Looking up round " + initialRoundNumber + "…"));
+            fetchRoundByNumber(initialRoundNumber).then((data) => renderRoundResult(resultArea, data));
+        } else {
+            // Default view: the current/most recent round, straight from
+            // live state - synchronous, nothing to lag behind.
+            renderRoundResult(resultArea, currentRoundFromLiveState());
+        }
     }
+
+    // Lets other scripts (js/roundHistory.js) open this modal pre-loaded
+    // to a specific past round, e.g. when a history chip is clicked.
+    window.openFairnessModalForRound = function (roundNumber) {
+        openFairnessModal(roundNumber);
+    };
 
     document.addEventListener("DOMContentLoaded", () => {
         const btn = document.getElementById("fairnessVerifyBtn");
         if (btn) {
-            btn.addEventListener("click", openFairnessModal);
+            btn.addEventListener("click", () => openFairnessModal());
         }
     });
 })();
