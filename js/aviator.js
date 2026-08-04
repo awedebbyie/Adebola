@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const GRAPH_WIDTH = 400;
     const GRAPH_HEIGHT = 320;
 
-    const HELI_WIDTH = 100;
+    const HELI_WIDTH = 150;
     const HELI_NATURAL_W = 198;
     const HELI_NATURAL_H = 86;
     const HELI_HEIGHT = HELI_WIDTH * (HELI_NATURAL_H / HELI_NATURAL_W);
@@ -160,10 +160,11 @@ requestAnimationFrame(animate);
         flightPath.setAttribute("d", "");
         fillArea.setAttribute("d", "");
 
-        helicopter.style.left = (x - ANCHOR_OFFSET_X) + "px";
-        helicopter.style.bottom = (320 - y) + "px";
-        helicopter.style.opacity = "1";
-        helicopter.style.transition = "none";
+        helicopter.style.left = ((x - ANCHOR_OFFSET_X) / GRAPH_WIDTH * 100) + "%";
+helicopter.style.bottom = ((GRAPH_HEIGHT - y) / GRAPH_HEIGHT * 100) + "%";
+helicopter.style.width = (HELI_WIDTH / GRAPH_WIDTH * 100) + "%";
+helicopter.style.opacity = "1";
+helicopter.style.transition = "none";
 
         flewAwayContainer.style.opacity = "0";
         countdownBarContainer.style.opacity = "0";
@@ -185,9 +186,9 @@ requestAnimationFrame(animate);
         helicopter.style.transition =
             "left 90ms linear, bottom 90ms linear, opacity 70ms linear";
 
-        helicopter.style.left = (MAX_X + 420) + "px";
-        helicopter.style.bottom = (320 - y - 140) + "px";
-        helicopter.style.opacity = "0";
+        helicopter.style.left = ((MAX_X + 420) / GRAPH_WIDTH * 100) + "%";
+helicopter.style.bottom = ((GRAPH_HEIGHT - y - 140) / GRAPH_HEIGHT * 100) + "%";
+helicopter.style.opacity = "0";
 
         if (flightPath) flightPath.setAttribute("d", "");
         if (fillArea) fillArea.setAttribute("d", "");
@@ -293,8 +294,9 @@ requestAnimationFrame(animate);
             }
         }
 
-        helicopter.style.left = (x - ANCHOR_OFFSET_X) + "px";
-        helicopter.style.bottom = (320 - y) + "px";
+       helicopter.style.left = ((x - ANCHOR_OFFSET_X) / GRAPH_WIDTH * 100) + "%";
+        helicopter.style.bottom = ((GRAPH_HEIGHT - y) / GRAPH_HEIGHT * 100) + "%";
+        helicopter.style.width = (HELI_WIDTH / GRAPH_WIDTH * 100) + "%";
 
         const origin = { x: 0, y: 310 };
         const tail = getTailPoint(x, y);

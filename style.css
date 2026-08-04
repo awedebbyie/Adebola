@@ -809,14 +809,12 @@ DOTS
 HELICOPTER
 ========================= */
 
-.helicopter{
-    position:absolute;
-
-    width:100px;
-
-    left:-15px;
-    bottom:0;
-
+.helicopter {
+    position: absolute;
+    width: 25%; /* fallback until JS runs; 100/400 */
+    left: 0;
+    bottom: 0;
+    /* ... rest unchanged ... */
     z-index:10;
 
     pointer-events:none;
