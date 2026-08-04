@@ -18,6 +18,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Hidden admin login (email code -> passcode). Fully isolated in its
+// own file - see backend/adminAuth.js.
+const adminAuth = require("./adminAuth");
+app.use("/admin/auth", adminAuth.router);
+
+// Admin stats (profit numbers, later charts). Every route in here is
+// guarded by adminAuth.requireAdmin - see backend/adminStats.js.
+const adminStats = require("./adminStats");
+app.use("/admin/api", adminStats);
+
 const FLW_SECRET_KEY = process.env.FLW_SECRET_KEY;
 
 app.post("/verify-payment", async (req, res) => {

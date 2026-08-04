@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Panel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+<style>
+    body{
+        margin:0;
+        min-height:100vh;
+        background:#0f0f1a;
+        color:#fff;
+        font-family:system-ui, sans-serif;
+    }
+    .top{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        padding:14px 18px;
+        border-bottom:1px solid #333;
+    }
+    button{
+        padding:8px 14px;
+        border-radius:6px;
+        border:1px solid #555;
+        background:#2a2a40;
+        color:#fff;
+        cursor:pointer;
+        font-size:13px;
+    }
+    main{
+        padding:24px 18px;
+    }
+    .range-bar{
+        display:flex;
+        gap:8px;
+        margin-bottom:18px;
+    }
+    .range-btn.active{
+        background:#00ff88;
+        color:#000;
+        border-color:#00ff88;
+    }
+    .stats-grid{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:12px;
+    }
+    .stat-card{
+        background:#1a1a2e;
+        border:1px solid #333;
+        border-radius:10px;
+        padding:14px;
+    }
+    .stat-label{
+        font-size:12px;
+        color:#999;
+        margin-bottom:6px;
+    }
+    .stat-value{
+        font-size:20px;
+        font-weight:bold;
+    }
+    .stat-value.positive{ color:#3ddc84; }
+    .stat-value.negative{ color:#ff5c5c; }
+    .stat-note{
+        font-size:11px;
+        color:#666;
+        margin-top:16px;
+    }
+    .chart-section{
+        margin-top:28px;
+    }
+    .chart-header{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        margin-bottom:10px;
+    }
+    .chart-header h2{
+        font-size:14px;
+        margin:0;
+        color:#ccc;
+    }
+    .chart-range-bar{
+        display:flex;
+        gap:6px;
+    }
+    .chart-range-btn{
+        padding:4px 10px;
+        font-size:12px;
+    }
+    .chart-range-btn.active{
+        background:#00ff88;
+        color:#000;
+        border-color:#00ff88;
+    }
+    .chart-box{
+        background:#1a1a2e;
+        border:1px solid #333;
+        border-radius:10px;
+        padding:14px;
+        height:260px;
+    }
+    .charts-row{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:16px;
+    }
+    .tier-legend{
+        margin-top:10px;
+        font-size:12px;
+        color:#999;
+    }
+    .tier-legend div{
+        display:flex;
+        justify-content:space-between;
+        padding:2px 0;
+    }
+    .tier-legend .off{
+        color:#ff5c5c;
+    }
+</style>
+</head>
+<body>
+
+<div class="top">
+    <strong>Admin Panel</strong>
+    <button id="logoutBtn">Log out</button>
+</div>
+
+<main>
+    <div class="range-bar">
+        <button class="range-btn" data-range="today">Today</button>
+        <button class="range-btn" data-range="7d">7 days</button>
+        <button class="range-btn" data-range="30d">30 days</button>
+        <button class="range-btn" data-range="all">All time</button>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">House profit</div>
+            <div class="stat-value" id="statHouseProfit">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total wagered</div>
+            <div class="stat-value" id="statWagered">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total paid out</div>
+            <div class="stat-value" id="statPaidOut">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Bets (won / lost)</div>
+            <div class="stat-value" id="statBets">—</div>
+        </div>
+    </div>
+
+    <p class="stat-note">
+        "House profit" only counts settled bets (cashed out or lost) -
+        active/in-progress bets aren't included yet. Negative means the
+        house paid out more than it collected in this period.
+    </p>
+
+    <div class="charts-row">
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2>Daily house profit</h2>
+                <div class="chart-range-bar">
+                    <button class="chart-range-btn" data-days="7">7 days</button>
+                    <button class="chart-range-btn" data-days="30">30 days</button>
+                </div>
+            </div>
+            <div class="chart-box">
+                <canvas id="profitTrendChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2>Tier A/B/C distribution (this range)</h2>
+            </div>
+            <div class="chart-box">
+                <canvas id="tierChart"></canvas>
+            </div>
+            <div class="tier-legend" id="tierLegend"></div>
+        </div>
+    </div>
+</main>
+
+<script>
+    // Same placeholder as the login page - update both when you deploy.
+    const BACKEND_URL = "http://localhost:3000";
+
+    const adminToken = localStorage.getItem("adminToken");
+    console.log("DEBUG panel: adminToken from localStorage:", adminToken);
+
+    async function checkSession() {
+        if (!adminToken) {
+            console.log("DEBUG panel: no token in localStorage - redirecting to login.");
+            window.location.href = "admin-f3b642e6.html";
+            return;
+        }
+
+        try {
+            const res = await fetch(BACKEND_URL + "/admin/auth/session", {
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+            console.log("DEBUG panel: /session response:", data);
+
+            if (!data.valid) {
+                console.log("DEBUG panel: session invalid - redirecting to login.");
+                localStorage.removeItem("adminToken");
+                window.location.href = "admin-f3b642e6.html";
+            }
+        } catch (err) {
+            // If the backend is unreachable, fail closed - don't leave
+            // the panel visibly rendered while we can't actually confirm
+            // the session is real.
+            console.log("DEBUG panel: /session request THREW an error:", err);
+            window.location.href = "admin-f3b642e6.html";
+        }
+    }
+
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+        try {
+            await fetch(BACKEND_URL + "/admin/auth/logout", {
+                method: "POST",
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+        } catch (err) {
+            // Log out client-side regardless of whether the request landed.
+        }
+        localStorage.removeItem("adminToken");
+        window.location.href = "admin-f3b642e6.html";
+    });
+
+    function formatNaira(amount) {
+        const n = Number(amount) || 0;
+        return "₦" + n.toLocaleString("en-NG", { maximumFractionDigits: 0 });
+    }
+
+    async function loadStats(range) {
+        document.querySelectorAll(".range-btn").forEach((btn) => {
+            btn.classList.toggle("active", btn.dataset.range === range);
+        });
+
+        try {
+            const res = await fetch(BACKEND_URL + "/admin/api/stats?range=" + range, {
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+
+            if (!data.ok) {
+                console.error("Stats load failed:", data.error);
+                return;
+            }
+
+            const profitEl = document.getElementById("statHouseProfit");
+            profitEl.textContent = formatNaira(data.houseProfit);
+            profitEl.classList.toggle("positive", data.houseProfit >= 0);
+            profitEl.classList.toggle("negative", data.houseProfit < 0);
+
+            document.getElementById("statWagered").textContent = formatNaira(data.totalWagered);
+            document.getElementById("statPaidOut").textContent = formatNaira(data.totalPaidOut);
+            document.getElementById("statBets").textContent =
+                data.betCount + " (" + data.winCount + " / " + data.lossCount + ")";
+        } catch (err) {
+            console.error("Stats load error:", err);
+        }
+    }
+
+    document.querySelectorAll(".range-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            loadStats(btn.dataset.range);
+            loadTierBreakdown(btn.dataset.range);
+        });
+    });
+
+    let tierChart = null;
+
+    async function loadTierBreakdown(range) {
+        if (typeof Chart === "undefined") return;
+
+        try {
+            const res = await fetch(BACKEND_URL + "/admin/api/tier-breakdown?range=" + range, {
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+
+            if (!data.ok) {
+                console.error("Tier breakdown load failed:", data.error);
+                return;
+            }
+
+            const labels = ["Tier A (1.00x-4.07x)", "Tier B (4.07x-10.09x)", "Tier C (10.09x-20.09x)"];
+            const values = [data.tierA.count, data.tierB.count, data.tierC.count];
+            const colors = ["#4da6ff", "#b366ff", "#ff4dd8"];
+
+            const ctx = document.getElementById("tierChart").getContext("2d");
+
+            if (tierChart) {
+                tierChart.data.datasets[0].data = values;
+                tierChart.update();
+            } else {
+                tierChart = new Chart(ctx, {
+                    type: "pie",
+                    data: {
+                        labels,
+                        datasets: [{ data: values, backgroundColor: colors }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: "bottom", labels: { color: "#ccc", font: { size: 10 } } }
+                        }
+                    }
+                });
+            }
+
+            const legend = document.getElementById("tierLegend");
+            legend.innerHTML = "";
+            [
+                { name: "Tier A", data: data.tierA },
+                { name: "Tier B", data: data.tierB },
+                { name: "Tier C", data: data.tierC }
+            ].forEach((tier) => {
+                const deviation = Math.abs(tier.data.pct - tier.data.expectedPct);
+                const row = document.createElement("div");
+                row.innerHTML =
+                    `<span>${tier.name}: ${tier.data.count} rounds</span>` +
+                    `<span class="${deviation > 5 ? "off" : ""}">${tier.data.pct}% (expected ${tier.data.expectedPct}%)</span>`;
+                legend.appendChild(row);
+            });
+
+            if (data.total < 100) {
+                const note = document.createElement("div");
+                note.textContent = `Only ${data.total} rounds in this range - too small a sample to draw conclusions from yet.`;
+                legend.appendChild(note);
+            }
+        } catch (err) {
+            console.error("Tier breakdown load error:", err);
+        }
+    }
+
+    let profitChart = null;
+
+    async function loadProfitTrend(days) {
+        if (typeof Chart === "undefined") {
+            console.error("Chart.js didn't load - check your internet connection or an ad blocker/extension may be blocking cdnjs.cloudflare.com.");
+            return;
+        }
+
+        document.querySelectorAll(".chart-range-btn").forEach((btn) => {
+            btn.classList.toggle("active", Number(btn.dataset.days) === days);
+        });
+
+        try {
+            const res = await fetch(BACKEND_URL + "/admin/api/profit-trend?days=" + days, {
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+
+            if (!data.ok) {
+                console.error("Trend load failed:", data.error);
+                return;
+            }
+
+            const labels = data.days.map((d) => d.date.slice(5)); // "MM-DD"
+            const values = data.days.map((d) => d.profit);
+            const barColors = values.map((v) => (v >= 0 ? "#3ddc84" : "#ff5c5c"));
+
+            const ctx = document.getElementById("profitTrendChart").getContext("2d");
+
+            if (profitChart) {
+                profitChart.data.labels = labels;
+                profitChart.data.datasets[0].data = values;
+                profitChart.data.datasets[0].backgroundColor = barColors;
+                profitChart.update();
+                return;
+            }
+
+            profitChart = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels,
+                    datasets: [{
+                        label: "House profit (₦)",
+                        data: values,
+                        backgroundColor: barColors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: "#999" }, grid: { color: "#2a2a2a" } },
+                        y: { ticks: { color: "#999" }, grid: { color: "#2a2a2a" } }
+                    }
+                }
+            });
+        } catch (err) {
+            console.error("Trend load error:", err);
+        }
+    }
+
+    document.querySelectorAll(".chart-range-btn").forEach((btn) => {
+        btn.addEventListener("click", () => loadProfitTrend(Number(btn.dataset.days)));
+    });
+
+    checkSession();
+    loadStats("today");
+    loadTierBreakdown("today");
+    loadProfitTrend(7);
+</script>
+
+</body>
+</html>

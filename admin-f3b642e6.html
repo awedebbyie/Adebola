@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Login</title>
+<!-- Deliberately generic <title> and no other page on the site links
+     here - the filename itself (admin-f3b642e6.html) is the only way
+     to find this page. That alone is NOT the real protection though -
+     the actual protection is the 2-step server-side gate below. Even
+     someone who finds this URL still needs the admin email inbox AND
+     the passcode. -->
+<style>
+    body{
+        margin:0;
+        min-height:100vh;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        background:#0f0f1a;
+        color:#fff;
+        font-family:system-ui, sans-serif;
+    }
+    .box{
+        width:100%;
+        max-width:340px;
+        padding:24px;
+        background:#1a1a2e;
+        border:1px solid #333;
+        border-radius:12px;
+    }
+    h1{
+        font-size:16px;
+        margin:0 0 4px;
+    }
+    p.step-label{
+        margin:0 0 16px;
+        font-size:12px;
+        color:#999;
+    }
+    input{
+        width:100%;
+        box-sizing:border-box;
+        padding:10px;
+        margin-bottom:12px;
+        border-radius:6px;
+        border:1px solid #444;
+        background:#0f0f1a;
+        color:#fff;
+        font-size:14px;
+    }
+    button{
+        width:100%;
+        padding:10px;
+        border-radius:6px;
+        border:none;
+        background:#00ff88;
+        color:#000;
+        font-weight:bold;
+        cursor:pointer;
+        font-size:14px;
+    }
+    button:disabled{
+        opacity:0.5;
+        cursor:default;
+    }
+    .error{
+        color:#ff5c5c;
+        font-size:13px;
+        margin:-4px 0 12px;
+        min-height:16px;
+    }
+    .step{
+        display:none;
+    }
+    .step.active{
+        display:block;
+    }
+</style>
+</head>
+<body>
+
+<div class="box">
+    <h1>Admin Login</h1>
+    <p class="step-label" id="stepLabel">Step 1 of 2 — Email</p>
+    <div class="error" id="errorMsg"></div>
+
+    <!-- Step 1: email -->
+    <div class="step active" id="stepEmail">
+        <input type="email" id="emailInput" placeholder="Email" autocomplete="username" />
+        <button id="startBtn">Send code</button>
+    </div>
+
+    <!-- Step 2: email code -->
+    <div class="step" id="stepEmailCode">
+        <input type="text" id="emailCodeInput" placeholder="6-digit email code" inputmode="numeric" maxlength="6" />
+        <button id="verifyEmailBtn">Verify</button>
+    </div>
+
+    <!-- Step 3: passcode -->
+    <div class="step" id="stepPasscode">
+        <input type="password" id="passcodeInput" placeholder="Passcode" autocomplete="current-password" />
+        <button id="verifyPasscodeBtn">Unlock</button>
+    </div>
+</div>
+
+<script>
+    // Update this to your deployed backend's URL (same as withdraw.html
+    // uses "http://localhost:3000" as a dev placeholder - swap both when
+    // you deploy).
+    const BACKEND_URL = "http://localhost:3000";
+
+    let sessionToken = null;
+
+    const errorMsg = document.getElementById("errorMsg");
+    const stepLabel = document.getElementById("stepLabel");
+
+    function showStep(id, label) {
+        document.querySelectorAll(".step").forEach((el) => el.classList.remove("active"));
+        document.getElementById(id).classList.add("active");
+        stepLabel.textContent = label;
+        errorMsg.textContent = "";
+    }
+
+    async function postJSON(path, body) {
+        const res = await fetch(BACKEND_URL + path, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        });
+        return res.json();
+    }
+
+    document.getElementById("startBtn").addEventListener("click", async () => {
+        const email = document.getElementById("emailInput").value.trim();
+        if (!email) return;
+
+        const btn = document.getElementById("startBtn");
+        btn.disabled = true;
+        try {
+            const data = await postJSON("/admin/auth/start", { email });
+            // Always proceeds to the code step regardless of whether the
+            // email was actually correct - the server never reveals that,
+            // on purpose. A wrong email just means no code ever arrives.
+            sessionToken = data.sessionToken || null;
+            showStep("stepEmailCode", "Step 2 of 2 — Email code");
+        } catch (err) {
+            errorMsg.textContent = "Something went wrong. Try again.";
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    document.getElementById("verifyEmailBtn").addEventListener("click", async () => {
+        const code = document.getElementById("emailCodeInput").value.trim();
+        if (!code || !sessionToken) return;
+
+        const btn = document.getElementById("verifyEmailBtn");
+        btn.disabled = true;
+        try {
+            const data = await postJSON("/admin/auth/verify-email", { sessionToken, code });
+            if (!data.ok) {
+                errorMsg.textContent = data.error || "Incorrect code.";
+                return;
+            }
+            showStep("stepPasscode", "Final step — Passcode");
+        } catch (err) {
+            errorMsg.textContent = "Something went wrong. Try again.";
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    document.getElementById("verifyPasscodeBtn").addEventListener("click", async () => {
+        const passcode = document.getElementById("passcodeInput").value;
+        if (!passcode || !sessionToken) return;
+
+        const btn = document.getElementById("verifyPasscodeBtn");
+        btn.disabled = true;
+        try {
+            const data = await postJSON("/admin/auth/verify-passcode", { sessionToken, passcode });
+            if (!data.ok) {
+                errorMsg.textContent = data.error || "Incorrect passcode.";
+                return;
+            }
+            // Stored client-side only for this one browser/device - never
+            // sent anywhere except back to /admin/auth/* as a Bearer token.
+            localStorage.setItem("adminToken", data.adminToken);
+            window.location.href = "admin-panel-f3b642e6.html";
+        } catch (err) {
+            errorMsg.textContent = "Something went wrong. Try again.";
+        } finally {
+            btn.disabled = false;
+        }
+    });
+</script>
+
+</body>
+</html>
