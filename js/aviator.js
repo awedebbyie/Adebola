@@ -37,15 +37,22 @@ document.addEventListener("DOMContentLoaded", () => {
     const GRAPH_WIDTH = 400;
     const GRAPH_HEIGHT = 320;
 
-    const HELI_WIDTH = 70;
-    const HELI_NATURAL_W = 660;
-    const HELI_NATURAL_H = 519;
+    const HELI_WIDTH = 100;
+    const HELI_NATURAL_W = 198;
+    const HELI_NATURAL_H = 86;
     const HELI_HEIGHT = HELI_WIDTH * (HELI_NATURAL_H / HELI_NATURAL_W);
+
+    // The nose sits at this fraction of the sprite's width, measured from
+    // its left edge (55/70 was true for the original 70px-wide sprite).
+    // Deriving ANCHOR_OFFSET_X from HELI_WIDTH means resizing the plane
+    // (changing HELI_WIDTH above) keeps the nose - and therefore the tail
+    // point below - correctly aligned automatically, no manual retuning.
+    const ANCHOR_OFFSET_X = HELI_WIDTH * (55 / 70);
 
     const EDGE_SAFETY_MARGIN_X = 60;
     const EDGE_SAFETY_MARGIN_Y = 29;
 
-    const EDGE_TOUCH_X = GRAPH_WIDTH - (HELI_WIDTH - 55) - EDGE_SAFETY_MARGIN_X;
+    const EDGE_TOUCH_X = GRAPH_WIDTH - (HELI_WIDTH - ANCHOR_OFFSET_X) - EDGE_SAFETY_MARGIN_X;
     const EDGE_TOUCH_Y = HELI_HEIGHT + EDGE_SAFETY_MARGIN_Y;
 
     // How quickly the cruise baseline eases toward that real edge-touch
@@ -63,12 +70,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const SWING_DISTANCE_Y = GRAPH_HEIGHT * 0.2;
 
     // ================= TAIL ANCHOR =================
-    const TAIL_FRACTION_X = 645 / HELI_NATURAL_W;
-    const TAIL_FRACTION_Y = 310 / HELI_NATURAL_H;
-
+    const TAIL_FRACTION_X = 18 / HELI_NATURAL_W; // \~0.09, just inside the tail
+const TAIL_FRACTION_Y = 55 / HELI_NATURAL_H; // \~0.56, fuselage centerline
     function getTailPoint(anchorX, anchorY) {
         return {
-            x: (anchorX - 55) + TAIL_FRACTION_X * HELI_WIDTH,
+            x: (anchorX - ANCHOR_OFFSET_X) + TAIL_FRACTION_X * HELI_WIDTH,
             y: (anchorY - HELI_HEIGHT) + TAIL_FRACTION_Y * HELI_HEIGHT
         };
     }
@@ -154,7 +160,7 @@ requestAnimationFrame(animate);
         flightPath.setAttribute("d", "");
         fillArea.setAttribute("d", "");
 
-        helicopter.style.left = (x - 55) + "px";
+        helicopter.style.left = (x - ANCHOR_OFFSET_X) + "px";
         helicopter.style.bottom = (320 - y) + "px";
         helicopter.style.opacity = "1";
         helicopter.style.transition = "none";
@@ -287,7 +293,7 @@ requestAnimationFrame(animate);
             }
         }
 
-        helicopter.style.left = (x - 55) + "px";
+        helicopter.style.left = (x - ANCHOR_OFFSET_X) + "px";
         helicopter.style.bottom = (320 - y) + "px";
 
         const origin = { x: 0, y: 310 };
