@@ -71,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ================= TAIL ANCHOR =================
     const TAIL_FRACTION_X = 18 / HELI_NATURAL_W; // \~0.09, just inside the tail
-const TAIL_FRACTION_Y = 55 / HELI_NATURAL_H; // \~0.56, fuselage centerline
+const TAIL_FRACTION_Y = 80 / HELI_NATURAL_H; // \~0.56, fuselage centerline
     function getTailPoint(anchorX, anchorY) {
         return {
             x: (anchorX - ANCHOR_OFFSET_X) + TAIL_FRACTION_X * HELI_WIDTH,
