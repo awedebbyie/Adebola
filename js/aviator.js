@@ -103,11 +103,11 @@ const TAIL_FRACTION_Y = 80 / HELI_NATURAL_H; // \~0.56, fuselage centerline
         const phase1EndX = 220;
 
         if (progress < 0.5) {
-            const localProgress = progress / 0.5;
-            const startX = 55 + localProgress * (phase1EndX - 55);
-            const startY = 320 - (startX - 55) * 0.5;
-            return { x: startX, y: startY, phase: 1 };
-        }
+    const localProgress = progress / 0.5;
+    const startX = 125 + localProgress * (phase1EndX - 125);  // was: 55 + ...(phase1EndX - 55)
+    const startY = 310 - (startX - 125) * 0.5;                 // was: 320 - (startX - 55) * 0.5
+    return { x: startX, y: startY, phase: 1 };
+}
 
         const localProgress = (progress - 0.5) / 0.5;
         const startX = phase1EndX + localProgress * (MAX_X - phase1EndX);
