@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const flightPath = document.getElementById("flightPath");
     const fillArea = document.getElementById("fillArea");
 
-    let x = 55;
-    let y = 320;
+    let x = 125;
+    let y = 310;
     let multiplierValue = 1;
     let phase = 1;
     let lastTime = 0;
@@ -97,7 +97,7 @@ const TAIL_FRACTION_Y = 80 / HELI_NATURAL_H; // \~0.56, fuselage centerline
         const progress = Math.min(1, (m - 1) / 4);
 
         if (progress <= 0.02) {
-            return { x: 55, y: 320, phase: 1 };
+            return { x: 125, y: 310, phase: 1 };
         }
 
         const phase1EndX = 220;

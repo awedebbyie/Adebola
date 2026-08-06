@@ -811,10 +811,9 @@ HELICOPTER
 
 .helicopter {
     position: absolute;
-    width: 25%; /* fallback until JS runs; 100/400 */
-    left: 0;
-    bottom: 0;
-    /* ... rest unchanged ... */
+    width: 37.5%; /* fallback until JS runs; matches HELI_WIDTH/GRAPH_WIDTH (150/400) in aviator.js */
+    left: 1.79%;
+    bottom: 3.125%;
     z-index:10;
 
     pointer-events:none;
