@@ -149,7 +149,7 @@ function updateBetButton(slot, uiState, payload) {
         }
 
         case "BET_PLACED":
-            btn.innerHTML = "<span>BET PLACED</span>";
+            btn.innerHTML = "<span>INVESTED</span>";
             btn.style.backgroundColor = "";
             break;
 
