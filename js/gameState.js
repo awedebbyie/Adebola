@@ -10,7 +10,7 @@ window.myQueuedBets = window.myQueuedBets || {}; // { [slot]: amount } - bets wa
 // compute how much of the window is ACTUALLY left (in case this poll
 // tick first observes "betting" a little after it truly started),
 // rather than always assuming the full window remains.
-const BETTING_WINDOW_MS = 7000;
+const BETTING_WINDOW_MS = 5000;
 
 async function getCurrentGameState() {
 
