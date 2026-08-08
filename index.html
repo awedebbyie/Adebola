@@ -239,6 +239,51 @@
 
     <!-- BET HISTORY PANEL -->
     <div id="betHistoryContainer"></div>
+
+    <!-- BOTTOM NAV (Home / Leaderboard / Missions / Rewards)
+         Sits in normal document flow right after the bet-history panel,
+         at the true bottom of the page content - not a scroll-triggered
+         overlay. It's simply the last thing on the page, so it only
+         comes into view once the user actually scrolls all the way
+         down, with no JS show/hide logic and no on-load flash. -->
+    <div class="bottom-nav-wrapper" id="bottomNavWrapper">
+        <nav class="bottom-nav" id="bottomNav">
+            <button type="button" class="bottom-nav-item active" data-label="Home">
+                <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 11.5 12 4l8 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="bottom-nav-label">Home</span>
+            </button>
+
+            <button type="button" class="bottom-nav-item" data-label="Leaderboard">
+                <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7 20v-6M12 20V9M17 20v-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 9 15 4l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="bottom-nav-label">Leaderboard</span>
+            </button>
+
+            <button type="button" class="bottom-nav-item" data-label="Missions">
+                <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="1" fill="currentColor"/>
+                </svg>
+                <span class="bottom-nav-label">Missions</span>
+            </button>
+
+            <button type="button" class="bottom-nav-item" data-label="Rewards">
+                <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="9" width="16" height="11" rx="1.5" stroke="currentColor" stroke-width="2"/>
+                    <path d="M4 9h16M12 9v11M12 9c-1.5-3-6-3-6-.5S9 9 12 9Zm0 0c1.5-3 6-3 6-.5S15 9 12 9Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                </svg>
+                <span class="bottom-nav-label">Rewards</span>
+            </button>
+        </nav>
+
+        <div class="bottom-nav-toast" id="bottomNavToast"></div>
+    </div>
 </div>
 
 <script>
@@ -474,5 +519,6 @@ document.getElementById("investBtn2").addEventListener("click", handleInvest);
 <script src="js/aviator.js"></script>
 <script src="js/loadBetHistory.js"></script>
 <script src="js/music.js"></script>
+<script src="js/bottomNav.js"></script>
 </body>
 </html>

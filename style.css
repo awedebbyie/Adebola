@@ -1074,3 +1074,86 @@ CRASH GAME OVERLAYS (absolute, locked to .graph-area)
     transition:opacity 0.3s ease;
     z-index:99999;
 }
+/* =========================
+   BOTTOM NAV (Home / Leaderboard / Missions / Rewards)
+   Lives in normal document flow right after the bet-history panel, at
+   the actual bottom of the page content - not a scroll-triggered
+   overlay, so there's no JS to show/hide it and nothing can flash on
+   load. It only comes into view once the user scrolls .game-container
+   all the way down to it, like any other content.
+   ========================= */
+.bottom-nav-wrapper{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    margin-top:16px;
+}
+
+.bottom-nav{
+    width:100%;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:rgba(28,28,28,0.94);
+    border:1px solid #333;
+    border-radius:18px;
+    padding:8px 6px;
+    box-sizing:border-box;
+    box-shadow:0 6px 22px rgba(0,0,0,0.45);
+}
+
+.bottom-nav-item{
+    flex:1 1 0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    background:none;
+    border:none;
+    padding:6px 4px;
+    border-radius:12px;
+    color:#999;
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+    transition:color 0.15s ease, background-color 0.15s ease;
+}
+
+.bottom-nav-item:hover{
+    color:#ccc;
+}
+
+.bottom-nav-item.active{
+    color:#00ff88;
+    background:rgba(0,255,136,0.12);
+}
+
+.bottom-nav-icon{
+    width:22px;
+    height:22px;
+}
+
+.bottom-nav-label{
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:0.2px;
+}
+
+.bottom-nav-toast{
+    pointer-events:none;
+    margin-top:8px;
+    padding:6px 14px;
+    background:rgba(20,20,20,0.94);
+    border:1px solid #333;
+    border-radius:20px;
+    color:#eee;
+    font-size:12px;
+    opacity:0;
+    transform:translateY(6px);
+    transition:opacity 0.2s ease, transform 0.2s ease;
+}
+
+.bottom-nav-toast.visible{
+    opacity:1;
+    transform:translateY(0);
+}
