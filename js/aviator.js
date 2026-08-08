@@ -128,6 +128,9 @@ const TAIL_FRACTION_Y = 80 / HELI_NATURAL_H; // \~0.56, fuselage centerline
         playRoundStartSound();
     }
 
+   // Motion is about to start - swap in the animated (spinning-rotor) sprite.
+   helicopter.src = "helicopter.svg";
+
    isRunning = true;
 window.animationRunning = true;
 
@@ -213,6 +216,11 @@ helicopter.style.opacity = "0";
         // whatever unrelated moment that fake timer happened to be at.
         setTimeout(() => {
             flewAwayContainer.style.opacity = "0";
+
+            // Flew-away text just finished disappearing - show the static
+            // (idle, no-spin) sprite until the next round's motion begins.
+            helicopter.src = "hepicopter.svg";
+
             multiplierEl.style.opacity = "0";
         }, 3000);
     }
