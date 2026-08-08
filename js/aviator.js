@@ -273,6 +273,31 @@ helicopter.style.opacity = "0";
         }, durationMs);
     };
 
+    // Whether a "crashed" server state should trigger the crash animation
+    // right now. Pulled out of animate() so it isn't only reachable from
+    // inside the requestAnimationFrame loop - browsers fully suspend rAF
+    // on a hidden/backgrounded tab, so relying on animate() alone meant a
+    // crash that happened while the tab was hidden was never processed:
+    // window.animationRunning stayed stuck "true" forever, which then
+    // silently blocked the NEXT round's beginRound() call (it's gated on
+    // that flag), which is what left the countdown bar/preparing text
+    // frozen on screen even after you came back and the game had clearly
+    // moved on. gameState.js now also calls this directly on every poll
+    // tick (see updateGameFromServer), so a crash is caught the moment the
+    // server reports it, whether or not this tab is visible or animating.
+    function checkForCrash() {
+        if (
+            window.currentGameState &&
+            window.currentGameState.status === "crashed" &&
+            phase !== 3
+        ) {
+            crashInstantly();
+            return true;
+        }
+        return false;
+    }
+    window.checkForCrash = checkForCrash;
+
     // ================= ANIMATION =================
     function animate(timestamp) {
         if (!isRunning || phase === 3) return;
@@ -288,18 +313,9 @@ helicopter.style.opacity = "0";
         lastTime = timestamp;
 
         // Checked FIRST, every single frame, regardless of which phase
-        // the helicopter is currently in. This used to live only inside
-        // the phase === 2 branch below, which meant a crash happening
-        // during phase 1 (the initial climb, before the first bounce
-        // point) was completely ignored until the animation happened to
-        // reach that point on its own - the helicopter kept flying for
-        // however long that took, well past the real crash moment.
-        if (
-            window.currentGameState &&
-            window.currentGameState.status === "crashed" &&
-            phase !== 3
-        ) {
-            crashInstantly();
+        // the helicopter is currently in - covers a crash happening
+        // during phase 1 (the initial climb) as well as phase 2.
+        if (checkForCrash()) {
             return;
         }
 

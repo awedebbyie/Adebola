@@ -35,10 +35,36 @@ async function getCurrentGameState() {
 
 setInterval(getCurrentGameState, 250);
 
+// The moment this tab comes back into focus - after being backgrounded,
+// switched away from, minimized, whatever - re-sync immediately instead
+// of waiting for the next (possibly delayed) 250ms poll tick. This is
+// the "make the game the controller again" fix: don't wait to notice a
+// transition, just go ask the server what's true right now and let the
+// normal state-handling logic above reconcile everything to that.
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+        getCurrentGameState();
+
+        if (typeof window.refreshRoundHistoryFromServer === "function") {
+            window.refreshRoundHistoryFromServer();
+        }
+    }
+});
+
 function updateGameFromServer(state) {
 
     // Save latest game state globally
     window.currentGameState = state;
+
+    // Check for a crash on every poll tick, not just when the flight
+    // animation loop happens to be running. requestAnimationFrame (which
+    // normally drives this check) is fully paused on a hidden tab, so
+    // without this, a crash that happens while you're backgrounded never
+    // gets processed - see the long comment on checkForCrash() in
+    // aviator.js for the full chain of what that used to break.
+    if (typeof window.checkForCrash === "function") {
+        window.checkForCrash();
+    }
 
     // Re-render every invest button from current round state + Firestore bet state
     refreshAllBetButtons();

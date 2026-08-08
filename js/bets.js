@@ -98,9 +98,21 @@ const DB_TO_UI_STATUS = {
 // =========================
 // ADD A NEW BET
 // =========================
-async function createBet(amount, betSlot) {
+// `options.suppressClosedAlert` - when true, a "round isn't in betting
+// status anymore" result is reported back via the return value instead of
+// a blocking alert(). Used by callers (gameState.js's queued-bet
+// auto-placer, invest.js's direct-click path) that can react to a timing
+// race by silently re-queuing the bet for the next window instead of
+// scaring the player with "Betting is closed" for a bet that was, from
+// their point of view, placed perfectly on time - the delay was ours
+// (network latency / a short window), not theirs. Every other failure
+// (not logged in, insufficient balance, etc.) still always alerts - those
+// are real problems the player needs to see and act on.
+async function createBet(amount, betSlot, options = {}) {
 
-    if (window.isPlacingBet[betSlot]) return; // double-click / duplicate submit guard
+    const { suppressClosedAlert = false } = options;
+
+    if (window.isPlacingBet[betSlot]) return { ok: false, reason: "already_placing" }; // double-click / duplicate submit guard
     window.isPlacingBet[betSlot] = true;
 
     try {
@@ -108,7 +120,7 @@ async function createBet(amount, betSlot) {
 
         if (!user) {
             alert("You need to be logged in to invest.");
-            return;
+            return { ok: false, reason: "not_logged_in" };
         }
 
         const userRef = db.collection("users").doc(user.uid);
@@ -130,12 +142,14 @@ async function createBet(amount, betSlot) {
         if (roundError || !round) {
             console.error("Failed to read current round:", roundError);
             alert("Could not verify the current round. Please try again.");
-            return;
+            return { ok: false, reason: "round_read_failed" };
         }
 
         if (round.status !== "betting") {
-            alert("Betting is closed.");
-            return;
+            if (!suppressClosedAlert) {
+                alert("Betting is closed.");
+            }
+            return { ok: false, reason: "betting_closed" };
         }
 
         const roundId = round.round_id;
@@ -143,19 +157,19 @@ async function createBet(amount, betSlot) {
         // Duplicate guard - this slot already has a bet recorded for this round.
         if (getSlotBetId(roundId, betSlot)) {
             alert("You already have an active bet in this slot.");
-            return;
+            return { ok: false, reason: "duplicate_slot" };
         }
 
         if (!userDoc.exists) {
             alert("User account not found.");
-            return;
+            return { ok: false, reason: "user_not_found" };
         }
 
         const balance = Number(userDoc.data().balance || 0);
 
         if (balance < amount) {
             alert("Insufficient balance.");
-            return;
+            return { ok: false, reason: "insufficient_balance" };
         }
 
         const username = userDoc.data().username || user.displayName || user.email;
@@ -214,7 +228,7 @@ async function createBet(amount, betSlot) {
             await userRef.update({ balance: balance });
             console.error(insertError);
             alert("Failed to place investment.");
-            return;
+            return { ok: false, reason: "insert_failed" };
         }
 
         setSlotBetId(roundId, betSlot, bet.id);
@@ -247,10 +261,13 @@ async function createBet(amount, betSlot) {
             });
         }
 
+        return { ok: true, bet };
+
     } catch (error) {
 
         console.error(error);
         alert("Failed to place investment.");
+        return { ok: false, reason: "unexpected_error" };
 
     } finally {
 

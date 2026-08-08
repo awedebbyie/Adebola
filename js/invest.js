@@ -140,13 +140,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (status === "betting") {
 
-                // Betting window is open - place the bet now.
+                // Betting window is open - place the bet now. Suppress
+                // createBet()'s own "Betting is closed" alert: if the
+                // window closes in the brief moment between this click and
+                // the request landing, that's a timing race, not a mistake
+                // by the player - fall back to queuing it for the next
+                // round instead of alerting and throwing the bet away.
                 try {
 
-                    await createBet(value, betSlot);
+                    const result = await createBet(value, betSlot, { suppressClosedAlert: true });
 
-                    input.value = "";
-                    // Button updates via the Firestore listener in bets.js.
+                    if (result && result.ok) {
+
+                        input.value = "";
+                        // Button updates via the Firestore listener in bets.js.
+
+                    } else if (result && result.reason === "betting_closed") {
+
+                        window.myQueuedBets[betSlot] = value;
+                        input.value = "";
+
+                        if (typeof window.refreshAllBetButtons === "function") {
+                            window.refreshAllBetButtons();
+                        }
+                    }
+                    // Any other failure reason already alerted inside createBet().
 
                 } catch (error) {
 

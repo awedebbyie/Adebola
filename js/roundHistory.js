@@ -172,17 +172,26 @@
             history.pop();
         }
 
-        history.unshift({ value, roundNumber: roundNumber != null ? roundNumber : null });
+        history.unshift({
+            value,
+            roundNumber: roundNumber != null ? roundNumber : null,
+            id: roundId != null ? roundId : null
+        });
         render();
     };
 
-    // Seeds `history` from the "rounds" table so a fresh page load (or a
-    // user joining partway through a session) sees the real recent rounds
-    // instead of an empty strip. Excludes whatever round is currently
-    // "live" in current_round - that round gets added the normal way via
-    // recordRoundHistory the moment it actually crashes, so excluding it
-    // here avoids ever double-counting it.
-    async function loadInitialHistory() {
+    // Pulls the latest finished rounds straight from the "rounds" table
+    // and reconciles `history` to match - both for the very first page
+    // load (when the strip starts empty) AND any time after, to backfill
+    // rounds that crashed while this tab was backgrounded and the poll
+    // never got a chance to observe that particular round's "crashed"
+    // moment (see gameState.js's visibilitychange handler, which calls
+    // this the instant the tab comes back into focus).
+    //
+    // Reconciled by round id, not just concatenated - safe to call this
+    // repeatedly without ever producing duplicate chips, unlike the old
+    // one-shot version this replaced.
+    async function syncHistoryFromServer() {
         if (!window.supabaseClient) return;
 
         try {
@@ -198,8 +207,6 @@
                 currentRoundId = current.round_id;
             }
 
-            console.log("Round history debug - currentRoundId:", currentRoundId);
-
             const { data: rounds, error: roundsError } = await window.supabaseClient
                 .from("rounds")
                 .select("id, round_number, crash_point")
@@ -208,22 +215,11 @@
                 .order("round_number", { ascending: false })
                 .limit(MAX_ENTRIES);
 
-            console.log("Round history debug - roundsError:", roundsError);
-            console.log("Round history debug - raw rounds:", rounds);
-
             if (roundsError || !rounds) {
-                console.error("Round history load failed - rounds query returned:", roundsError);
+                console.error("Round history sync failed - rounds query returned:", roundsError);
                 return;
             }
 
-            if (rounds.length === 0) {
-                console.warn("Round history debug - query succeeded but returned zero rows.");
-            }
-
-            // Keep id alongside crash_point so we can seed lastRecordedRoundId
-            // from the newest finished round. That stops a concurrent
-            // "crashed" poll from double-adding a round that load just
-            // excluded (or included) while the async query was in flight.
             const finished = rounds
                 .filter((row) => row.id !== currentRoundId)
                 .map((row) => ({
@@ -231,29 +227,36 @@
                     value: Number(row.crash_point),
                     roundNumber: row.round_number
                 }))
-                .filter((row) => Number.isFinite(row.value))
+                .filter((row) => Number.isFinite(row.value));
+
+            // The DB is authoritative here - merge by round id (keyed in a
+            // Map) rather than blindly concatenating, so any round already
+            // in `history` (recorded live, or from a previous sync) never
+            // ends up duplicated just because this fetch sees it again.
+            const byId = new Map();
+            history.forEach((entry) => {
+                if (entry.id != null) byId.set(entry.id, entry);
+            });
+            finished.forEach((entry) => byId.set(entry.id, entry));
+
+            history = Array.from(byId.values())
+                .sort((a, b) => (b.roundNumber || 0) - (a.roundNumber || 0))
                 .slice(0, MAX_ENTRIES);
 
-            // Preserve any crash(es) that recordRoundHistory already pushed
-            // while this async query was in flight. Replacing history wholesale
-            // used to drop those live values (or, combined with the old
-            // clear-on-max logic, wipe the whole strip right after a refresh).
-            const livePrefix = history.slice();
-            const fromDb = finished.map((row) => ({ value: row.value, roundNumber: row.roundNumber }));
-            history = livePrefix.concat(fromDb).slice(0, MAX_ENTRIES);
-
-            if (finished.length > 0 && lastRecordedRoundId == null) {
-                lastRecordedRoundId = finished[0].id;
+            if (history.length > 0 && history[0].id != null) {
+                lastRecordedRoundId = history[0].id;
             }
 
             render();
         } catch (err) {
-            console.error("Round history load failed:", err);
+            console.error("Round history sync failed:", err);
         }
     }
+
+    window.refreshRoundHistoryFromServer = syncHistoryFromServer;
 
     // Re-fit the strip if the window/layout is resized.
     window.addEventListener("resize", render);
 
-    loadInitialHistory();
+    syncHistoryFromServer();
 })();
