@@ -6,8 +6,11 @@
 // comes into view once the user scrolls all the way down to it. No
 // JS-driven show/hide here.
 //
-// Landing pages for the four tabs don't exist yet, so tapping one just
-// marks it active and shows a brief "coming soon" toast.
+// Home is this page itself (index.html), so tapping it just
+// re-highlights it and scrolls back to the top - it does NOT show the
+// "coming soon" toast, unlike Missions/Rewards which have no page yet.
+// Leaderboard has a real destination (data-href="leaderboard.html" in
+// the markup) and navigates there directly.
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -25,6 +28,22 @@ document.addEventListener("DOMContentLoaded", () => {
             tabs.forEach((t) => t.classList.remove("active"));
             tab.classList.add("active");
 
+            const href = tab.dataset.href;
+
+            if (href) {
+                window.location.href = href;
+                return;
+            }
+
+            // Home - already on this page, just scroll back to the top
+            // instead of showing a "coming soon" toast.
+            if (tab.dataset.label === "Home") {
+                const scrollEl = document.querySelector(".game-container");
+                if (scrollEl) scrollEl.scrollTo({ top: 0, behavior: "smooth" });
+                return;
+            }
+
+            // No landing page yet (Missions/Rewards) - brief toast instead.
             if (toast) {
                 toast.textContent = `${tab.dataset.label} - coming soon`;
                 toast.classList.add("visible");

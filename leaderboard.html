@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leaderboard - Aviator</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        background: white;
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        min-height: 100vh;
+    }
+
+    .app-wrapper {
+        width: 25vw;
+        min-width: 380px;
+        max-width: 420px;
+        min-height: 100vh;
+        background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+        color: #fff;
+        box-shadow: 0 0 30px rgba(0,0,0,0.3);
+        overflow-x: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+        background: #1f1f2e;
+        border-bottom: 1px solid #333;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .header .back-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 20px;
+    }
+
+    .header h1 {
+        font-size: 17px;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .header .home-btn {
+        font-size: 20px;
+        cursor: pointer;
+    }
+
+    /* Tabs */
+    .lb-tabs {
+        display: flex;
+        background: #1f1f2e;
+        border-bottom: 1px solid #333;
+        flex-shrink: 0;
+    }
+
+    .lb-tab-btn {
+        flex: 1;
+        padding: 12px 4px;
+        background: none;
+        border: none;
+        color: #aaa;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .lb-tab-btn.active {
+        color: #00ff88;
+        border-bottom: 3px solid #00ff88;
+    }
+
+    /* Table */
+    .lb-header-row, .lb-row {
+        display: grid;
+        grid-template-columns: 30px 44px 1fr 92px 62px;
+        gap: 8px;
+        align-items: center;
+        padding: 10px 14px;
+    }
+
+    .lb-header-row {
+        background: #25253a;
+        font-size: 11.5px;
+        color: #999;
+        font-weight: 600;
+        border-bottom: 1px solid #333;
+    }
+
+    .lb-header-row .col-amount,
+    .lb-header-row .col-rate {
+        text-align: right;
+    }
+
+    .lb-list {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .lb-row {
+        border-bottom: 1px solid #2a2a3a;
+        font-size: 13.5px;
+    }
+
+    .lb-row:hover {
+        background: rgba(0,255,136,0.05);
+    }
+
+    .lb-rank {
+        color: #999;
+        font-weight: 700;
+        text-align: center;
+    }
+
+    .lb-avatar-cell {
+        position: relative;
+        width: 40px;
+        height: 40px;
+    }
+
+    .lb-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #3a3a5a, #1f1f3a);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        font-weight: 700;
+        overflow: hidden;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    .lb-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+
+    /* Medal badge - sits directly beside the avatar, bottom-right corner */
+    .lb-medal {
+        position: absolute;
+        bottom: -4px;
+        right: -6px;
+        font-size: 16px;
+        line-height: 1;
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
+    }
+
+    .lb-name {
+        color: #ddd;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .lb-amount {
+        color: #00ff88;
+        font-weight: 700;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    .lb-amount.negative {
+        color: #ff6666;
+    }
+
+    .lb-rate {
+        text-align: right;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        color: #ccc;
+    }
+
+    .lb-rate.positive { color: #00ff88; }
+    .lb-rate.negative { color: #ff6666; }
+
+    /* Top 3 rows get a subtle tint */
+    .lb-row.rank-1 { background: rgba(255, 215, 0, 0.08); }
+    .lb-row.rank-2 { background: rgba(192, 192, 192, 0.08); }
+    .lb-row.rank-3 { background: rgba(205, 127, 50, 0.08); }
+
+    /* Your own row, when it appears below the top 50 */
+    .lb-you-row {
+        background: rgba(0, 255, 136, 0.12);
+        border-left: 3px solid #00ff88;
+    }
+
+    .lb-ellipsis-row {
+        text-align: center;
+        color: #666;
+        padding: 6px 0;
+        font-size: 16px;
+        letter-spacing: 3px;
+    }
+
+    .lb-empty, .lb-you-note {
+        padding: 24px 16px;
+        text-align: center;
+        color: #777;
+        font-size: 13.5px;
+    }
+
+    .lb-loading {
+        padding: 24px 16px;
+        text-align: center;
+        color: #777;
+        font-size: 13.5px;
+    }
+</style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <div class="header">
+        <div class="back-group" onclick="goBack()">
+            ← <h1>Leaderboard</h1>
+        </div>
+        <div class="home-btn" onclick="goHome()">🏠</div>
+    </div>
+
+    <div class="lb-tabs">
+        <button class="lb-tab-btn active" data-range="today">Today</button>
+        <button class="lb-tab-btn" data-range="yesterday">Yesterday</button>
+        <button class="lb-tab-btn" data-range="week">This Week</button>
+        <button class="lb-tab-btn" data-range="all">All Time</button>
+    </div>
+
+    <div class="lb-header-row">
+        <div>S/N</div>
+        <div></div>
+        <div>Name</div>
+        <div class="col-amount">Amount Won</div>
+        <div class="col-rate">Rate</div>
+    </div>
+
+    <div class="lb-list" id="lbList">
+        <div class="lb-loading">Loading leaderboard...</div>
+    </div>
+
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+        authDomain: "success-75f95.firebaseapp.com",
+        projectId: "success-75f95",
+        storageBucket: "success-75f95.firebasestorage.app",
+        messagingSenderId: "774097711994",
+        appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+
+    const auth = firebase.auth();
+    const sb = window.supabase.createClient(
+        "https://axojmnizpewbewempaaa.supabase.co",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4b2ptbml6cGV3YmV3ZW1wYWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDk3OTcsImV4cCI6MjA5ODA4NTc5N30._Ib3RhlMpPaUQoUVYDd6dS_gUOiaVsCBPBYEO30A8zc"
+    );
+
+    function goBack() { window.history.back(); }
+    function goHome() { window.location.href = "index.html"; }
+
+    let currentUid = null;
+    auth.onAuthStateChanged((user) => {
+        currentUid = user ? user.uid : null;
+        loadLeaderboard(currentRange);
+    });
+
+    // =========================
+    // TIME RANGE BOUNDARIES
+    // =========================
+    function rangeBounds(range) {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        if (range === "today") {
+            return { gte: startOfToday };
+        }
+
+        if (range === "yesterday") {
+            const startOfYesterday = new Date(startOfToday);
+            startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+            return { gte: startOfYesterday, lt: startOfToday };
+        }
+
+        if (range === "week") {
+            // Calendar week starting Monday.
+            const day = startOfToday.getDay(); // 0 = Sunday
+            const diffToMonday = (day === 0 ? 6 : day - 1);
+            const startOfWeek = new Date(startOfToday);
+            startOfWeek.setDate(startOfWeek.getDate() - diffToMonday);
+            return { gte: startOfWeek };
+        }
+
+        return {}; // all time - no bounds
+    }
+
+    // =========================
+    // FETCH + AGGREGATE
+    // =========================
+    // bets.username/photo_url may not exist yet on older DBs (same
+    // situation js/bets.js guards against) - try the full column set
+    // first and fall back to the bare columns if Postgres/PostgREST
+    // reports either one missing.
+    const COLUMNS_FULL = "user_id, username, photo_url, email, amount, status, profit, placed_at";
+    const COLUMNS_FALLBACK = "user_id, email, amount, status, profit, placed_at";
+
+    function isMissingColumnError(error) {
+        if (!error) return false;
+        const code = String(error.code || "");
+        const text = `${error.message || ""} ${error.details || ""} ${error.hint || ""}`.toLowerCase();
+        return (
+            code === "42703" ||
+            code === "PGRST204" ||
+            text.includes("schema cache") ||
+            (text.includes("column") && (text.includes("does not exist") || text.includes("could not find")))
+        );
+    }
+
+    function nameFor(row) {
+        return row.username || (row.email ? row.email.split("@")[0] : "Player");
+    }
+
+    function maskName(name) {
+        const clean = String(name || "Player").trim();
+        if (clean.length <= 2) return clean;
+        return clean[0] + "***" + clean[clean.length - 1];
+    }
+
+    function avatarInitial(name) {
+        return String(name || "P").trim().charAt(0).toUpperCase() || "P";
+    }
+
+    function formatNaira(amount) {
+        return Number(amount || 0).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    async function fetchBets(range) {
+        const bounds = rangeBounds(range);
+
+        const applyBounds = (query) => {
+            if (bounds.gte) query = query.gte("placed_at", bounds.gte.toISOString());
+            if (bounds.lt) query = query.lt("placed_at", bounds.lt.toISOString());
+            return query;
+        };
+
+        let { data, error } = await applyBounds(sb.from("bets").select(COLUMNS_FULL));
+
+        if (error && isMissingColumnError(error)) {
+            ({ data, error } = await applyBounds(sb.from("bets").select(COLUMNS_FALLBACK)));
+        }
+
+        if (error) {
+            console.error("Leaderboard query error:", error);
+            return null;
+        }
+
+        return data || [];
+    }
+
+    // Aggregates raw bet rows into one entry per player:
+    //   staked      - total amount wagered across all their bets
+    //   payout      - total received back from cashed-out bets
+    //   amountWon   - net profit (payout - staked) - this is the
+    //                 leaderboard's "Amount Won" column
+    //   rate        - ROI%, amountWon / staked * 100
+    function aggregate(rows) {
+        const byUser = new Map();
+
+        rows.forEach((bet) => {
+            const uid = bet.user_id;
+            if (!uid) return;
+
+            if (!byUser.has(uid)) {
+                byUser.set(uid, {
+                    user_id: uid,
+                    name: nameFor(bet),
+                    photo_url: bet.photo_url || null,
+                    staked: 0,
+                    payout: 0
+                });
+            }
+
+            const entry = byUser.get(uid);
+            entry.staked += Number(bet.amount || 0);
+
+            if (bet.status === "cashed_out") {
+                entry.payout += Number(bet.profit || 0);
+            }
+        });
+
+        const list = Array.from(byUser.values()).map((entry) => {
+            const amountWon = entry.payout - entry.staked;
+            const rate = entry.staked > 0 ? (amountWon / entry.staked) * 100 : 0;
+            return { ...entry, amountWon, rate };
+        });
+
+        list.sort((a, b) => b.amountWon - a.amountWon);
+
+        return list;
+    }
+
+    // =========================
+    // RENDER
+    // =========================
+    const MEDALS = { 1: "🥇", 2: "🥈", 3: "🥉" };
+
+    function buildAvatarCell(entry) {
+        const cell = document.createElement("div");
+        cell.className = "lb-avatar-cell";
+
+        const avatar = document.createElement("div");
+        avatar.className = "lb-avatar";
+
+        const displayName = entry.isYou ? entry.name : maskName(entry.name);
+        const initial = avatarInitial(displayName);
+
+        if (entry.photo_url) {
+            const img = document.createElement("img");
+            img.src = entry.photo_url;
+            img.alt = "";
+            img.addEventListener("error", () => {
+                avatar.innerHTML = "";
+                avatar.textContent = initial;
+            });
+            avatar.appendChild(img);
+        } else {
+            avatar.textContent = initial;
+        }
+
+        cell.appendChild(avatar);
+
+        if (MEDALS[entry.rank]) {
+            const medal = document.createElement("div");
+            medal.className = "lb-medal";
+            medal.textContent = MEDALS[entry.rank];
+            cell.appendChild(medal);
+        }
+
+        return cell;
+    }
+
+    function buildRow(entry) {
+        const row = document.createElement("div");
+        row.className = `lb-row ${entry.rank <= 3 ? "rank-" + entry.rank : ""} ${entry.isYou ? "lb-you-row" : ""}`;
+
+        const rankEl = document.createElement("div");
+        rankEl.className = "lb-rank";
+        rankEl.textContent = entry.rank;
+        row.appendChild(rankEl);
+
+        row.appendChild(buildAvatarCell(entry));
+
+        const nameEl = document.createElement("div");
+        nameEl.className = "lb-name";
+        nameEl.textContent = entry.isYou ? `${entry.name} (You)` : maskName(entry.name);
+        row.appendChild(nameEl);
+
+        const amountEl = document.createElement("div");
+        amountEl.className = `lb-amount ${entry.amountWon < 0 ? "negative" : ""}`;
+        amountEl.textContent = (entry.amountWon < 0 ? "-₦" : "₦") + formatNaira(Math.abs(entry.amountWon));
+        row.appendChild(amountEl);
+
+        const rateEl = document.createElement("div");
+        rateEl.className = `lb-rate ${entry.rate > 0 ? "positive" : entry.rate < 0 ? "negative" : ""}`;
+        rateEl.textContent = `${entry.rate >= 0 ? "+" : ""}${entry.rate.toFixed(1)}%`;
+        row.appendChild(rateEl);
+
+        return row;
+    }
+
+    let currentRange = "today";
+    let loadToken = 0;
+
+    async function loadLeaderboard(range) {
+        currentRange = range;
+
+        const list = document.getElementById("lbList");
+        list.innerHTML = '<div class="lb-loading">Loading leaderboard...</div>';
+
+        const myToken = ++loadToken;
+
+        const rows = await fetchBets(range);
+
+        if (myToken !== loadToken) return; // a newer tab click superseded this load
+
+        if (rows === null) {
+            list.innerHTML = '<div class="lb-empty">Could not load the leaderboard. Please try again.</div>';
+            return;
+        }
+
+        const ranked = aggregate(rows).map((entry, index) => ({
+            ...entry,
+            rank: index + 1,
+            isYou: currentUid != null && entry.user_id === currentUid
+        }));
+
+        if (ranked.length === 0) {
+            list.innerHTML = '<div class="lb-empty">No bets placed in this period yet.</div>';
+            return;
+        }
+
+        list.innerHTML = "";
+
+        const top50 = ranked.slice(0, 50);
+        top50.forEach((entry) => list.appendChild(buildRow(entry)));
+
+        if (currentUid != null) {
+            const you = ranked.find((entry) => entry.user_id === currentUid);
+
+            if (you && you.rank > 50) {
+                const ellipsis = document.createElement("div");
+                ellipsis.className = "lb-ellipsis-row";
+                ellipsis.textContent = "...";
+                list.appendChild(ellipsis);
+
+                list.appendChild(buildRow(you));
+            } else if (!you) {
+                const note = document.createElement("div");
+                note.className = "lb-you-note";
+                note.textContent = "You haven't placed any bets in this period yet.";
+                list.appendChild(note);
+            }
+        }
+    }
+
+    document.querySelectorAll(".lb-tab-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".lb-tab-btn").forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
+            loadLeaderboard(btn.dataset.range);
+        });
+    });
+
+    loadLeaderboard(currentRange);
+</script>
+
+</body>
+</html>
