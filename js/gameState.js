@@ -217,11 +217,18 @@ if (
 function updateBetButton(slot, uiState, payload) {
 
     const investButtons = document.querySelectorAll(".invest-btn");
+    const investRows = document.querySelectorAll(".invest-row");
     const btn = investButtons[slot - 1];
+    const row = investRows[slot - 1];
+    const input = row && row.querySelector(".amount-input");
+    const priceBtns = row ? row.querySelectorAll(".price-btn") : [];
 
     if (!btn) return;
 
     btn.disabled = false;
+    btn.style.opacity = "";
+    if (input) input.disabled = false;
+    priceBtns.forEach((pBtn) => { pBtn.disabled = false; });
 
     switch (uiState) {
 
@@ -266,6 +273,13 @@ function updateBetButton(slot, uiState, payload) {
                 <small>(₦${Number((payload && payload.amount) || 0).toFixed(2)})</small>
             `;
             btn.style.backgroundColor = "";
+            // Bet is locked in and waiting for the next betting window to
+            // auto-place it - disable + dim the whole row so it's obvious
+            // nothing here is actionable until it's actually placed.
+            btn.disabled = true;
+            btn.style.opacity = "0.4";
+            if (input) input.disabled = true;
+            priceBtns.forEach((pBtn) => { pBtn.disabled = true; });
             break;
 
         default:

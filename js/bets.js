@@ -290,6 +290,15 @@ async function cashOut(betSlot) {
         return;
     }
 
+    // Block cash-outs at the very start of the flight (multiplier still
+    // at 1.00x) - otherwise a player could cash out the instant "flying"
+    // begins with zero risk, which is especially exploitable on rounds
+    // that crash immediately at 1.00x (a free, guaranteed win).
+    if (Number(window.currentGameState.multiplier) <= 1) {
+        alert("You cannot cash out at 1.00x, especially when the round crashes at 1.00x.");
+        return;
+    }
+
     // Prevent duplicate/overlapping cash-out attempts for this slot
     if (window.isProcessingCashOut[betSlot]) {
         return;
