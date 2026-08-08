@@ -71,16 +71,17 @@ function updateGameFromServer(state) {
         // stale balance and race each other on the deduction.
         if (state.status === "betting") {
 
-            // Real countdown, not a guess: compute exactly how much of
-            // the window is left (started_at is set by the server) and
-            // hand that to aviator.js's window.showBettingCountdown(),
-            // which sets the CSS transition duration to match exactly.
-            const startedAt = new Date(state.started_at).getTime();
-            const elapsed = Date.now() - startedAt;
-            const remaining = Math.max(0, BETTING_WINDOW_MS - elapsed);
-
+            // Deliberately NOT computing "remaining time" from the
+            // server's started_at timestamp vs. this browser's clock -
+            // that was tried and caused a real bug: the two machines'
+            // clocks don't agree (the Go server's clock runs several
+            // seconds ahead), so the computed "remaining" came out wildly
+            // wrong. Always starting at the full window avoids depending
+            // on cross-machine clock sync at all. The only imprecision
+            // this has is the poll interval itself (up to ~250ms) - far
+            // smaller and more acceptable than a multi-second clock skew.
             if (typeof window.showBettingCountdown === "function") {
-                window.showBettingCountdown(remaining);
+                window.showBettingCountdown(BETTING_WINDOW_MS);
             }
 
             const queuedSlots = Object.keys(window.myQueuedBets);

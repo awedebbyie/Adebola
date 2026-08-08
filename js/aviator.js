@@ -260,6 +260,22 @@ helicopter.style.opacity = "0";
 
         lastTime = timestamp;
 
+        // Checked FIRST, every single frame, regardless of which phase
+        // the helicopter is currently in. This used to live only inside
+        // the phase === 2 branch below, which meant a crash happening
+        // during phase 1 (the initial climb, before the first bounce
+        // point) was completely ignored until the animation happened to
+        // reach that point on its own - the helicopter kept flying for
+        // however long that took, well past the real crash moment.
+        if (
+            window.currentGameState &&
+            window.currentGameState.status === "crashed" &&
+            phase !== 3
+        ) {
+            crashInstantly();
+            return;
+        }
+
         if (phase === 1) {
             // Climbing straight from the origin up to field-dot1 - once the
             // tail rotor reaches it, switch into the dot1<->dot2 bounce loop.
@@ -292,16 +308,6 @@ helicopter.style.opacity = "0";
             } else {
                 x += (dx / dist) * MOVE_SPEED;
                 y += (dy / dist) * MOVE_SPEED;
-            }
-
-            // ✅ FIX: guard against calling crashInstantly() more than once
-            if (
-                window.currentGameState &&
-                window.currentGameState.status === "crashed" &&
-                phase !== 3
-            ) {
-                crashInstantly();
-                return;
             }
         }
 
