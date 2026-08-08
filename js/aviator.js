@@ -166,7 +166,9 @@ helicopter.style.opacity = "1";
 helicopter.style.transition = "none";
 
         flewAwayContainer.style.opacity = "0";
+        countdownBarContainer.style.transition = "none";
         countdownBarContainer.style.opacity = "0";
+        countdownBarContainer.offsetHeight; // force reflow so the instant hide above actually applies before the bar underneath is reset
         preparingText.style.opacity = "0";
         countdownBar.style.transition = "none";
         countdownBar.style.width = "100%";
@@ -230,6 +232,7 @@ helicopter.style.opacity = "0";
             return;
         }
 
+        countdownBarContainer.style.transition = "";
         countdownBarContainer.style.opacity = "1";
         preparingText.style.opacity = "1";
 
