@@ -3,13 +3,19 @@
 // =========================
 
 window.myQueuedBets = window.myQueuedBets || {}; // { [slot]: amount } - bets waiting for the next betting window
+window.countdownStartedForRoundId = window.countdownStartedForRoundId || null;
+
+// Tracks whether we've received any poll response yet this page load.
+// Used to detect "just refreshed mid-round" - see the countdown logic
+// further down.
+let hasSeenFirstState = false;
 
 // Must match the sleep() duration for the betting window in
 // engine/gameEngine.js exactly - that file is the real source of truth
-// for this timing; this constant only exists so the countdown bar can
-// compute how much of the window is ACTUALLY left (in case this poll
-// tick first observes "betting" a little after it truly started),
-// rather than always assuming the full window remains.
+// for this timing. The countdown bar always animates this full duration
+// from the moment a betting window is genuinely observed starting -
+// deliberately not computed from server vs. browser clocks, since those
+// don't reliably agree (see git history / prior fix notes).
 const BETTING_WINDOW_MS = 5000;
 
 async function getCurrentGameState() {
@@ -41,7 +47,18 @@ function updateGameFromServer(state) {
     const multiplierEl = document.querySelector(".multiplier");
 
     if (multiplierEl) {
-        multiplierEl.textContent = Number(state.multiplier).toFixed(2) + "x";
+        // Never shown during betting/countdown - there's no real
+        // multiplier yet (the server just holds it at 1 as a DB default,
+        // not a meaningful value). This runs on every poll tick, not just
+        // on a round transition, so it also covers landing mid-countdown
+        // on a fresh page refresh, not just normal round-to-round flow.
+        // aviator.js's resetGame() sets it back to opacity 1 once flying
+        // actually starts.
+        if (state.status === "betting") {
+            multiplierEl.style.opacity = "0";
+        } else {
+            multiplierEl.textContent = Number(state.multiplier).toFixed(2) + "x";
+        }
     }
 
     // Provably-fair live hash indicator - defined in js/fairnessPanel.js.
@@ -71,19 +88,6 @@ function updateGameFromServer(state) {
         // stale balance and race each other on the deduction.
         if (state.status === "betting") {
 
-            // Deliberately NOT computing "remaining time" from the
-            // server's started_at timestamp vs. this browser's clock -
-            // that was tried and caused a real bug: the two machines'
-            // clocks don't agree (the Go server's clock runs several
-            // seconds ahead), so the computed "remaining" came out wildly
-            // wrong. Always starting at the full window avoids depending
-            // on cross-machine clock sync at all. The only imprecision
-            // this has is the poll interval itself (up to ~250ms) - far
-            // smaller and more acceptable than a multi-second clock skew.
-            if (typeof window.showBettingCountdown === "function") {
-                window.showBettingCountdown(BETTING_WINDOW_MS);
-            }
-
             const queuedSlots = Object.keys(window.myQueuedBets);
 
             (async () => {
@@ -109,6 +113,46 @@ function updateGameFromServer(state) {
 
         console.log("🔄 Switched to Round:", state.round_id);
     }
+
+    // Shows the "preparing for next round" countdown - deliberately
+    // OUTSIDE the round-change block above, so it's checked on every
+    // single poll tick (every 250ms), not just once at the moment a new
+    // round is first detected. That matters: if the flew-away crash
+    // message (window.flewAwayActive, set in aviator.js) is still
+    // showing when the new betting window opens, this simply doesn't
+    // fire yet - it just checks again next tick, and again, until
+    // flewAway finishes and clears the flag. The
+    // countdownStartedForRoundId guard makes sure it still only actually
+    // fires once per round, no matter how many ticks it took to get
+    // there.
+    if (
+        state.status === "betting" &&
+        window.countdownStartedForRoundId !== state.round_id
+    ) {
+        if (!hasSeenFirstState) {
+            // This is the very first state this page has ever observed,
+            // and it's already mid-betting-window - almost always means
+            // the page was refreshed partway through an existing
+            // countdown. We have no honest way to know how much real
+            // time is actually left without comparing this browser's
+            // clock to the server's, which caused a real bug before
+            // (they don't reliably agree). Rather than animate a
+            // countdown that's likely wrong, skip it for just this one
+            // in-progress window - it'll be accurate again starting with
+            // the very next round, which this page will genuinely watch
+            // begin from zero.
+            window.countdownStartedForRoundId = state.round_id;
+        } else if (!window.flewAwayActive) {
+            window.countdownStartedForRoundId = state.round_id;
+
+            if (typeof window.showBettingCountdown === "function") {
+                window.showBettingCountdown(BETTING_WINDOW_MS);
+            }
+        }
+    }
+
+    hasSeenFirstState = true;
+
 // Start animation when backend enters flying state
 if (
     state.status === "flying" &&

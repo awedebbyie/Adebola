@@ -152,6 +152,8 @@ helicopter.style.opacity = "1";
 helicopter.style.transition = "none";
 
         flewAwayContainer.style.opacity = "0";
+        window.flewAwayActive = false;
+        clearTimeout(window._countdownContainerHideTimer);
         countdownBarContainer.style.transition = "none";
         countdownBarContainer.style.opacity = "0";
         countdownBarContainer.offsetHeight; // force reflow so the instant hide above actually applies before the bar underneath is reset
@@ -160,6 +162,12 @@ helicopter.style.transition = "none";
         countdownBar.style.width = "100%";
     }
     window.resetGame = resetGame;   
+
+    // Tracks whether the "flew away" crash message is currently visible.
+    // gameState.js checks this before ever showing the next round's
+    // "preparing" countdown, so the two can never overlap - see the rule
+    // enforced in window.showBettingCountdown() below and in gameState.js.
+    window.flewAwayActive = false;
 
     // ================= CRASH =================
     function crashInstantly() {
@@ -184,6 +192,7 @@ helicopter.style.opacity = "0";
         multiplierEl.style.color = "#ff3333";
 
         flewAwayContainer.style.opacity = "1";
+        window.flewAwayActive = true;
 
         // Only the "flew away" crash message is on a local timer here -
         // it's purely cosmetic and never controls when the next round
@@ -199,6 +208,7 @@ helicopter.style.opacity = "0";
         // whatever unrelated moment that fake timer happened to be at.
         setTimeout(() => {
             flewAwayContainer.style.opacity = "0";
+            window.flewAwayActive = false;
 
             // Flew-away text just finished disappearing - show the static
             // (idle, no-spin) sprite until the next round's motion begins.
@@ -244,6 +254,23 @@ helicopter.style.opacity = "0";
         countdownBar.offsetHeight; // force reflow so the reset above actually applies before animating
         countdownBar.style.transition = `width ${durationMs}ms linear`;
         countdownBar.style.width = "0%";
+
+        // The instant this countdown genuinely finishes (the bar
+        // actually empties, on its own local timer, which we set above
+        // so we know precisely when that is) - hide the container right
+        // away. It's an empty bar with nothing left to show once it's
+        // done, no reason to leave it sitting there.
+        //
+        // Deliberately NOT hiding preparingText here too: it stays
+        // visible until resetGame() hides it, which happens once the
+        // real "flying" signal actually arrives (a poll tick or so
+        // later). So there's a brief moment where the bar/container is
+        // already gone but "Preparing for next round..." is still up -
+        // that's intentional, not a bug.
+        clearTimeout(window._countdownContainerHideTimer);
+        window._countdownContainerHideTimer = setTimeout(() => {
+            countdownBarContainer.style.opacity = "0";
+        }, durationMs);
     };
 
     // ================= ANIMATION =================
