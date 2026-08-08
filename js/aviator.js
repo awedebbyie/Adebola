@@ -226,6 +226,18 @@ helicopter.style.opacity = "0";
     // "flying") is now the ONLY other code that ever touches this bar,
     // so there's no more race between two independent timers.
     window.showBettingCountdown = function (durationMs) {
+        // Bring the helicopter back into view at its resting/idle spot as
+        // soon as the betting window opens, instead of leaving it hidden
+        // (from crashInstantly()'s off-screen, opacity:0 state) until the
+        // next round actually goes "flying" and resetGame() runs. This is
+        // purely cosmetic positioning - resetGame() still runs its own
+        // (possibly late-join-adjusted) placement once flying starts.
+        helicopter.style.transition = "none";
+        helicopter.style.left = ((125 - ANCHOR_OFFSET_X) / GRAPH_WIDTH * 100) + "%";
+        helicopter.style.bottom = ((GRAPH_HEIGHT - 310) / GRAPH_HEIGHT * 100) + "%";
+        helicopter.style.width = (HELI_WIDTH / GRAPH_WIDTH * 100) + "%";
+        helicopter.style.opacity = "1";
+
         if (!durationMs || durationMs <= 0) {
             countdownBarContainer.style.opacity = "0";
             preparingText.style.opacity = "0";
@@ -338,4 +350,4 @@ helicopter.style.opacity = "0";
         requestAnimationFrame(animate);
     }
 
-});git
+});
