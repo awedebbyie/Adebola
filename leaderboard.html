@@ -7,7 +7,9 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/missions.js"></script>
 
 <style>
     * { box-sizing: border-box; }
@@ -375,6 +377,7 @@
     }
 
     const auth = firebase.auth();
+    const db = firebase.firestore();
     const sb = window.supabase.createClient(
         "https://axojmnizpewbewempaaa.supabase.co",
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4b2ptbml6cGV3YmV3ZW1wYWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDk3OTcsImV4cCI6MjA5ODA4NTc5N30._Ib3RhlMpPaUQoUVYDd6dS_gUOiaVsCBPBYEO30A8zc"
@@ -387,6 +390,10 @@
     auth.onAuthStateChanged((user) => {
         currentUid = user ? user.uid : null;
         loadLeaderboard(currentRange);
+
+        if (user && typeof window.recordMissionEvent === "function") {
+            window.recordMissionEvent("visited_leaderboard");
+        }
     });
 
     // =========================

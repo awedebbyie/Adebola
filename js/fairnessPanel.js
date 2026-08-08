@@ -105,6 +105,11 @@
             container.removeChild(verifying);
 
             const passed = result.hashMatches && result.crashMatches;
+
+            if (typeof window.recordMissionEvent === "function") {
+                window.recordMissionEvent("verified_fairness");
+            }
+
             const banner = document.createElement("div");
             banner.className = "fairness-result " + (passed ? "fairness-pass" : "fairness-fail");
             banner.textContent = passed

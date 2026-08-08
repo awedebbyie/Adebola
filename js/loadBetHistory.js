@@ -10,6 +10,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             btn.classList.add("active");
             document.getElementById(`tab-${btn.dataset.tab}`).classList.add("active");
+
+            if (typeof window.recordMissionEvent === "function") {
+                window.recordMissionEvent("opened_bet_history");
+            }
         });
     });
 

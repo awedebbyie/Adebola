@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Missions - Aviator</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+<style>
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        background: white;
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        min-height: 100vh;
+    }
+
+    .app-wrapper {
+        width: 25vw;
+        min-width: 380px;
+        max-width: 420px;
+        min-height: 100vh;
+        background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+        color: #fff;
+        box-shadow: 0 0 30px rgba(0,0,0,0.3);
+        overflow-x: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .header {
+        background: #1f1f2e;
+        border-bottom: 1px solid #333;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .header .back-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 20px;
+    }
+
+    .header h1 {
+        font-size: 17px;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .header .home-btn {
+        font-size: 20px;
+        cursor: pointer;
+    }
+
+    /* Progress summary */
+    .ms-summary {
+        margin: 16px;
+        padding: 18px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #7b2ff7 0%, #5417b8 100%);
+    }
+
+    .ms-summary-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 10px;
+    }
+
+    .ms-summary-title {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.85);
+    }
+
+    .ms-summary-count {
+        font-size: 14px;
+        font-weight: 700;
+        color: #ffcf5c;
+    }
+
+    .ms-progress-track {
+        height: 8px;
+        border-radius: 4px;
+        background: rgba(255,255,255,0.2);
+        overflow: hidden;
+    }
+
+    .ms-progress-fill {
+        height: 100%;
+        background: #00ff88;
+        border-radius: 4px;
+        transition: width 0.4s ease;
+    }
+
+    /* Streak card */
+    .ms-streak {
+        margin: 0 16px 16px;
+        padding: 14px 16px;
+        border-radius: 12px;
+        background: #1f1f2e;
+        border: 1px solid #333;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .ms-streak-label {
+        font-size: 12px;
+        color: #999;
+        margin-bottom: 2px;
+    }
+
+    .ms-streak-value {
+        font-size: 20px;
+        font-weight: 700;
+    }
+
+    .ms-streak-best {
+        font-size: 11.5px;
+        color: #999;
+        text-align: right;
+    }
+
+    /* Section label */
+    .ms-section-label {
+        margin: 4px 16px 8px;
+        font-size: 12.5px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: #888;
+    }
+
+    /* Mission list - every mission always visible, nothing hidden */
+    .ms-list {
+        margin: 0 16px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .ms-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: #1f1f2e;
+        border: 1px solid #2a2a3a;
+    }
+
+    .ms-card.done {
+        border-color: rgba(0,255,136,0.35);
+        background: rgba(0,255,136,0.06);
+    }
+
+    .ms-card-icon {
+        font-size: 22px;
+        width: 32px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    .ms-card-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .ms-card-title {
+        font-size: 13.5px;
+        font-weight: 700;
+        color: #eee;
+    }
+
+    .ms-card-desc {
+        font-size: 12px;
+        color: #999;
+        margin-top: 2px;
+    }
+
+    .ms-card-check {
+        font-size: 18px;
+        color: #00ff88;
+        flex-shrink: 0;
+        opacity: 0;
+    }
+
+    .ms-card.done .ms-card-check {
+        opacity: 1;
+    }
+
+    /* Collection grid */
+    .ms-collection {
+        margin: 0 16px 24px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+    }
+
+    .ms-badge {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 10px 4px;
+        border-radius: 10px;
+        background: #1f1f2e;
+        border: 1px solid #2a2a3a;
+        opacity: 0.4;
+    }
+
+    .ms-badge.earned {
+        opacity: 1;
+        border-color: rgba(255, 207, 92, 0.4);
+        background: rgba(255, 207, 92, 0.08);
+    }
+
+    .ms-badge-icon {
+        font-size: 22px;
+    }
+
+    .ms-badge-label {
+        font-size: 9.5px;
+        text-align: center;
+        color: #bbb;
+        line-height: 1.2;
+    }
+
+    .ms-loading {
+        padding: 24px 16px;
+        text-align: center;
+        color: #777;
+        font-size: 13.5px;
+    }
+
+    .ms-login-note {
+        margin: 16px;
+        padding: 16px;
+        border-radius: 10px;
+        background: #1f1f2e;
+        border: 1px solid #333;
+        text-align: center;
+        color: #999;
+        font-size: 13px;
+    }
+</style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <div class="header">
+        <div class="back-group" onclick="goBack()">
+            ← <h1>Missions</h1>
+        </div>
+        <div class="home-btn" onclick="goHome()">🏠</div>
+    </div>
+
+    <div id="msContent">
+        <div class="ms-loading">Loading missions...</div>
+    </div>
+
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+        authDomain: "success-75f95.firebaseapp.com",
+        projectId: "success-75f95",
+        storageBucket: "success-75f95.firebasestorage.app",
+        messagingSenderId: "774097711994",
+        appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    function goBack() { window.history.back(); }
+    function goHome() { window.location.href = "index.html"; }
+</script>
+<script src="js/missions.js"></script>
+<script>
+    function buildSummary(summary) {
+        const wrap = document.createElement("div");
+
+        const card = document.createElement("div");
+        card.className = "ms-summary";
+
+        const top = document.createElement("div");
+        top.className = "ms-summary-top";
+        top.innerHTML = `
+            <span class="ms-summary-title">Your Progress</span>
+            <span class="ms-summary-count">${summary.completedCount} / ${summary.total}</span>
+        `;
+        card.appendChild(top);
+
+        const track = document.createElement("div");
+        track.className = "ms-progress-track";
+        const fill = document.createElement("div");
+        fill.className = "ms-progress-fill";
+        const pct = summary.total > 0 ? (summary.completedCount / summary.total) * 100 : 0;
+        fill.style.width = pct + "%";
+        track.appendChild(fill);
+        card.appendChild(track);
+
+        wrap.appendChild(card);
+
+        const streakCard = document.createElement("div");
+        streakCard.className = "ms-streak";
+        streakCard.innerHTML = `
+            <div>
+                <div class="ms-streak-label">Visit streak</div>
+                <div class="ms-streak-value">🔥 ${summary.streak.current || 0} day${summary.streak.current === 1 ? "" : "s"}</div>
+            </div>
+            <div class="ms-streak-best">Best<br>${summary.streak.best || 0} days</div>
+        `;
+        wrap.appendChild(streakCard);
+
+        return wrap;
+    }
+
+    function buildMissionList(summary) {
+        const label = document.createElement("div");
+        label.className = "ms-section-label";
+        label.textContent = "Objectives";
+
+        const list = document.createElement("div");
+        list.className = "ms-list";
+
+        window.MISSION_DEFINITIONS.forEach((mission) => {
+            const done = !!summary.events[mission.id];
+
+            const card = document.createElement("div");
+            card.className = "ms-card" + (done ? " done" : "");
+
+            card.innerHTML = `
+                <div class="ms-card-icon">${mission.badge}</div>
+                <div class="ms-card-body">
+                    <div class="ms-card-title">${mission.title}</div>
+                    <div class="ms-card-desc">${mission.description}</div>
+                </div>
+                <div class="ms-card-check">✓</div>
+            `;
+
+            list.appendChild(card);
+        });
+
+        const fragment = document.createDocumentFragment();
+        fragment.appendChild(label);
+        fragment.appendChild(list);
+        return fragment;
+    }
+
+    function buildCollection(summary) {
+        const label = document.createElement("div");
+        label.className = "ms-section-label";
+        label.textContent = `Collection — ${summary.completedCount} / ${summary.total}`;
+
+        const grid = document.createElement("div");
+        grid.className = "ms-collection";
+
+        window.MISSION_DEFINITIONS.forEach((mission) => {
+            const earned = !!summary.events[mission.id];
+
+            const badge = document.createElement("div");
+            badge.className = "ms-badge" + (earned ? " earned" : "");
+            badge.innerHTML = `
+                <div class="ms-badge-icon">${mission.badge}</div>
+                <div class="ms-badge-label">${mission.title}</div>
+            `;
+
+            grid.appendChild(badge);
+        });
+
+        const fragment = document.createDocumentFragment();
+        fragment.appendChild(label);
+        fragment.appendChild(grid);
+        return fragment;
+    }
+
+    async function render() {
+        const content = document.getElementById("msContent");
+
+        if (!auth.currentUser) {
+            content.innerHTML = "";
+            const note = document.createElement("div");
+            note.className = "ms-login-note";
+            note.textContent = "Log in to track your missions.";
+            content.appendChild(note);
+            return;
+        }
+
+        const summary = await window.getMissionSummary();
+
+        content.innerHTML = "";
+        content.appendChild(buildSummary(summary));
+        content.appendChild(buildMissionList(summary));
+        content.appendChild(buildCollection(summary));
+    }
+
+    auth.onAuthStateChanged((user) => {
+        if (user && typeof window.recordVisitStreak === "function") {
+            window.recordVisitStreak();
+        }
+        render();
+    });
+</script>
+
+</body>
+</html>

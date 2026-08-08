@@ -6,6 +6,8 @@
     <title>Settings - Aviator</title>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="js/missions.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
@@ -271,6 +273,13 @@ if (!firebase.apps.length) {
 }
 
 const auth = firebase.auth();
+const db = firebase.firestore();
+
+if (typeof window.recordMissionEvent === "function") {
+    auth.onAuthStateChanged((user) => {
+        if (user) window.recordMissionEvent("visited_settings");
+    });
+}
 
         function goBack() {
             window.history.back();

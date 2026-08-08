@@ -148,6 +148,10 @@
         dropdown.classList.add("chat-dropdown-open");
         if (backdrop) backdrop.classList.add("chat-open");
 
+        if (typeof window.recordMissionEvent === "function") {
+            window.recordMissionEvent("opened_chat");
+        }
+
         setUnread(false);
 
         const container = document.getElementById("chatMessages");

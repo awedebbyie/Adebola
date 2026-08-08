@@ -12,6 +12,7 @@
 
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/missions.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
@@ -298,6 +299,10 @@ document.getElementById(
 ).src=
 imageURL;
 
+if (typeof window.recordMissionEvent === "function") {
+    window.recordMissionEvent("added_profile_photo");
+}
+
 alert(
 "Profile picture updated!"
 );
@@ -332,6 +337,10 @@ const userDoc = await db
     .collection("users")
     .doc(user.uid)
     .get();
+
+if (typeof window.recordMissionEvent === "function") {
+    window.recordMissionEvent("visited_profile");
+}
 
 const data = userDoc.data() || {};
 

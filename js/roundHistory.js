@@ -108,6 +108,10 @@
     function openHistoryModal() {
         closeHistoryModal();
 
+        if (typeof window.recordMissionEvent === "function") {
+            window.recordMissionEvent("opened_round_history");
+        }
+
         const overlay = document.createElement("div");
         overlay.id = "roundHistoryModal";
         overlay.className = "round-history-modal-overlay";
