@@ -338,4 +338,4 @@ helicopter.style.opacity = "0";
         requestAnimationFrame(animate);
     }
 
-});
+});git
