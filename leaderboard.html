@@ -232,6 +232,98 @@
         color: #777;
         font-size: 13.5px;
     }
+
+    /* =========================
+       TOP 3 PODIUM
+       ========================= */
+    .lb-podium {
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 22px;
+        padding: 22px 16px 26px;
+        background: linear-gradient(135deg, #7b2ff7 0%, #5417b8 100%);
+        flex-shrink: 0;
+    }
+
+    .lb-podium-slot {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        width: 84px;
+    }
+
+    .lb-podium-rank-num {
+        font-size: 12.5px;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 6px;
+    }
+
+    .lb-podium-avatar-wrap {
+        position: relative;
+        margin-bottom: 8px;
+    }
+
+    .lb-podium-crown {
+        position: absolute;
+        top: -24px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 26px;
+        line-height: 1;
+        filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4));
+    }
+
+    .lb-podium-avatar {
+        border-radius: 50%;
+        background: rgba(255,255,255,0.22);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border: 3px solid rgba(255,255,255,0.55);
+        color: #fff;
+        font-weight: 700;
+        width: 56px;
+        height: 56px;
+        font-size: 18px;
+    }
+
+    .lb-podium-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+
+    .lb-podium-slot.rank-1 .lb-podium-avatar {
+        width: 76px;
+        height: 76px;
+        font-size: 24px;
+        border-color: #ffd700;
+    }
+
+    .lb-podium-name {
+        font-size: 10.5px;
+        font-weight: 600;
+        color: rgba(255,255,255,0.85);
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        max-width: 84px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .lb-podium-amount {
+        font-size: 13px;
+        font-weight: 700;
+        color: #ffcf5c;
+        margin-top: 3px;
+        font-variant-numeric: tabular-nums;
+    }
 </style>
 </head>
 <body>
@@ -251,6 +343,8 @@
         <button class="lb-tab-btn" data-range="week">This Week</button>
         <button class="lb-tab-btn" data-range="all">All Time</button>
     </div>
+
+    <div class="lb-podium" id="lbPodium"></div>
 
     <div class="lb-header-row">
         <div>S/N</div>
@@ -501,6 +595,88 @@
         return row;
     }
 
+    // =========================
+    // TOP 3 PODIUM
+    // =========================
+    function buildPodiumSlot(entry) {
+        const slot = document.createElement("div");
+        slot.className = `lb-podium-slot rank-${entry.rank}`;
+
+        const rankNum = document.createElement("div");
+        rankNum.className = "lb-podium-rank-num";
+        rankNum.textContent = entry.rank;
+        slot.appendChild(rankNum);
+
+        const avatarWrap = document.createElement("div");
+        avatarWrap.className = "lb-podium-avatar-wrap";
+
+        if (entry.rank === 1) {
+            const crown = document.createElement("div");
+            crown.className = "lb-podium-crown";
+            crown.textContent = "👑";
+            avatarWrap.appendChild(crown);
+        }
+
+        const avatar = document.createElement("div");
+        avatar.className = "lb-podium-avatar";
+
+        const displayName = entry.isYou ? entry.name : maskName(entry.name);
+        const initial = avatarInitial(displayName);
+
+        if (entry.photo_url) {
+            const img = document.createElement("img");
+            img.src = entry.photo_url;
+            img.alt = "";
+            img.addEventListener("error", () => {
+                avatar.innerHTML = "";
+                avatar.textContent = initial;
+            });
+            avatar.appendChild(img);
+        } else {
+            avatar.textContent = initial;
+        }
+
+        avatarWrap.appendChild(avatar);
+        slot.appendChild(avatarWrap);
+
+        const nameEl = document.createElement("div");
+        nameEl.className = "lb-podium-name";
+        nameEl.textContent = entry.isYou ? `${entry.name} (You)` : maskName(entry.name);
+        slot.appendChild(nameEl);
+
+        const amountEl = document.createElement("div");
+        amountEl.className = "lb-podium-amount";
+        amountEl.textContent = "₦" + formatNaira(entry.amountWon);
+        slot.appendChild(amountEl);
+
+        return slot;
+    }
+
+    // top3 only ever contains QUALIFYING entries (amountWon > 0) - see
+    // the filtering in loadLeaderboard(). Renders whatever's actually
+    // available (1, 2, or 3 slots), left-to-right as 2nd / 1st / 3rd so
+    // the highest earner sits centered and larger, and hides itself
+    // entirely if nobody has qualified yet.
+    function renderPodium(top3) {
+        const podium = document.getElementById("lbPodium");
+        podium.innerHTML = "";
+
+        if (top3.length === 0) {
+            podium.style.display = "none";
+            return;
+        }
+        podium.style.display = "flex";
+
+        const byRank = {};
+        top3.forEach((entry) => { byRank[entry.rank] = entry; });
+
+        [2, 1, 3].forEach((rank) => {
+            if (byRank[rank]) {
+                podium.appendChild(buildPodiumSlot(byRank[rank]));
+            }
+        });
+    }
+
     let currentRange = "today";
     let loadToken = 0;
 
@@ -521,24 +697,48 @@
             return;
         }
 
-        const ranked = aggregate(rows).map((entry, index) => ({
+        const allAggregated = aggregate(rows);
+
+        // Only players with a positive net result ever appear on the
+        // leaderboard - a negative "Amount Won" is discouraging to show
+        // publicly, so those entries are excluded entirely rather than
+        // shown in red. Rank numbers are assigned AFTER filtering, so
+        // they stay contiguous (1, 2, 3...) among qualifying players
+        // only - no gaps where an excluded negative entry used to sit.
+        const qualifying = allAggregated.filter((entry) => entry.amountWon > 0);
+
+        const ranked = qualifying.map((entry, index) => ({
             ...entry,
             rank: index + 1,
             isYou: currentUid != null && entry.user_id === currentUid
         }));
 
         if (ranked.length === 0) {
-            list.innerHTML = '<div class="lb-empty">No bets placed in this period yet.</div>';
+            renderPodium([]);
+            list.innerHTML = '<div class="lb-empty">Players have not yet met the minimum threshold.</div>';
             return;
         }
 
         list.innerHTML = "";
 
+        renderPodium(ranked.slice(0, 3));
+
         const top50 = ranked.slice(0, 50);
         top50.forEach((entry) => list.appendChild(buildRow(entry)));
 
+        // Fewer than 50 players have actually qualified (positive
+        // result) - rather than leaving the list looking cut off with no
+        // explanation, say why it stops here.
+        if (ranked.length < 50) {
+            const thresholdNote = document.createElement("div");
+            thresholdNote.className = "lb-you-note";
+            thresholdNote.textContent = "Players have not yet met the minimum threshold.";
+            list.appendChild(thresholdNote);
+        }
+
         if (currentUid != null) {
             const you = ranked.find((entry) => entry.user_id === currentUid);
+            const youFullEntry = allAggregated.find((entry) => entry.user_id === currentUid);
 
             if (you && you.rank > 50) {
                 const ellipsis = document.createElement("div");
@@ -550,7 +750,9 @@
             } else if (!you) {
                 const note = document.createElement("div");
                 note.className = "lb-you-note";
-                note.textContent = "You haven't placed any bets in this period yet.";
+                note.textContent = youFullEntry
+                    ? "You haven't met the minimum threshold to appear on the leaderboard yet."
+                    : "You haven't placed any bets in this period yet.";
                 list.appendChild(note);
             }
         }
