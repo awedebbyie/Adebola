@@ -168,6 +168,7 @@ helicopter.style.transition = "none";
         flewAwayContainer.style.opacity = "0";
         countdownBarContainer.style.opacity = "0";
         preparingText.style.opacity = "0";
+        countdownBar.style.transition = "none";
         countdownBar.style.width = "100%";
     }
     window.resetGame = resetGame;   
@@ -196,29 +197,48 @@ helicopter.style.opacity = "0";
 
         flewAwayContainer.style.opacity = "1";
 
+        // Only the "flew away" crash message is on a local timer here -
+        // it's purely cosmetic and never controls when the next round
+        // actually starts. The countdown bar itself is driven entirely
+        // by window.showBettingCountdown(), called from gameState.js the
+        // moment the REAL server round enters "betting" - see that
+        // function below. This used to also run its own independent
+        // ~11s timer that animated the same bar and then called a
+        // (nonexistent) startNextRound() - that second, fake timer is
+        // what caused the countdown to intermittently glitch: it was
+        // racing against resetGame() forcibly resetting the same bar the
+        // instant the real server round actually went "flying", at
+        // whatever unrelated moment that fake timer happened to be at.
         setTimeout(() => {
             flewAwayContainer.style.opacity = "0";
-
-            countdownBarContainer.style.opacity = "1";
-            preparingText.style.opacity = "1";
-
             multiplierEl.style.opacity = "0";
-
-            countdownBar.style.width = "100%";
-            countdownBar.offsetHeight;
-            countdownBar.style.width = "0%";
-
-            setTimeout(() => {
-                countdownBarContainer.style.opacity = "0";
-                preparingText.style.opacity = "0";
-
-                if (typeof startNextRound === "function") {
-                    startNextRound();
-                }
-            }, 8000);
-
         }, 3000);
     }
+
+    // Called from gameState.js the moment it observes the real server
+    // round enter "betting" - durationMs is the ACTUAL remaining time in
+    // that window (computed from the round's real started_at timestamp),
+    // not a guess. The CSS transition duration is set inline to match
+    // exactly, so this can never drift from the real timing - and
+    // resetGame() (called by beginRound() when the real round goes
+    // "flying") is now the ONLY other code that ever touches this bar,
+    // so there's no more race between two independent timers.
+    window.showBettingCountdown = function (durationMs) {
+        if (!durationMs || durationMs <= 0) {
+            countdownBarContainer.style.opacity = "0";
+            preparingText.style.opacity = "0";
+            return;
+        }
+
+        countdownBarContainer.style.opacity = "1";
+        preparingText.style.opacity = "1";
+
+        countdownBar.style.transition = "none";
+        countdownBar.style.width = "100%";
+        countdownBar.offsetHeight; // force reflow so the reset above actually applies before animating
+        countdownBar.style.transition = `width ${durationMs}ms linear`;
+        countdownBar.style.width = "0%";
+    };
 
     // ================= ANIMATION =================
     function animate(timestamp) {
@@ -315,5 +335,4 @@ helicopter.style.opacity = "0";
         requestAnimationFrame(animate);
     }
 
-    //setTimeout(() => startNextRound(), 600);
 });

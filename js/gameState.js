@@ -4,6 +4,14 @@
 
 window.myQueuedBets = window.myQueuedBets || {}; // { [slot]: amount } - bets waiting for the next betting window
 
+// Must match the sleep() duration for the betting window in
+// engine/gameEngine.js exactly - that file is the real source of truth
+// for this timing; this constant only exists so the countdown bar can
+// compute how much of the window is ACTUALLY left (in case this poll
+// tick first observes "betting" a little after it truly started),
+// rather than always assuming the full window remains.
+const BETTING_WINDOW_MS = 5000;
+
 async function getCurrentGameState() {
 
     const { data, error } = await window.supabaseClient
@@ -62,6 +70,18 @@ function updateGameFromServer(state) {
         // firing them concurrently would let both calls read the same
         // stale balance and race each other on the deduction.
         if (state.status === "betting") {
+
+            // Real countdown, not a guess: compute exactly how much of
+            // the window is left (started_at is set by the server) and
+            // hand that to aviator.js's window.showBettingCountdown(),
+            // which sets the CSS transition duration to match exactly.
+            const startedAt = new Date(state.started_at).getTime();
+            const elapsed = Date.now() - startedAt;
+            const remaining = Math.max(0, BETTING_WINDOW_MS - elapsed);
+
+            if (typeof window.showBettingCountdown === "function") {
+                window.showBettingCountdown(remaining);
+            }
 
             const queuedSlots = Object.keys(window.myQueuedBets);
 
