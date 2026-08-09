@@ -264,7 +264,7 @@
                 <span class="bottom-nav-label">Leaderboard</span>
             </button>
 
-            <button type="button" class="bottom-nav-item" data-label="Missions">
+            <button type="button" class="bottom-nav-item" data-label="Missions" data-href="missions.html">
                 <svg class="bottom-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"/>
                     <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2"/>
@@ -443,6 +443,10 @@ auth.onAuthStateChanged(async (user) => {
                 return;
             }
 
+            if (typeof window.recordVisitStreak === "function") {
+                window.recordVisitStreak();
+            }
+
             // Render Top Bar - buttons use the compact .topbar-btn styling
             // so they keep a small, fixed footprint and the balance in the
             // middle gets whatever room is left over.
@@ -507,6 +511,7 @@ document.getElementById("investBtn2").addEventListener("click", handleInvest);
 </script>
 
 <script src="js/supabase.js"></script>
+<script src="js/missions.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/roundHistory.js"></script>
 <script src="js/verifyFairness.js"></script>
