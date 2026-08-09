@@ -20,21 +20,59 @@ backgroundMusic.volume = MUSIC_VOLUME;
 backgroundMusic.preload = "auto";
 backgroundMusic.muted = localStorage.getItem("musicMuted") === "true";
 
+let hasStartedSuccessfully = false;
+let loadRetries = 0;
+const MAX_LOAD_RETRIES = 3;
+const RETRY_DELAY_MS = 1500;
+
+backgroundMusic.addEventListener("playing", () => {
+    hasStartedSuccessfully = true;
+});
+
+// This fires on a genuine load/decode failure (bad network, interrupted
+// fetch, etc) - NOT on an autoplay block, which shows up as a rejected
+// play() promise instead. On flaky connections the file often just needs
+// another attempt rather than being truly unreachable, so retry a few
+// times with a short delay instead of leaving the track silently dead.
+backgroundMusic.addEventListener("error", () => {
+    if (hasStartedSuccessfully || loadRetries >= MAX_LOAD_RETRIES) return;
+    loadRetries++;
+    setTimeout(() => {
+        backgroundMusic.load();
+        attemptMusicStart();
+    }, RETRY_DELAY_MS);
+});
+
 // Browsers refuse to play audio with sound until the user has interacted
 // with the page (click/tap/keypress). We attempt to start immediately in
 // case the browser allows it (some do once a site's been visited before),
-// and otherwise fall back to starting on the very first interaction.
+// and otherwise fall back to starting on interaction.
 function attemptMusicStart() {
-    backgroundMusic.play().catch(() => {
-        const startOnce = () => {
-            backgroundMusic.play().catch(() => {});
-            document.removeEventListener("click", startOnce);
-            document.removeEventListener("touchstart", startOnce);
-            document.removeEventListener("keydown", startOnce);
+    backgroundMusic.play().then(() => {
+        hasStartedSuccessfully = true;
+    }).catch(() => {
+        const retryOnInteraction = () => {
+            if (hasStartedSuccessfully) {
+                cleanup();
+                return;
+            }
+            // Could still fail here too (e.g. the earlier attempt was
+            // cut off mid-buffer) - unlike before, this listener stays
+            // attached and tries again on the *next* interaction instead
+            // of giving up for the rest of the page's life.
+            backgroundMusic.play().then(() => {
+                hasStartedSuccessfully = true;
+                cleanup();
+            }).catch(() => {});
         };
-        document.addEventListener("click", startOnce);
-        document.addEventListener("touchstart", startOnce);
-        document.addEventListener("keydown", startOnce);
+        function cleanup() {
+            document.removeEventListener("click", retryOnInteraction);
+            document.removeEventListener("touchstart", retryOnInteraction);
+            document.removeEventListener("keydown", retryOnInteraction);
+        }
+        document.addEventListener("click", retryOnInteraction);
+        document.addEventListener("touchstart", retryOnInteraction);
+        document.addEventListener("keydown", retryOnInteraction);
     });
 }
 
