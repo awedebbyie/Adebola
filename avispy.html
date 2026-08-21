@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avispy - Aviator</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        body {
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-wrapper {
+            width: 25vw;
+            min-width: 380px;
+            max-width: 420px;
+            height: 100vh;
+            background: #121212;
+            box-shadow: 0 0 30px rgba(0,0,0,0.3);
+            overflow-y: auto;
+        }
+
+        .header {
+            background-color: #e60000;
+            padding: 10px 16px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin: 0;
+        }
+
+        .section-note {
+            color: #888;
+            font-size: 13px;
+            line-height: 1.5;
+            padding: 16px 16px 10px;
+        }
+
+        .spy-row {
+            background-color: #1f1f1f;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0 16px 2px;
+            border-radius: 6px;
+        }
+
+        .spy-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #333;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .spy-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .spy-name {
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .spy-detail {
+            color: #999;
+            font-size: 12px;
+            margin-top: 2px;
+        }
+
+        .spy-amount {
+            color: #ffcf5c;
+            font-weight: 700;
+            font-size: 14px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .spy-mult {
+            color: #3ddc84;
+            font-size: 11px;
+            text-align: right;
+        }
+
+        .empty-note, .loading-note {
+            color: #888;
+            font-size: 13px;
+            text-align: center;
+            padding: 30px 20px;
+        }
+
+        .refresh-note {
+            color: #666;
+            font-size: 11px;
+            text-align: center;
+            padding: 10px 16px 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <div class="header">
+        <div onclick="goBack()" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            ←
+            <h1>Avispy</h1>
+        </div>
+        <div style="font-size:22px; cursor:pointer; color:white;" onclick="goHome()">🏠</div>
+    </div>
+
+    <p class="section-note">
+        See what other players are winning, live. Names are partially
+        masked for privacy.
+    </p>
+
+    <div id="feed">
+        <p class="loading-note">Loading recent wins...</p>
+    </div>
+
+    <p class="refresh-note">Updates automatically every few seconds</p>
+
+</div>
+
+<script>
+    const supabaseClient = window.supabase.createClient(
+        "https://axojmnizpewbewempaaa.supabase.co",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4b2ptbml6cGV3YmV3ZW1wYWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDk3OTcsImV4cCI6MjA5ODA4NTc5N30._Ib3RhlMpPaUQoUVYDd6dS_gUOiaVsCBPBYEO30A8zc"
+    );
+
+    function goBack() {
+        window.history.back();
+    }
+
+    function goHome() {
+        window.location.href = 'index.html';
+    }
+
+    function maskName(name) {
+        const clean = String(name || "Player").trim();
+        if (clean.length <= 2) return clean;
+        return clean[0] + "***" + clean[clean.length - 1];
+    }
+
+    function avatarInitial(name) {
+        return String(name || "P").trim().charAt(0).toUpperCase() || "P";
+    }
+
+    function formatNaira(amount) {
+        return "₦" + Number(amount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
+    }
+
+    function timeAgo(isoString) {
+        const seconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
+        if (seconds < 60) return seconds + "s ago";
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return minutes + "m ago";
+        const hours = Math.floor(minutes / 60);
+        return hours + "h ago";
+    }
+
+    async function loadFeed() {
+        const feed = document.getElementById("feed");
+
+        // Same public data the leaderboard reads - recent cashed-out bets,
+        // biggest payouts first, capped to a reasonable feed length.
+        const { data: bets, error } = await supabaseClient
+            .from("bets")
+            .select("email, amount, profit, cash_out_multiplier, placed_at")
+            .eq("status", "cashed_out")
+            .order("placed_at", { ascending: false })
+            .limit(60);
+
+        if (error) {
+            console.error("Avispy load failed:", error);
+            feed.innerHTML = '<p class="empty-note">Couldn\'t load live activity right now.</p>';
+            return;
+        }
+
+        // Biggest wins first among these recent ones, shown as a feed.
+        const sorted = (bets || [])
+            .filter((b) => Number(b.profit) > 0)
+            .sort((a, b) => Number(b.profit) - Number(a.profit))
+            .slice(0, 25);
+
+        if (sorted.length === 0) {
+            feed.innerHTML = '<p class="empty-note">No recent wins to show yet.</p>';
+            return;
+        }
+
+        feed.innerHTML = sorted.map((bet) => {
+            const name = bet.email ? bet.email.split("@")[0] : "Player";
+            const masked = maskName(name);
+            return `
+                <div class="spy-row">
+                    <div class="spy-avatar">${avatarInitial(masked)}</div>
+                    <div class="spy-info">
+                        <div class="spy-name">${masked}</div>
+                        <div class="spy-detail">Staked ${formatNaira(bet.amount)} · ${timeAgo(bet.placed_at)}</div>
+                    </div>
+                    <div>
+                        <div class="spy-amount">${formatNaira(bet.profit)}</div>
+                        <div class="spy-mult">${Number(bet.cash_out_multiplier || 0).toFixed(2)}x</div>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    }
+
+    loadFeed();
+    setInterval(loadFeed, 5000);
+</script>
+
+</body>
+</html>

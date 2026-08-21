@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aviloyalty - Aviator</title>
+
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        body {
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-wrapper {
+            width: 25vw;
+            min-width: 380px;
+            max-width: 420px;
+            height: 100vh;
+            background: #121212;
+            box-shadow: 0 0 30px rgba(0,0,0,0.3);
+            overflow-y: auto;
+        }
+
+        .header {
+            background-color: #e60000;
+            padding: 10px 16px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin: 0;
+        }
+
+        .tier-card {
+            margin: 16px;
+            padding: 24px 20px;
+            border-radius: 14px;
+            text-align: center;
+            background: linear-gradient(135deg, #7b2ff7 0%, #5417b8 100%);
+        }
+
+        .tier-badge {
+            font-size: 34px;
+            margin-bottom: 6px;
+        }
+
+        .tier-name {
+            font-size: 22px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .tier-wagered {
+            color: rgba(255,255,255,0.8);
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        .progress-track {
+            margin: 18px 4px 6px;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.2);
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #ffcf5c;
+            border-radius: 4px;
+            transition: width 0.4s ease;
+        }
+
+        .progress-label {
+            color: rgba(255,255,255,0.75);
+            font-size: 12px;
+        }
+
+        .section {
+            padding: 0 16px 16px;
+        }
+
+        .section-title {
+            background-color: #1f1f1f;
+            padding: 12px 16px;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 2px;
+            color: white;
+        }
+
+        .tier-row {
+            background-color: #1f1f1f;
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2px;
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .tier-row.current {
+            background-color: #2a2a2a;
+            color: white;
+            font-weight: 600;
+        }
+
+        .tier-row .perk {
+            font-size: 12px;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        .loading-note {
+            color: #888;
+            font-size: 13px;
+            text-align: center;
+            padding: 40px 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <div class="header">
+        <div onclick="goBack()" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            ←
+            <h1>Aviloyalty</h1>
+        </div>
+        <div style="font-size:22px; cursor:pointer; color:white;" onclick="goHome()">🏠</div>
+    </div>
+
+    <div id="content">
+        <p class="loading-note">Loading your loyalty status...</p>
+    </div>
+
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+        authDomain: "success-75f95.firebaseapp.com",
+        projectId: "success-75f95",
+        storageBucket: "success-75f95.firebasestorage.app",
+        messagingSenderId: "774097711994",
+        appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const auth = firebase.auth();
+
+    const supabaseClient = window.supabase.createClient(
+        "https://axojmnizpewbewempaaa.supabase.co",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4b2ptbml6cGV3YmV3ZW1wYWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDk3OTcsImV4cCI6MjA5ODA4NTc5N30._Ib3RhlMpPaUQoUVYDd6dS_gUOiaVsCBPBYEO30A8zc"
+    );
+
+    function goBack() {
+        window.history.back();
+    }
+
+    function goHome() {
+        window.location.href = 'index.html';
+    }
+
+    function formatNaira(amount) {
+        return "₦" + Number(amount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
+    }
+
+    // Tiers based on ALL-TIME total wagered (sum of every bet's amount,
+    // win or lose - wagering activity, not just winnings). Thresholds are
+    // in Naira. Adjust freely - this is the only place they're defined.
+    const TIERS = [
+        { name: "Bronze", badge: "🥉", min: 0 },
+        { name: "Silver", badge: "🥈", min: 50000 },
+        { name: "Gold", badge: "🥇", min: 200000 },
+        { name: "Platinum", badge: "💎", min: 1000000 }
+    ];
+
+    const PERKS = {
+        Bronze: "Standard support",
+        Silver: "Priority support",
+        Gold: "Priority support + exclusive promotions",
+        Platinum: "Priority support + exclusive promotions + early access to new features"
+    };
+
+    function tierForAmount(amount) {
+        let current = TIERS[0];
+        for (const tier of TIERS) {
+            if (amount >= tier.min) current = tier;
+        }
+        return current;
+    }
+
+    function nextTier(current) {
+        const idx = TIERS.findIndex((t) => t.name === current.name);
+        return idx >= 0 && idx < TIERS.length - 1 ? TIERS[idx + 1] : null;
+    }
+
+    async function loadLoyalty(uid) {
+        const content = document.getElementById("content");
+
+        const { data: bets, error } = await supabaseClient
+            .from("bets")
+            .select("amount")
+            .eq("user_id", uid);
+
+        if (error) {
+            console.error("Aviloyalty load failed:", error);
+            content.innerHTML = '<p class="loading-note">Couldn\'t load your loyalty status right now.</p>';
+            return;
+        }
+
+        const totalWagered = (bets || []).reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+        const current = tierForAmount(totalWagered);
+        const next = nextTier(current);
+
+        let progressPct = 100;
+        let progressLabel = "Highest tier reached";
+        if (next) {
+            const span = next.min - current.min;
+            const into = totalWagered - current.min;
+            progressPct = Math.max(0, Math.min(100, (into / span) * 100));
+            progressLabel = `${formatNaira(next.min - totalWagered)} more wagered to reach ${next.name}`;
+        }
+
+        const tierRows = TIERS.map((tier) => {
+            const isCurrent = tier.name === current.name;
+            return `
+                <div class="tier-row ${isCurrent ? "current" : ""}">
+                    <div>
+                        ${tier.badge} ${tier.name}
+                        <div class="perk">${PERKS[tier.name]}</div>
+                    </div>
+                    <div>${formatNaira(tier.min)}+</div>
+                </div>
+            `;
+        }).join("");
+
+        content.innerHTML = `
+            <div class="tier-card">
+                <div class="tier-badge">${current.badge}</div>
+                <div class="tier-name">${current.name}</div>
+                <div class="tier-wagered">${formatNaira(totalWagered)} wagered all-time</div>
+                <div class="progress-track"><div class="progress-fill" style="width:${progressPct}%"></div></div>
+                <div class="progress-label">${progressLabel}</div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Tiers</div>
+                ${tierRows}
+            </div>
+        `;
+    }
+
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            loadLoyalty(user.uid);
+        } else {
+            document.getElementById("content").innerHTML =
+                '<p class="loading-note">Log in to see your loyalty status.</p>';
+        }
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification Settings - Aviator</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        body {
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-wrapper {
+            width: 25vw;
+            min-width: 380px;
+            max-width: 420px;
+            height: 100vh;
+            background: #121212;
+            box-shadow: 0 0 30px rgba(0,0,0,0.3);
+            overflow-y: auto;
+        }
+
+        .header {
+            background-color: #e60000;
+            padding: 10px 16px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin: 0;
+        }
+
+        .section {
+            padding: 16px;
+        }
+
+        .section-note {
+            color: #888;
+            font-size: 13px;
+            line-height: 1.5;
+            padding: 0 4px 14px;
+        }
+
+        .menu-item {
+            background-color: #1f1f1f;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2px;
+            font-size: 16px;
+            color: white;
+        }
+
+        .item-desc {
+            color: #999;
+            font-size: 12.5px;
+            margin-top: 3px;
+        }
+
+        .switch {
+            width: 44px;
+            height: 24px;
+            border-radius: 12px;
+            background: #3a3a3a;
+            position: relative;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.15s ease;
+        }
+
+        .switch.on {
+            background: #00aa44;
+        }
+
+        .switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: white;
+            transition: transform 0.15s ease;
+        }
+
+        .switch.on::after {
+            transform: translateX(20px);
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <div class="header">
+        <div onclick="goBack()" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            ←
+            <h1>Notification Settings</h1>
+        </div>
+        <div style="font-size:22px; cursor:pointer; color:white;" onclick="goHome()">🏠</div>
+    </div>
+
+    <div class="section">
+        <p class="section-note">
+            Choose what you want to be alerted about. These preferences are
+            saved on this device.
+        </p>
+
+        <div class="menu-item">
+            <div>
+                Round Results
+                <div class="item-desc">Big wins and notable crashes</div>
+            </div>
+            <div class="switch" id="switch-roundResults" onclick="toggle('roundResults')"></div>
+        </div>
+
+        <div class="menu-item">
+            <div>
+                Transactions
+                <div class="item-desc">Deposit and withdrawal updates</div>
+            </div>
+            <div class="switch" id="switch-transactions" onclick="toggle('transactions')"></div>
+        </div>
+
+        <div class="menu-item">
+            <div>
+                Promotions & Bonuses
+                <div class="item-desc">Offers, jackpots, special events</div>
+            </div>
+            <div class="switch" id="switch-promotions" onclick="toggle('promotions')"></div>
+        </div>
+
+        <div class="menu-item">
+            <div>
+                Missions
+                <div class="item-desc">New missions and reward reminders</div>
+            </div>
+            <div class="switch" id="switch-missions" onclick="toggle('missions')"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    function goBack() {
+        window.history.back();
+    }
+
+    function goHome() {
+        window.location.href = 'index.html';
+    }
+
+    // Each preference defaults to ON unless the person has explicitly
+    // turned it off before - same "only store what's non-default"
+    // approach as js/aviator.js's other toggles.
+    const KEYS = ["roundResults", "transactions", "promotions", "missions"];
+
+    function isEnabled(key) {
+        return localStorage.getItem("notif_" + key) !== "false";
+    }
+
+    function toggle(key) {
+        const enabled = !isEnabled(key);
+        localStorage.setItem("notif_" + key, enabled);
+        render();
+    }
+
+    function render() {
+        KEYS.forEach((key) => {
+            const el = document.getElementById("switch-" + key);
+            if (el) el.classList.toggle("on", isEnabled(key));
+        });
+    }
+
+    render();
+</script>
+
+</body>
+</html>

@@ -201,12 +201,12 @@
                     <div class="radio" id="darkRadio"></div>
                 </div>
 
-                <div class="option" onclick="comingSoon()">
+                <div class="option" onclick="setTheme('light')">
                     <span>Off</span>
                     <div class="radio" id="lightRadio"></div>
                 </div>
 
-                <div class="option" onclick="comingSoon()">
+                <div class="option" onclick="setTheme('system')">
                     <span>Follow System Settings</span>
                     <div class="radio checked" id="systemRadio"></div>
                 </div>
@@ -216,12 +216,12 @@
             
             <div class="section-title">Preference</div>
 
-            <div class="menu-item" onclick="comingSoon()">Avispy <span style="font-size:20px;">›</span></div>
-            <div class="menu-item" onclick="comingSoon()">Aviloyalty <span style="font-size:20px;">›</span></div>
+            <div class="menu-item" onclick="window.location.href='avispy.html'">Avispy <span style="font-size:20px;">›</span></div>
+            <div class="menu-item" onclick="window.location.href='aviloyalty.html'">Aviloyalty <span style="font-size:20px;">›</span></div>
 
             
             <div class="section-title">Notifications</div>
-            <div class="menu-item" onclick="comingSoon()">Notification Settings <span style="font-size:20px;">›</span></div>
+            <div class="menu-item" onclick="window.location.href='notification-settings.html'">Notification Settings <span style="font-size:20px;">›</span></div>
 
             
             <div class="section-title">Audio</div>
@@ -248,7 +248,7 @@
                 <span style="font-size:20px;">›</span>
             </div>
             
-            <div class="menu-item" onclick="comingSoon()">Deactivate <span style="font-size:20px;">›</span></div>
+            <div class="menu-item" onclick="window.location.href='deactivate.html'">Deactivate <span style="font-size:20px;">›</span></div>
             <div class="menu-item" onclick="comingSoon()">Device Management <span style="font-size:20px;">›</span></div>
         </div>
 
@@ -391,150 +391,32 @@ if (typeof window.recordMissionEvent === "function") {
 
         }
 
-        function applyTheme(){  
-  
-const mode=  
-localStorage.getItem(  
-"themeMode"  
-) || "system";  
-  
-document  
-.querySelectorAll(".radio")  
-.forEach(r=>{  
-  
-r.classList.remove(  
-"checked"  
-);  
-  
-});  
-  
-let finalTheme=mode;  
-  
-if(mode==="system"){  
-  
-const prefersDark=  
-window.matchMedia(  
-"(prefers-color-scheme: dark)"  
-).matches;  
-  
-finalTheme=  
-prefersDark ?  
-"dark" :  
-"light";  
-  
-document.getElementById(  
-"systemRadio"  
-).classList.add(  
-"checked"  
-);  
-  
-}  
-  
-else if(mode==="dark"){  
-  
-document.getElementById(  
-"darkRadio"  
-).classList.add(  
-"checked"  
-);  
-  
-}  
-  
-else{  
-  
-document.getElementById(  
-"lightRadio"  
-).classList.add(  
-"checked"  
-);  
-  
-}  
-  
-if(finalTheme==="dark"){  
-  
-document.querySelector(  
-".app-wrapper"  
-).style.background=  
-"#121212";  
-  
-document.querySelectorAll(  
-".section-title,.menu-item,.dark-mode-options"  
-).forEach(el=>{  
-  
-el.style.background=  
-"#1f1f1f";  
-  
-el.style.color=  
-"white";  
-  
-});  
-  
-document.querySelectorAll(  
-".option"  
-).forEach(el=>{  
-  
-el.style.color=  
-"white";  
-  
-el.style.borderBottom=  
-"1px solid #2a2a2a";  
-  
-});  
-  
-document.querySelectorAll(  
-"h1"  
-).forEach(el=>{  
-  
-el.style.color=  
-"white";  
-  
-});  
-  
-}  
-  
-else{  
-  
-document.querySelector(  
-".app-wrapper"  
-).style.background=  
-"#ffffff";  
-  
-document.querySelectorAll(  
-".section-title,.menu-item,.dark-mode-options"  
-).forEach(el=>{  
-  
-el.style.background=  
-"#f5f5f5";  
-  
-el.style.color=  
-"black";  
-  
-});  
-  
-document.querySelectorAll(  
-".option"  
-).forEach(el=>{  
-  
-el.style.color=  
-"black";  
-  
-el.style.borderBottom=  
-"1px solid #cccccc";  
-  
-});  
-  
-document.querySelectorAll(  
-"h1"  
-).forEach(el=>{  
-  
-el.style.color=  
-"black";  
-  
-});  
-  
-}  
-  
-}
+        function applyTheme(){
+            const mode = localStorage.getItem("themeMode") || "system";
+
+            document.querySelectorAll(".radio").forEach(r => r.classList.remove("checked"));
+
+            let finalTheme = mode;
+
+            if (mode === "system") {
+                const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+                finalTheme = prefersDark ? "dark" : "light";
+                document.getElementById("systemRadio").classList.add("checked");
+            } else if (mode === "dark") {
+                document.getElementById("darkRadio").classList.add("checked");
+            } else {
+                document.getElementById("lightRadio").classList.add("checked");
+            }
+
+            // ONLY the main background changes here - menu items, section
+            // titles, options, and headers all keep their own fixed colors
+            // from the CSS above regardless of theme. This used to also
+            // override background/color/border on all of those elements,
+            // which is the "changes colors that already had their own
+            // colors" bug - removed entirely, on purpose.
+            document.querySelector(".app-wrapper").style.background =
+                finalTheme === "dark" ? "#121212" : "#ffffff";
+        }
 
         window.matchMedia(
             "(prefers-color-scheme: dark)"

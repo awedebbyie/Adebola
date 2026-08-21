@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deactivate Account - Aviator</title>
+
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        body {
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-wrapper {
+            width: 25vw;
+            min-width: 380px;
+            max-width: 420px;
+            height: 100vh;
+            background: #121212;
+            box-shadow: 0 0 30px rgba(0,0,0,0.3);
+            overflow-y: auto;
+        }
+
+        .header {
+            background-color: #e60000;
+            padding: 10px 16px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin: 0;
+        }
+
+        .section {
+            padding: 20px 16px;
+        }
+
+        .warning-box {
+            background: rgba(230,0,0,0.12);
+            border: 1px solid rgba(230,0,0,0.4);
+            border-radius: 10px;
+            padding: 16px;
+            color: #ff9d9d;
+            font-size: 13.5px;
+            line-height: 1.6;
+        }
+
+        .warning-box strong {
+            color: #ff5c5c;
+        }
+
+        .info-note {
+            color: #999;
+            font-size: 13px;
+            line-height: 1.6;
+            padding: 16px 4px;
+        }
+
+        label {
+            display: block;
+            color: #ccc;
+            font-size: 13px;
+            margin: 18px 0 6px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #1a1a1a;
+            color: white;
+            font-size: 15px;
+        }
+
+        .deactivate-btn {
+            margin-top: 22px;
+            background: #e60000;
+            color: white;
+            border: none;
+            padding: 16px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 10px;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .deactivate-btn:disabled {
+            background: #4a2020;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+        .error-msg {
+            color: #ff5c5c;
+            font-size: 13px;
+            margin-top: 10px;
+            min-height: 16px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <div class="header">
+        <div onclick="goBack()" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            ←
+            <h1>Deactivate Account</h1>
+        </div>
+        <div style="font-size:22px; cursor:pointer; color:white;" onclick="goHome()">🏠</div>
+    </div>
+
+    <div class="section">
+        <div class="warning-box">
+            <strong>This will immediately log you out</strong> and prevent you
+            from logging back in. Your account, balance, and history are
+            preserved - not deleted - but access is blocked. Contact support
+            if you need this reversed.
+        </div>
+
+        <p class="info-note">
+            Any active bets you have right now will still resolve normally.
+            This does not withdraw your balance for you.
+        </p>
+
+        <label for="confirmInput">Type <strong style="color:#fff;">DEACTIVATE</strong> to confirm</label>
+        <input type="text" id="confirmInput" autocomplete="off" />
+
+        <div class="error-msg" id="errorMsg"></div>
+
+        <button class="deactivate-btn" id="deactivateBtn" disabled>Deactivate My Account</button>
+    </div>
+
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+        authDomain: "success-75f95.firebaseapp.com",
+        projectId: "success-75f95",
+        storageBucket: "success-75f95.firebasestorage.app",
+        messagingSenderId: "774097711994",
+        appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    function goBack() {
+        window.history.back();
+    }
+
+    function goHome() {
+        window.location.href = 'index.html';
+    }
+
+    const input = document.getElementById("confirmInput");
+    const btn = document.getElementById("deactivateBtn");
+    const errorMsg = document.getElementById("errorMsg");
+
+    input.addEventListener("input", () => {
+        btn.disabled = input.value.trim() !== "DEACTIVATE";
+    });
+
+    let currentUser = null;
+    auth.onAuthStateChanged((user) => {
+        currentUser = user;
+        if (!user) {
+            window.location.href = "login.html";
+        }
+    });
+
+    btn.addEventListener("click", async () => {
+        if (!currentUser) return;
+
+        btn.disabled = true;
+        btn.textContent = "Deactivating...";
+        errorMsg.textContent = "";
+
+        try {
+            // Flag lives on the user's own Firestore doc - login.html
+            // (or wherever auth is checked) needs to check this flag and
+            // block sign-in for anyone with deactivated:true. That check
+            // isn't added yet - this page only writes the flag and signs
+            // the user out of THIS session; enforcing it on the next
+            // login attempt is a separate, small addition to login.html.
+            await db.collection("users").doc(currentUser.uid).set({
+                deactivated: true,
+                deactivatedAt: new Date().toISOString()
+            }, { merge: true });
+
+            await auth.signOut();
+            localStorage.removeItem("userData");
+            sessionStorage.clear();
+
+            window.location.replace("index.html");
+        } catch (err) {
+            console.error("Deactivation failed:", err);
+            errorMsg.textContent = "Something went wrong. Please try again.";
+            btn.disabled = false;
+            btn.textContent = "Deactivate My Account";
+        }
+    });
+</script>
+
+</body>
+</html>
