@@ -272,6 +272,8 @@ return;
 
 try{
 
+const previousPhotoURL = user.photoURL;
+
 const fileName=
 `${user.uid}-${Date.now()}`;
 
@@ -298,6 +300,26 @@ document.getElementById(
 "avatar"
 ).src=
 imageURL;
+
+// Clean up the file this just replaced, so old avatars don't pile up
+// unused in storage forever. Only removes it if it was actually one of
+// ours (same bucket path) - the very first avatar someone ever sets
+// often still points at the ui-avatars.com placeholder from
+// register.html/login.html, which lives on a different host entirely
+// and was never a file we uploaded, so there's nothing to remove there.
+if (previousPhotoURL && previousPhotoURL.startsWith(`${supabaseUrl}/storage/v1/object/public/avatars/`)) {
+    const previousFileName = previousPhotoURL.split("/avatars/")[1];
+    if (previousFileName && previousFileName !== fileName) {
+        const { error: removeError } = await supabaseClient.storage
+            .from("avatars")
+            .remove([previousFileName]);
+        if (removeError) {
+            // Not fatal - the new avatar is already live either way,
+            // this is just housekeeping. Log it and move on.
+            console.error("Failed to remove previous avatar:", removeError);
+        }
+    }
+}
 
 if (typeof window.recordMissionEvent === "function") {
     window.recordMissionEvent("added_profile_photo");

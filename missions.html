@@ -259,6 +259,23 @@
         color: #999;
         font-size: 13px;
     }
+
+    .ms-all-done {
+        margin: 16px 16px 0;
+        padding: 16px;
+        border-radius: 12px;
+        background: rgba(0,255,136,0.1);
+        border: 1px solid rgba(0,255,136,0.35);
+        text-align: center;
+        color: #d9fff0;
+        font-size: 13.5px;
+        line-height: 1.5;
+    }
+
+    .ms-all-done-icon {
+        font-size: 24px;
+        margin-bottom: 6px;
+    }
 </style>
 </head>
 <body>
@@ -398,6 +415,16 @@
         return fragment;
     }
 
+    function buildAllDoneBanner(summary) {
+        const banner = document.createElement("div");
+        banner.className = "ms-all-done";
+        banner.innerHTML = `
+            <div class="ms-all-done-icon">🎉</div>
+            <div>You have completed your missions, the admin will update your tasks soon.</div>
+        `;
+        return banner;
+    }
+
     async function render() {
         const content = document.getElementById("msContent");
 
@@ -413,6 +440,12 @@
         const summary = await window.getMissionSummary();
 
         content.innerHTML = "";
+
+        // Only when every single mission is done - not partial progress.
+        if (summary.total > 0 && summary.completedCount === summary.total) {
+            content.appendChild(buildAllDoneBanner(summary));
+        }
+
         content.appendChild(buildSummary(summary));
         content.appendChild(buildMissionList(summary));
         content.appendChild(buildCollection(summary));

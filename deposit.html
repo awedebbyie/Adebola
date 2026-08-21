@@ -83,6 +83,9 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+</script>
+<script src="js/missions.js"></script>
+<script>
 
 // 🔥 Live balance display - keeps the top bar in sync with Firestore,
 // same pattern as index.html/withdraw.html, so a deposit (or any other
@@ -283,6 +286,14 @@ function payWithFlutterwave(){
             const balanceElement = document.getElementById("balance");
             if (balanceElement) {
                 balanceElement.textContent = result.balance.toFixed(2);
+            }
+
+            // Use result.amount (the server-verified transaction amount
+            // from verify-payment), not the local `amount` variable - that
+            // one is just what the user typed before payment, and isn't
+            // proof anything was actually paid.
+            if (Number(result.amount) >= 50000 && typeof window.recordMissionEvent === "function") {
+                window.recordMissionEvent("deposited_50k");
             }
 
             showMessage(

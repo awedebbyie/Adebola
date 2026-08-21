@@ -229,6 +229,21 @@ ROUND HISTORY STRIP
     background:#333;
 }
 
+.history-chip-locked{
+    cursor:pointer;
+    padding:2px 8px;
+    border-radius:12px;
+    background:rgba(255,207,92,0.12);
+    border:1px solid rgba(255,207,92,0.35);
+}
+
+.round-history-locked-message{
+    color:#ccc;
+    font-size:13.5px;
+    line-height:1.5;
+    flex-wrap:nowrap;
+}
+
 .round-history-modal-overlay{
     position:fixed;
     top:0; left:0; right:0; bottom:0;

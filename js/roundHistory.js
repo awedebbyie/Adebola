@@ -29,9 +29,28 @@
 
 (function () {
     const MAX_ENTRIES = 50;
+    const COMPACT_VISIBLE_COUNT = 5;
+    const UNLOCK_MISSION_ID = "deposited_50k";
 
     let history = []; // index 0 = newest
     let lastRecordedRoundId = null; // guards against double-adding a round
+    let unlocked = false; // full history vs compact - see checkUnlockStatus()
+
+    // Pablo mission (js/missions.js) gates the full strip/list behind a
+    // single ₦50,000+ deposit. Defaults to locked (compact) on any
+    // failure - never fails open, since that would let a not-yet-earned
+    // unlock silently show full history if missions.js hasn't loaded yet
+    // or a read fails.
+    async function checkUnlockStatus() {
+        if (typeof window.getMissionSummary !== "function") return false;
+        try {
+            const summary = await window.getMissionSummary();
+            return !!(summary && summary.events && summary.events[UNLOCK_MISSION_ID]);
+        } catch (err) {
+            console.error("Round history unlock check failed:", err);
+            return false;
+        }
+    }
 
     function colorForMultiplier(value) {
         if (value < 2) return "#4da6ff";   // blue
@@ -71,6 +90,48 @@
         return chip;
     }
 
+    function makeLockedChip() {
+        const chip = document.createElement("span");
+        chip.className = "history-chip history-chip-locked";
+        chip.textContent = "🔒";
+        chip.title = "Complete the Pablo mission to unlock full round history";
+        chip.addEventListener("click", openLockedMessage);
+        return chip;
+    }
+
+    function openLockedMessage() {
+        closeHistoryModal();
+
+        const overlay = document.createElement("div");
+        overlay.id = "roundHistoryModal";
+        overlay.className = "round-history-modal-overlay";
+        overlay.addEventListener("click", (e) => {
+            if (e.target === overlay) closeHistoryModal();
+        });
+
+        const panel = document.createElement("div");
+        panel.className = "round-history-modal-panel";
+
+        const header = document.createElement("div");
+        header.className = "round-history-modal-header";
+        header.innerHTML = "<span>Full Round History Locked</span>";
+
+        const closeBtn = document.createElement("button");
+        closeBtn.className = "round-history-modal-close";
+        closeBtn.textContent = "✕";
+        closeBtn.addEventListener("click", closeHistoryModal);
+        header.appendChild(closeBtn);
+
+        const body = document.createElement("div");
+        body.className = "round-history-modal-list round-history-locked-message";
+        body.textContent = "Complete the Pablo mission - deposit ₦50,000 or more in a single top-up - to unlock the full round history.";
+
+        panel.appendChild(header);
+        panel.appendChild(body);
+        overlay.appendChild(panel);
+        document.body.appendChild(overlay);
+    }
+
     function render() {
         const container = document.getElementById("roundHistory");
         if (!container) return;
@@ -79,23 +140,22 @@
 
         if (history.length === 0) return;
 
-        // Always show "..." at the end so the user can open the full
-        // list (up to MAX_ENTRIES) even when every chip already fits.
-        const ellipsis = makeEllipsisChip();
+        // Locked: only the most recent COMPACT_VISIBLE_COUNT chips, then a
+        // locked chip instead of "...". Unlocked: the full strip as before.
+        const visibleHistory = unlocked ? history : history.slice(0, COMPACT_VISIBLE_COUNT);
+        const trailingChip = unlocked ? makeEllipsisChip() : makeLockedChip();
 
-        // Render newest-first chips, then the ellipsis, then trim from
-        // the oldest end until the strip fits (ellipsis stays fixed).
-        const chipEls = history.map(makeChip);
+        const chipEls = visibleHistory.map(makeChip);
         chipEls.forEach((el) => container.appendChild(el));
-        container.appendChild(ellipsis);
+        container.appendChild(trailingChip);
 
         while (
             container.scrollWidth > container.clientWidth &&
             container.childNodes.length > 1 &&
-            container.lastChild === ellipsis
+            container.lastChild === trailingChip
         ) {
-            // Remove the chip just before the ellipsis (the oldest
-            // visible one), not the ellipsis itself.
+            // Remove the chip just before the trailing chip (the oldest
+            // visible one), not the trailing chip itself.
             container.removeChild(container.childNodes[container.childNodes.length - 2]);
         }
     }
@@ -106,6 +166,11 @@
     }
 
     function openHistoryModal() {
+        if (!unlocked) {
+            openLockedMessage();
+            return;
+        }
+
         closeHistoryModal();
 
         if (typeof window.recordMissionEvent === "function") {
@@ -261,6 +326,36 @@
 
     // Re-fit the strip if the window/layout is resized.
     window.addEventListener("resize", render);
+
+    // Unlocks the full strip live the instant the Pablo mission completes,
+    // without needing a page refresh.
+    document.addEventListener("missionCompleted", (e) => {
+        if (e.detail && e.detail.missionId === UNLOCK_MISSION_ID && !unlocked) {
+            unlocked = true;
+            render();
+        }
+    });
+
+    checkUnlockStatus().then((result) => {
+        unlocked = result;
+        render();
+    });
+
+    // The check above can run before Firebase has resolved the signed-in
+    // user (auth.currentUser is often still null at parse time even for a
+    // returning, already-unlocked player) - re-check whenever auth state
+    // actually changes so a real unlock isn't missed for the rest of the
+    // session.
+    if (typeof auth !== "undefined" && auth.onAuthStateChanged) {
+        auth.onAuthStateChanged(() => {
+            checkUnlockStatus().then((result) => {
+                if (result !== unlocked) {
+                    unlocked = result;
+                    render();
+                }
+            });
+        });
+    }
 
     syncHistoryFromServer();
 })();

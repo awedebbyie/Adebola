@@ -58,6 +58,12 @@ window.MISSION_DEFINITIONS = [
         badge: "💬"
     },
     {
+        id: "deposited_50k",
+        title: "Pablo",
+        description: "Fund your wallet with a single deposit of ₦50,000 or more to unlock the full round history.",
+        badge: "💎"
+    },
+    {
         id: "opened_round_history",
         title: "Know The Past",
         description: "Open the round history to see recent results.",
@@ -158,6 +164,12 @@ window.MISSION_DEFINITIONS = [
 
         const def = window.MISSION_DEFINITIONS.find((m) => m.id === missionId);
         if (def) showMissionToast(def.title);
+
+        // Lets other modules react to a specific mission completing
+        // without polling or coupling directly to missions.js - e.g.
+        // js/roundHistory.js listens for "deposited_50k" to unlock the
+        // full strip immediately instead of requiring a page refresh.
+        document.dispatchEvent(new CustomEvent("missionCompleted", { detail: { missionId } }));
     };
 
     // ---- Visit streak ----------------------------------------------

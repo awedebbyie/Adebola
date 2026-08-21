@@ -8,9 +8,9 @@
 //
 // Home is this page itself (index.html), so tapping it just
 // re-highlights it and scrolls back to the top - it does NOT show the
-// "coming soon" toast, unlike Missions/Rewards which have no page yet.
-// Leaderboard has a real destination (data-href="leaderboard.html" in
-// the markup) and navigates there directly.
+// "coming soon" toast, unlike any future tab added without a data-href.
+// Leaderboard, Missions, and Rewards each have a real destination
+// (data-href in the markup) and navigate there directly.
 
 document.addEventListener("DOMContentLoaded", () => {
 

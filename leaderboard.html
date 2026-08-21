@@ -497,6 +497,17 @@
     //   amountWon   - net profit (payout - staked) - this is the
     //                 leaderboard's "Amount Won" column
     //   rate        - ROI%, amountWon / staked * 100
+    //
+    // name/photo_url are a snapshot taken at the moment each bet was
+    // placed (see js/bets.js), so a player who has since changed their
+    // avatar or username has old and new values scattered across their
+    // bet rows. fetchBets() has no explicit ORDER BY, so whichever row
+    // happens to arrive first for a given user is arbitrary - picking
+    // that one and never revisiting it (the old behavior here) meant the
+    // leaderboard could easily freeze on a stale avatar/name indefinitely,
+    // even after dozens of newer bets. Track each player's latest
+    // placed_at seen so far instead, and only take name/photo_url from
+    // whichever row is actually the most recent.
     function aggregate(rows) {
         const byUser = new Map();
 
@@ -504,17 +515,27 @@
             const uid = bet.user_id;
             if (!uid) return;
 
+            const placedAt = bet.placed_at ? new Date(bet.placed_at).getTime() : 0;
+
             if (!byUser.has(uid)) {
                 byUser.set(uid, {
                     user_id: uid,
                     name: nameFor(bet),
                     photo_url: bet.photo_url || null,
+                    latestPlacedAt: placedAt,
                     staked: 0,
                     payout: 0
                 });
             }
 
             const entry = byUser.get(uid);
+
+            if (placedAt >= entry.latestPlacedAt) {
+                entry.name = nameFor(bet);
+                entry.photo_url = bet.photo_url || null;
+                entry.latestPlacedAt = placedAt;
+            }
+
             entry.staked += Number(bet.amount || 0);
 
             if (bet.status === "cashed_out") {
@@ -525,7 +546,8 @@
         const list = Array.from(byUser.values()).map((entry) => {
             const amountWon = entry.payout - entry.staked;
             const rate = entry.staked > 0 ? (amountWon / entry.staked) * 100 : 0;
-            return { ...entry, amountWon, rate };
+            const { latestPlacedAt, ...rest } = entry;
+            return { ...rest, amountWon, rate };
         });
 
         list.sort((a, b) => b.amountWon - a.amountWon);

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rewards - Aviator</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+<style>
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        background: white;
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        min-height: 100vh;
+    }
+
+    .app-wrapper {
+        width: 25vw;
+        min-width: 380px;
+        max-width: 420px;
+        min-height: 100vh;
+        background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+        color: #fff;
+        box-shadow: 0 0 30px rgba(0,0,0,0.3);
+        overflow-x: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .header {
+        background: #1f1f2e;
+        border-bottom: 1px solid #333;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .header .back-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 20px;
+    }
+
+    .header h1 {
+        font-size: 17px;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .header .home-btn {
+        font-size: 20px;
+        cursor: pointer;
+    }
+
+    /* Hero stat card */
+    .rw-hero {
+        margin: 16px;
+        padding: 20px 18px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #7b2ff7 0%, #5417b8 100%);
+        text-align: center;
+    }
+
+    .rw-hero-count {
+        font-size: 34px;
+        font-weight: 800;
+        color: #ffcf5c;
+        line-height: 1;
+    }
+
+    .rw-hero-label {
+        margin-top: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.85);
+    }
+
+    .rw-hero-sub {
+        margin-top: 10px;
+        font-size: 12px;
+        color: rgba(255,255,255,0.7);
+    }
+
+    .rw-cash-note {
+        margin: 0 16px 16px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: rgba(255,207,92,0.1);
+        border: 1px solid rgba(255,207,92,0.35);
+        text-align: center;
+        color: #ffe4ac;
+        font-size: 12.5px;
+    }
+
+    /* Stat strip */
+    .rw-stats {
+        margin: 0 16px 16px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .rw-stat-card {
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: #1f1f2e;
+        border: 1px solid #333;
+        text-align: center;
+    }
+
+    .rw-stat-value {
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .rw-stat-label {
+        margin-top: 2px;
+        font-size: 11px;
+        color: #999;
+    }
+
+    /* Section label */
+    .rw-section-label {
+        margin: 4px 16px 8px;
+        font-size: 12.5px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: #888;
+    }
+
+    /* Badge grid - the all-time collection itself */
+    .rw-collection {
+        margin: 0 16px 24px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+    }
+
+    .rw-badge {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 14px 6px;
+        border-radius: 12px;
+        background: #1f1f2e;
+        border: 1px solid #2a2a3a;
+        opacity: 0.35;
+    }
+
+    .rw-badge.earned {
+        opacity: 1;
+        border-color: rgba(255, 207, 92, 0.4);
+        background: rgba(255, 207, 92, 0.08);
+    }
+
+    .rw-badge-icon {
+        font-size: 28px;
+    }
+
+    .rw-badge-label {
+        font-size: 10px;
+        text-align: center;
+        color: #ccc;
+        line-height: 1.25;
+    }
+
+    .rw-badge-status {
+        font-size: 9px;
+        color: #666;
+    }
+
+    .rw-badge.earned .rw-badge-status {
+        color: #ffcf5c;
+    }
+
+    .rw-loading, .rw-login-note {
+        margin: 16px;
+        padding: 16px;
+        border-radius: 10px;
+        background: #1f1f2e;
+        border: 1px solid #333;
+        text-align: center;
+        color: #999;
+        font-size: 13px;
+    }
+</style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <div class="header">
+        <div class="back-group" onclick="goBack()">
+            ← <h1>Rewards</h1>
+        </div>
+        <div class="home-btn" onclick="goHome()">🏠</div>
+    </div>
+
+    <div id="rwContent">
+        <div class="rw-loading">Loading your collection...</div>
+    </div>
+
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+        authDomain: "success-75f95.firebaseapp.com",
+        projectId: "success-75f95",
+        storageBucket: "success-75f95.firebasestorage.app",
+        messagingSenderId: "774097711994",
+        appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    function goBack() { window.history.back(); }
+    function goHome() { window.location.href = "index.html"; }
+</script>
+<script src="js/missions.js"></script>
+<script>
+    // This page shows the same underlying badge data as missions.html's
+    // "Collection" section, just as its own dedicated page - the full
+    // all-time record of what's been earned, not just today's progress.
+
+    function buildHero(summary) {
+        const hero = document.createElement("div");
+        hero.className = "rw-hero";
+        hero.innerHTML = `
+            <div class="rw-hero-count">${summary.completedCount} / ${summary.total}</div>
+            <div class="rw-hero-label">Badges Collected</div>
+            <div class="rw-hero-sub">Everything you've earned so far, all in one place.</div>
+        `;
+        return hero;
+    }
+
+    function buildCashNote() {
+        const note = document.createElement("div");
+        note.className = "rw-cash-note";
+        note.textContent = "Cash prizes coming soon, check for updates.";
+        return note;
+    }
+
+    function buildStats(summary) {
+        const wrap = document.createElement("div");
+        wrap.className = "rw-stats";
+        wrap.innerHTML = `
+            <div class="rw-stat-card">
+                <div class="rw-stat-value">🔥 ${summary.streak.current || 0}</div>
+                <div class="rw-stat-label">Current streak (days)</div>
+            </div>
+            <div class="rw-stat-card">
+                <div class="rw-stat-value">🏅 ${summary.streak.best || 0}</div>
+                <div class="rw-stat-label">Best streak (days)</div>
+            </div>
+        `;
+        return wrap;
+    }
+
+    function buildCollection(summary) {
+        const label = document.createElement("div");
+        label.className = "rw-section-label";
+        label.textContent = "All-Time Collection";
+
+        const grid = document.createElement("div");
+        grid.className = "rw-collection";
+
+        window.MISSION_DEFINITIONS.forEach((mission) => {
+            const earned = !!summary.events[mission.id];
+
+            const badge = document.createElement("div");
+            badge.className = "rw-badge" + (earned ? " earned" : "");
+            badge.innerHTML = `
+                <div class="rw-badge-icon">${mission.badge}</div>
+                <div class="rw-badge-label">${mission.title}</div>
+                <div class="rw-badge-status">${earned ? "Collected" : "Locked"}</div>
+            `;
+
+            grid.appendChild(badge);
+        });
+
+        const fragment = document.createDocumentFragment();
+        fragment.appendChild(label);
+        fragment.appendChild(grid);
+        return fragment;
+    }
+
+    async function render() {
+        const content = document.getElementById("rwContent");
+
+        if (!auth.currentUser) {
+            content.innerHTML = "";
+            const note = document.createElement("div");
+            note.className = "rw-login-note";
+            note.textContent = "Log in to see your rewards collection.";
+            content.appendChild(note);
+            return;
+        }
+
+        const summary = await window.getMissionSummary();
+
+        content.innerHTML = "";
+        content.appendChild(buildHero(summary));
+        content.appendChild(buildCashNote());
+        content.appendChild(buildStats(summary));
+        content.appendChild(buildCollection(summary));
+    }
+
+    auth.onAuthStateChanged(() => {
+        render();
+    });
+</script>
+
+</body>
+</html>
