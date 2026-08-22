@@ -109,12 +109,28 @@ function updateGameFromServer(state) {
 
         // Auto-place any bets that were queued while the previous round
         // was flying/settling, now that a fresh betting window is open.
+        // Also auto-places a fresh bet for any slot with auto-bet armed
+        // (window.autoBetEnabled, set in js/invest.js) that doesn't
+        // already have something queued/pending this round - that's what
+        // makes auto-bet keep re-arming itself round after round instead
+        // of firing only once.
         // NOTE: these are placed sequentially (awaited one at a time) -
         // firing them concurrently would let both calls read the same
         // stale balance and race each other on the deduction.
         if (state.status === "betting") {
 
             const queuedSlots = Object.keys(window.myQueuedBets);
+            const mySlotState = window.mySlotState || {};
+            const autoBetEnabled = window.autoBetEnabled || {};
+            const investRows = document.querySelectorAll(".invest-row");
+
+            const autoSlots = Object.keys(autoBetEnabled).filter((slot) => {
+                if (!autoBetEnabled[slot]) return false;
+                if (queuedSlots.includes(slot)) return false; // already queued above
+                const myBet = mySlotState[slot];
+                if (myBet && myBet.status === "Pending") return false; // already has a bet this round
+                return true;
+            });
 
             (async () => {
 
@@ -128,6 +144,28 @@ function updateGameFromServer(state) {
                             await createBet(amount, Number(slot));
                         } catch (err) {
                             console.error("Queued bet failed:", err);
+                        }
+                    }
+                }
+
+                for (const slot of autoSlots) {
+
+                    const row = investRows[Number(slot) - 1];
+                    const input = row && row.querySelector(".amount-input");
+                    const amount = input ? Number(input.value) : NaN;
+
+                    if (isNaN(amount) || amount < 10) {
+                        // Row's amount became invalid somehow (e.g. cleared) -
+                        // don't silently bet nothing; just skip this round
+                        // and leave auto-bet armed for the next one.
+                        continue;
+                    }
+
+                    if (typeof createBet === "function") {
+                        try {
+                            await createBet(amount, Number(slot));
+                        } catch (err) {
+                            console.error("Auto bet failed:", err);
                         }
                     }
                 }
@@ -189,6 +227,31 @@ if (
     window.beginRound(state.multiplier);
 }
 
+    // Auto cash-out - checked on every poll tick while flying, same as
+    // the crash check above. For every slot with a target armed
+    // (window.autoCashoutTarget, set in js/invest.js) that still has a
+    // pending bet, cash out the instant the live multiplier reaches that
+    // target. cashOut() itself guards against duplicate/overlapping calls
+    // per slot (window.isProcessingCashOut in js/bets.js), so it's safe
+    // to just call it again on every tick until the bet actually settles.
+    if (state.status === "flying") {
+        const autoCashoutTarget = window.autoCashoutTarget || {};
+        const mySlotState = window.mySlotState || {};
+        const multiplier = Number(state.multiplier);
+
+        Object.keys(autoCashoutTarget).forEach((slot) => {
+            const target = autoCashoutTarget[slot];
+            if (target == null) return;
+
+            const myBet = mySlotState[slot];
+            if (!myBet || myBet.status !== "Pending") return;
+
+            if (multiplier >= target && typeof cashOut === "function") {
+                cashOut(Number(slot));
+            }
+        });
+    }
+
     // The round just crashed - settle any of my own still-active bets as
     // losses. Guarded by round_id so this only fires once per round even
     // though this function runs on every 250ms poll tick.
@@ -233,6 +296,22 @@ function updateBetButton(slot, uiState, payload) {
     switch (uiState) {
 
         case "INVEST": {
+            // Auto-bet armed for this slot (js/invest.js) means the slot's
+            // next bet gets placed automatically the moment betting opens
+            // - manual investing is locked out here so the two can't
+            // conflict/double-place. This only applies to the INVEST case:
+            // an already-pending bet still shows CASH_OUT/BET_PLACED below
+            // and stays fully clickable either way, since cashing out
+            // manually is a separate action from placing a new bet.
+            if (window.autoBetEnabled && window.autoBetEnabled[slot]) {
+                btn.innerHTML = "<span>AUTO BET ON</span>";
+                btn.style.backgroundColor = "";
+                btn.disabled = true;
+                btn.style.opacity = "0.4";
+                priceBtns.forEach((pBtn) => { pBtn.disabled = true; });
+                break;
+            }
+
             const amount = payload && payload.amount;
             if (amount != null) {
                 btn.innerHTML = `

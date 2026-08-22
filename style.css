@@ -861,11 +861,166 @@ CONTROLS
 
 .invest-row{
     display:flex;
+    flex-direction:column;
+
+    gap:6px;
+
+    width:100%;
+}
+
+.invest-row-inner{
+    display:flex;
     gap:8px;
 
     width:100%;
 
     align-items:flex-start;
+}
+
+.mode-tabs{
+    display:flex;
+    justify-content:center;
+    gap:6px;
+}
+
+.mode-tab{
+    flex:0 0 auto;
+
+    padding:5px 16px;
+
+    background:#222;
+    color:#999;
+
+    border:none;
+    border-radius:8px;
+
+    font-size:12px;
+    font-weight:700;
+
+    cursor:pointer;
+}
+
+.mode-tab.active{
+    background:#00aa44;
+    color:white;
+}
+
+.auto-controls{
+    display:none;
+    flex-direction:row;
+    flex-wrap:nowrap;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+
+    margin-top:2px;
+    padding:8px;
+
+    background:#161616;
+    border-radius:8px;
+}
+
+.invest-row.mode-auto .auto-controls{
+    display:flex;
+}
+
+.auto-toggle-line{
+    display:flex;
+    align-items:center;
+    gap:6px;
+
+    flex:0 0 auto;
+}
+
+.auto-toggle-label{
+    flex:0 0 auto;
+
+    font-size:11px;
+    color:#ccc;
+    white-space:nowrap;
+}
+
+.auto-switch{
+    position:relative;
+    display:inline-block;
+
+    width:30px;
+    height:16px;
+
+    flex-shrink:0;
+}
+
+.auto-switch input{
+    opacity:0;
+    width:0;
+    height:0;
+}
+
+.auto-switch-slider{
+    position:absolute;
+    top:0;left:0;right:0;bottom:0;
+
+    background:#444;
+    border-radius:16px;
+
+    cursor:pointer;
+    transition:.15s;
+}
+
+.auto-switch-slider::before{
+    content:"";
+    position:absolute;
+
+    height:12px;
+    width:12px;
+
+    left:2px;
+    bottom:2px;
+
+    background:white;
+    border-radius:50%;
+
+    transition:.15s;
+}
+
+.auto-switch input:checked + .auto-switch-slider{
+    background:#00aa44;
+}
+
+.auto-switch input:checked + .auto-switch-slider::before{
+    transform:translateX(14px);
+}
+
+.auto-cashout-value{
+    width:42px;
+    height:22px;
+
+    background:#1a1a1a;
+    border:none;
+    border-radius:6px;
+
+    color:white;
+    font-size:11px;
+    text-align:center;
+
+    flex-shrink:0;
+}
+
+.auto-cashout-clear{
+    width:20px;
+    height:20px;
+
+    background:#333;
+    color:#aaa;
+
+    border:none;
+    border-radius:50%;
+
+    font-size:10px;
+    line-height:1;
+
+    cursor:pointer;
+    flex-shrink:0;
 }
 
 .left-side{
@@ -919,6 +1074,15 @@ CONTROLS
     background:#444;
 }
 
+.price-btn:disabled{
+    opacity:0.35;
+    cursor:not-allowed;
+}
+
+.price-btn:disabled:hover{
+    background:#333;
+}
+
 .invest-btn{
     width:110px;
     height:95px;
@@ -942,6 +1106,10 @@ CONTROLS
     cursor:pointer;
 
     flex-shrink:0;
+}
+
+.invest-btn:disabled{
+    cursor:not-allowed;
 }
 
 .bet-history-panel{

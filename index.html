@@ -199,41 +199,89 @@
     <!-- CONTROLS -->
     <div class="controls">
         <div class="invest-row">
-            <div class="left-side">
-                <input type="text" class="amount-input" placeholder="Enter amount">
-                <div class="price-grid">
-                    <button class="price-btn">100</button>
-                    <button class="price-btn">200</button>
-                    <button class="price-btn">300</button>
-                    <button class="price-btn">400</button>
-                    <button class="price-btn">500</button>
-                    <button class="price-btn">600</button>
-                    <button class="price-btn">700</button>
-                    <button class="price-btn">800</button>
-                    <button class="price-btn">900</button>
-                    <button class="price-btn">1000</button>
-                </div>
+            <div class="mode-tabs">
+                <button type="button" class="mode-tab active" data-mode="manual">Bet</button>
+                <button type="button" class="mode-tab" data-mode="auto">Auto</button>
             </div>
-            <button id="investBtn" class="invest-btn" disabled>INVEST</button>
+            <div class="invest-row-inner">
+                <div class="left-side">
+                    <input type="text" class="amount-input" placeholder="Enter amount">
+                    <div class="price-grid">
+                        <button class="price-btn">100</button>
+                        <button class="price-btn">200</button>
+                        <button class="price-btn">300</button>
+                        <button class="price-btn">400</button>
+                        <button class="price-btn">500</button>
+                        <button class="price-btn">600</button>
+                        <button class="price-btn">700</button>
+                        <button class="price-btn">800</button>
+                        <button class="price-btn">900</button>
+                        <button class="price-btn">1000</button>
+                    </div>
+                    <div class="auto-controls">
+                        <div class="auto-toggle-line">
+                            <span class="auto-toggle-label">Auto bet</span>
+                            <label class="auto-switch">
+                                <input type="checkbox" class="auto-bet-toggle">
+                                <span class="auto-switch-slider"></span>
+                            </label>
+                        </div>
+                        <div class="auto-toggle-line">
+                            <span class="auto-toggle-label">Auto Cash Out</span>
+                            <label class="auto-switch">
+                                <input type="checkbox" class="auto-cashout-toggle">
+                                <span class="auto-switch-slider"></span>
+                            </label>
+                            <input type="text" class="auto-cashout-value" value="1.10">
+                            <button type="button" class="auto-cashout-clear">✕</button>
+                        </div>
+                    </div>
+                </div>
+                <button id="investBtn" class="invest-btn" disabled>INVEST</button>
+            </div>
         </div>
 
         <div class="invest-row">
-            <div class="left-side">
-                <input type="text" class="amount-input" placeholder="Enter amount">
-                <div class="price-grid">
-                    <button class="price-btn">100</button>
-                    <button class="price-btn">200</button>
-                    <button class="price-btn">300</button>
-                    <button class="price-btn">400</button>
-                    <button class="price-btn">500</button>
-                    <button class="price-btn">600</button>
-                    <button class="price-btn">700</button>
-                    <button class="price-btn">800</button>
-                    <button class="price-btn">900</button>
-                    <button class="price-btn">1000</button>
-                </div>
+            <div class="mode-tabs">
+                <button type="button" class="mode-tab active" data-mode="manual">Bet</button>
+                <button type="button" class="mode-tab" data-mode="auto">Auto</button>
             </div>
-            <button id="investBtn2" class="invest-btn" disabled>INVEST</button>
+            <div class="invest-row-inner">
+                <div class="left-side">
+                    <input type="text" class="amount-input" placeholder="Enter amount">
+                    <div class="price-grid">
+                        <button class="price-btn">100</button>
+                        <button class="price-btn">200</button>
+                        <button class="price-btn">300</button>
+                        <button class="price-btn">400</button>
+                        <button class="price-btn">500</button>
+                        <button class="price-btn">600</button>
+                        <button class="price-btn">700</button>
+                        <button class="price-btn">800</button>
+                        <button class="price-btn">900</button>
+                        <button class="price-btn">1000</button>
+                    </div>
+                    <div class="auto-controls">
+                        <div class="auto-toggle-line">
+                            <span class="auto-toggle-label">Auto bet</span>
+                            <label class="auto-switch">
+                                <input type="checkbox" class="auto-bet-toggle">
+                                <span class="auto-switch-slider"></span>
+                            </label>
+                        </div>
+                        <div class="auto-toggle-line">
+                            <span class="auto-toggle-label">Auto Cash Out</span>
+                            <label class="auto-switch">
+                                <input type="checkbox" class="auto-cashout-toggle">
+                                <span class="auto-switch-slider"></span>
+                            </label>
+                            <input type="text" class="auto-cashout-value" value="1.10">
+                            <button type="button" class="auto-cashout-clear">✕</button>
+                        </div>
+                    </div>
+                </div>
+                <button id="investBtn2" class="invest-btn" disabled>INVEST</button>
+            </div>
         </div>
     </div>
 
