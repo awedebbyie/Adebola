@@ -1025,6 +1025,13 @@ CONTROLS
 
 .left-side{
     flex:1;
+    min-width:0; /* without this, a flex:1 (basis 0%) child still won't
+                    shrink below its content's natural width - .auto-controls'
+                    nowrap row of switches/input/button was forcing
+                    .left-side wider than intended, pushing .invest-btn
+                    and the price-grid to the right whenever Auto mode
+                    revealed it. This is the actual fix; .auto-controls
+                    itself is untouched. */
 
     display:flex;
     flex-direction:column;
