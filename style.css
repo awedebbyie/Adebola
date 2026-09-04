@@ -846,7 +846,7 @@ CONTROLS
     display:flex;
     flex-direction:column;
 
-    gap:14px;
+    gap:4px;
 
     width:100%;
 
@@ -856,14 +856,14 @@ CONTROLS
 
     box-sizing:border-box;
 
-    margin-top:2px;
+    margin-top:-1px;
 }
 
 .invest-row{
     display:flex;
     flex-direction:column;
 
-    gap:6px;
+    gap:0px;
 
     width:100%;
 }
