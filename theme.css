@@ -1,0 +1,73 @@
+/* =========================================================
+   THEME.CSS
+   Job: swap solid "fill" backgrounds - the main page surface,
+   plus dark card/row surfaces like a settings menu item or a
+   profile info row - between black and white. Buttons, links,
+   badges, gradients (tier cards, red headers, etc.) and any
+   text that wasn't already literally white are NEVER touched
+   here or in theme.js - they keep whatever color they already
+   have, because nothing here overrides them.
+
+   How it works:
+   - theme.js adds either "theme-dark" or "theme-light" to
+     <html>, based on the saved preference (or system setting).
+   - Section 1 below is the main surface: .game-container /
+     .app-wrapper / .login-container ONLY. `body` is deliberately
+     never targeted here - every page's own <style> already sets
+     body's background to white, and that's meant to stay fixed
+     no matter what theme is picked. On a wide/desktop viewport
+     the game/app box is centered with empty space around it;
+     that space is body's background, not the game container's,
+     so it stays light in both themes instead of turning black.
+   - Section 2 covers the same idea one level down: solid dark
+     "row" surfaces (settings menu items, profile info rows,
+     loyalty tier rows, avispy win rows, etc.) that sit inside
+     that main surface and flip the same way.
+   - Section 3 flips ONLY the text that was already literally
+     white (color:white / #fff) on one of those row surfaces,
+     to black, so it stays readable. Grey/green/gold/red text
+     (labels, amounts, links) is left exactly as it was -
+     nothing here targets it.
+========================================================= */
+
+/* ---- 1. Main game/app/login surface (never `body` - see above) ---- */
+
+html.theme-dark .game-container,
+html.theme-dark .app-wrapper,
+html.theme-dark .login-container{
+    background:#000000;
+}
+
+html.theme-light .game-container,
+html.theme-light .app-wrapper,
+html.theme-light .login-container{
+    background:#ffffff;
+}
+
+/* ---- 2. Row/card surfaces (menu items, info rows, etc.) ---- */
+/* dark mode: left alone - these already keep their own dark
+   fill colors from each page's own <style> block, unchanged. */
+
+html.theme-light .menu-item,
+html.theme-light .option,
+html.theme-light .dark-mode-options,
+html.theme-light .section-title,
+html.theme-light .info-row,
+html.theme-light .tier-row,
+html.theme-light .spy-row{
+    background:#ffffff;
+}
+
+/* ---- 3. Text that was already literal white on one of the
+   row surfaces above (or on the main surface) - flipped to
+   black so it's still readable on the new white fill. ---- */
+
+html.theme-light .menu-item,
+html.theme-light .section-title,
+html.theme-light .tier-row.current,
+html.theme-light .info-value,
+html.theme-light .username,
+html.theme-light .spy-name,
+html.theme-light .login-title{
+    color:#000000;
+}

@@ -196,17 +196,17 @@
 
             <div class="dark-mode-options">
 
-                <div class="option" onclick="setTheme('dark')">
+                <div class="option" onclick="selectTheme('dark')">
                     <span>On</span>
                     <div class="radio" id="darkRadio"></div>
                 </div>
 
-                <div class="option" onclick="setTheme('light')">
+                <div class="option" onclick="selectTheme('light')">
                     <span>Off</span>
                     <div class="radio" id="lightRadio"></div>
                 </div>
 
-                <div class="option" onclick="setTheme('system')">
+                <div class="option" onclick="selectTheme('system')">
                     <span>Follow System Settings</span>
                     <div class="radio checked" id="systemRadio"></div>
                 </div>
@@ -379,65 +379,38 @@ if (typeof window.recordMissionEvent === "function") {
         }
 
         // Dark mode system
+        //
+        // The actual background swap (and reading/saving "themeMode",
+        // and following system-theme changes) all lives in the shared
+        // theme.js / theme.css, loaded in <head>. window.setTheme is
+        // defined there - clicking an option below just calls straight
+        // into it, so this page and index.html stay in sync.
+        //
+        // The only thing that's specific to THIS page is which radio
+        // dot is filled in, so that's the only thing handled here.
 
-        function setTheme(mode){
-
-            localStorage.setItem(
-                "themeMode",
-                mode
-            );
-
-            applyTheme();
-
-        }
-
-        function applyTheme(){
+        function highlightSelectedRadio(){
             const mode = localStorage.getItem("themeMode") || "system";
 
             document.querySelectorAll(".radio").forEach(r => r.classList.remove("checked"));
 
-            let finalTheme = mode;
-
-            if (mode === "system") {
-                const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-                finalTheme = prefersDark ? "dark" : "light";
-                document.getElementById("systemRadio").classList.add("checked");
-            } else if (mode === "dark") {
+            if (mode === "dark") {
                 document.getElementById("darkRadio").classList.add("checked");
-            } else {
+            } else if (mode === "light") {
                 document.getElementById("lightRadio").classList.add("checked");
+            } else {
+                document.getElementById("systemRadio").classList.add("checked");
             }
-
-            // ONLY the main background changes here - menu items, section
-            // titles, options, and headers all keep their own fixed colors
-            // from the CSS above regardless of theme. This used to also
-            // override background/color/border on all of those elements,
-            // which is the "changes colors that already had their own
-            // colors" bug - removed entirely, on purpose.
-            document.querySelector(".app-wrapper").style.background =
-                finalTheme === "dark" ? "#121212" : "#ffffff";
         }
 
-        window.matchMedia(
-            "(prefers-color-scheme: dark)"
-        ).addEventListener(
-            "change",
-            ()=>{
+        // Called from the onclick on each option below - applies the
+        // theme via the shared theme.js, then refreshes this page's radios.
+        function selectTheme(mode){
+            window.setTheme(mode);
+            highlightSelectedRadio();
+        }
 
-                const mode=
-                localStorage.getItem(
-                    "themeMode"
-                );
-
-                if(mode==="system"){
-                    applyTheme();
-                }
-
-            }
-        );
-
-        applyTheme();
-
+        highlightSelectedRadio();
     </script>
 <script src="js/music.js"></script>
 </body>

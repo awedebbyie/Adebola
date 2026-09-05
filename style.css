@@ -97,6 +97,14 @@ body{
     justify-content:center;
 }
 
+/* Page heading inside .login-container (Deposit/Withdraw/Login/Register/
+   Forgot Password/Complete Profile). Color used to be an inline style on
+   each <h1> - moved here so theme.css can flip it in light mode without
+   fighting inline-style specificity. */
+.login-title{
+    color:#ffffff;
+}
+
 .logo-circle{
     width:120px;
     height:120px;
@@ -846,7 +854,7 @@ CONTROLS
     display:flex;
     flex-direction:column;
 
-    gap:4px;
+    gap:14px;
 
     width:100%;
 
@@ -856,14 +864,14 @@ CONTROLS
 
     box-sizing:border-box;
 
-    margin-top:-1px;
+    margin-top:2px;
 }
 
 .invest-row{
     display:flex;
     flex-direction:column;
 
-    gap:0px;
+    gap:6px;
 
     width:100%;
 }
