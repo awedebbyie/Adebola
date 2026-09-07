@@ -374,8 +374,8 @@ async function cashOut(betSlot) {
 
         console.log(`✅ Slot ${betSlot} cashed out at ${multiplier.toFixed(2)}x`);
 
-        if (typeof window.incrementReferralRounds === "function") {
-            window.incrementReferralRounds();
+        if (typeof window.countRoundForReferral === "function") {
+            window.countRoundForReferral(roundId);
         }
 
     } catch (error) {
@@ -434,8 +434,8 @@ async function settleLostBets() {
 
         clearSlotBetId(Number(slot));
 
-        if (typeof window.incrementReferralRounds === "function") {
-            window.incrementReferralRounds();
+        if (typeof window.countRoundForReferral === "function") {
+            window.countRoundForReferral(roundId);
         }
     }
 

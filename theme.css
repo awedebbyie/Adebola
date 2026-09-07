@@ -121,3 +121,48 @@ html.theme-dark .chart-range-btn.active,
 html.theme-dark .box button{
     color:#ffffff;
 }
+
+/* ---- 7. Grey/muted text (labels, notes, timestamps, descriptions) ----
+   Every page's own <style> block used a fixed set of grey text colors
+   (#eee/#ddd/#ccc/#bbb/#aaa/#999/#888/#777/#666) for de-emphasized text
+   sitting on .app-wrapper/.game-container/.login-container - fine on
+   the original dark fill, but low-contrast once that fill flips to
+   white in light mode.
+
+   Each page's own hardcoded color:#XXX was swapped for color:var(--g-XXX)
+   (see each file's diff) so it can be swapped per theme here, WITHOUT
+   changing the actual grey used anywhere else (border colors, other
+   backgrounds, etc. are untouched).
+
+   Dark mode values below are exactly the original hex codes - dark mode
+   looks pixel-identical to before. Light mode values are new, chosen to
+   stay readable on white while preserving the same relative order (the
+   grey that read as most prominent in dark mode is still the most
+   prominent of this set in light mode, and so on down to the most
+   muted/fine-print one). Pages whose background never actually flips
+   (the two admin pages, readme.html) were left untouched entirely -
+   their grey text was never actually broken by theming. ---- */
+
+html.theme-dark{
+    --g-eee:#eeeeee;
+    --g-ddd:#dddddd;
+    --g-ccc:#cccccc;
+    --g-bbb:#bbbbbb;
+    --g-aaa:#aaaaaa;
+    --g-999:#999999;
+    --g-888:#888888;
+    --g-777:#777777;
+    --g-666:#666666;
+}
+
+html.theme-light{
+    --g-eee:#222222;
+    --g-ddd:#2e2e2e;
+    --g-ccc:#3a3a3a;
+    --g-bbb:#454545;
+    --g-aaa:#505050;
+    --g-999:#5c5c5c;
+    --g-888:#676767;
+    --g-777:#717171;
+    --g-666:#7a7a7a;
+}

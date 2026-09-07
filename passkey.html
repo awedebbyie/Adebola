@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passkey - Aviator</title>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="theme.css">
+    <script src="theme.js"></script>
+    <script src="js/passkey.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        body {
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-wrapper {
+            width: 25vw;
+            min-width: 380px;
+            max-width: 420px;
+            min-height: 100vh;
+            background: #121212;
+            color: #fff;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-sizing: border-box;
+            padding-bottom: 30px;
+        }
+
+        .header {
+            background-color: #e60000;
+            padding: 10px 16px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin: 0;
+        }
+
+        .section {
+            padding: 16px;
+        }
+
+        .info-block {
+            background-color: #171717;
+            padding: 14px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--g-ccc);
+            margin-bottom: 20px;
+        }
+
+        .info-block b {
+            color: #fff;
+        }
+
+        .status-badge {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .status-on {
+            color: #3ddc84;
+            background: rgba(0,255,136,0.12);
+        }
+
+        .status-off {
+            color: var(--g-999);
+            background: rgba(255,255,255,0.06);
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            color: var(--g-ccc);
+            margin-bottom: 6px;
+        }
+
+        input[type="password"] {
+            width: 100%;
+            background: #1a1a1a;
+            color: #fff;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 14px;
+            box-sizing: border-box;
+            margin-bottom: 16px;
+        }
+
+        .primary-btn {
+            width: 100%;
+            height: 50px;
+            background: #00aa44;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .primary-btn:disabled {
+            background: #333;
+            cursor: not-allowed;
+        }
+
+        .remove-btn {
+            width: 100%;
+            height: 46px;
+            background: transparent;
+            color: #ff5c5c;
+            border: 1px solid rgba(230,0,0,0.4);
+            border-radius: 10px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        #message {
+            text-align: center;
+            margin-top: 14px;
+            font-size: 14px;
+            min-height: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <div class="header">
+        <div onclick="goBack()" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            ←
+            <h1>Passkey</h1>
+        </div>
+        <div style="font-size:22px; cursor:pointer; color:white;" onclick="goHome()">🏠</div>
+    </div>
+
+    <div class="section">
+
+        <div class="info-block">
+            A passkey is a second secret, separate from your password.
+            Once it's set, logging into your account from a device you
+            haven't used before will ask for it - so someone with just
+            your password still can't get in on a new device.
+        </div>
+
+        <div id="statusBadge" class="status-badge status-off">Not set</div>
+
+        <div id="currentPasskeyField" style="display:none;">
+            <label for="currentPasskeyInput">Current passkey</label>
+            <input type="password" id="currentPasskeyInput" placeholder="Enter your current passkey" autocomplete="off">
+        </div>
+
+        <label for="newPasskeyInput" id="newPasskeyLabel">Set a passkey</label>
+        <input type="password" id="newPasskeyInput" placeholder="At least 6 characters" autocomplete="off">
+
+        <label for="confirmPasskeyInput">Confirm passkey</label>
+        <input type="password" id="confirmPasskeyInput" placeholder="Type it again" autocomplete="off">
+
+        <button id="saveBtn" class="primary-btn">SAVE PASSKEY</button>
+        <button id="removeBtn" class="remove-btn" style="display:none;">REMOVE PASSKEY</button>
+
+        <div id="message"></div>
+    </div>
+</div>
+
+<script>
+    function goBack() { window.history.back(); }
+    function goHome() { window.location.href = 'index.html'; }
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+        authDomain: "success-75f95.firebaseapp.com",
+        projectId: "success-75f95",
+        storageBucket: "success-75f95.firebasestorage.app",
+        messagingSenderId: "774097711994",
+        appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const statusBadge = document.getElementById("statusBadge");
+    const currentPasskeyField = document.getElementById("currentPasskeyField");
+    const newPasskeyLabel = document.getElementById("newPasskeyLabel");
+    const saveBtn = document.getElementById("saveBtn");
+    const removeBtn = document.getElementById("removeBtn");
+    const messageDiv = document.getElementById("message");
+
+    let currentUser = null;
+    let hasExistingPasskey = false;
+
+    function showMessage(text, color) {
+        messageDiv.style.color = color;
+        messageDiv.textContent = text;
+    }
+
+    async function refreshStatus() {
+        const snap = await db.collection("users").doc(currentUser.uid).get();
+        hasExistingPasskey = !!(snap.exists && snap.data().passkeyHash);
+
+        if (hasExistingPasskey) {
+            statusBadge.textContent = "Passkey set";
+            statusBadge.className = "status-badge status-on";
+            currentPasskeyField.style.display = "block";
+            newPasskeyLabel.textContent = "New passkey";
+            removeBtn.style.display = "block";
+        } else {
+            statusBadge.textContent = "Not set";
+            statusBadge.className = "status-badge status-off";
+            currentPasskeyField.style.display = "none";
+            newPasskeyLabel.textContent = "Set a passkey";
+            removeBtn.style.display = "none";
+        }
+    }
+
+    saveBtn.addEventListener("click", async () => {
+        const newPasskey = document.getElementById("newPasskeyInput").value;
+        const confirmPasskey = document.getElementById("confirmPasskeyInput").value;
+        const currentPasskey = document.getElementById("currentPasskeyInput").value;
+
+        if (newPasskey.length < 6) {
+            showMessage("Passkey must be at least 6 characters.", "#ff5555");
+            return;
+        }
+
+        if (newPasskey !== confirmPasskey) {
+            showMessage("Passkeys don't match.", "#ff5555");
+            return;
+        }
+
+        if (hasExistingPasskey) {
+            const ok = await window.verifyPasskeyForUser(currentUser.uid, currentPasskey);
+            if (!ok) {
+                showMessage("Current passkey is incorrect.", "#ff5555");
+                return;
+            }
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = "SAVING...";
+
+        try {
+            const hash = await window.hashPasskey(currentUser.uid, newPasskey);
+            await db.collection("users").doc(currentUser.uid).update({
+                passkeyHash: hash
+            });
+
+            showMessage("Passkey saved.", "#3ddc84");
+            document.getElementById("newPasskeyInput").value = "";
+            document.getElementById("confirmPasskeyInput").value = "";
+            document.getElementById("currentPasskeyInput").value = "";
+            await refreshStatus();
+
+        } catch (err) {
+            console.error("Save passkey failed:", err);
+            showMessage("Couldn't save your passkey. Please try again.", "#ff5555");
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = "SAVE PASSKEY";
+        }
+    });
+
+    removeBtn.addEventListener("click", async () => {
+        const currentPasskey = document.getElementById("currentPasskeyInput").value;
+        const ok = await window.verifyPasskeyForUser(currentUser.uid, currentPasskey);
+
+        if (!ok) {
+            showMessage("Enter your current passkey to remove it.", "#ff5555");
+            return;
+        }
+
+        if (!confirm("Remove your passkey? New devices will no longer be challenged.")) return;
+
+        try {
+            await db.collection("users").doc(currentUser.uid).update({
+                passkeyHash: firebase.firestore.FieldValue.delete()
+            });
+            showMessage("Passkey removed.", "#3ddc84");
+            document.getElementById("currentPasskeyInput").value = "";
+            await refreshStatus();
+        } catch (err) {
+            console.error("Remove passkey failed:", err);
+            showMessage("Couldn't remove your passkey. Please try again.", "#ff5555");
+        }
+    });
+
+    auth.onAuthStateChanged((user) => {
+        if (!user) {
+            window.location.replace("login.html");
+            return;
+        }
+        currentUser = user;
+        refreshStatus();
+    });
+</script>
+
+</body>
+</html>

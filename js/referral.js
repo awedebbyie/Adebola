@@ -100,3 +100,18 @@ window.incrementReferralRounds = async function () {
         console.error("incrementReferralRounds failed:", err);
     }
 };
+
+// A user can have a bet running in BOTH slots at once. Without this,
+// one round where both slots settle (whichever mix of cash-out/loss)
+// would call incrementReferralRounds() twice for what is really one
+// round played. This gates it to once per distinct round_id - callers
+// (js/bets.js, on both the cash-out and the settle-loss path) pass the
+// round_id they just settled a slot for, instead of calling
+// incrementReferralRounds() directly.
+const countedRoundIds = new Set();
+
+window.countRoundForReferral = function (roundId) {
+    if (!roundId || countedRoundIds.has(roundId)) return;
+    countedRoundIds.add(roundId);
+    window.incrementReferralRounds();
+};

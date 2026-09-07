@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="theme.css">
 <script src="theme.js"></script>
 <script src="js/sessions.js"></script>
+<script src="js/passkey.js"></script>
 </head>
 <body>
     <div class="login-container">
@@ -68,6 +69,25 @@
                 </a>
             </div>
         </div>
+
+        <!-- Shown instead of the form above, only when registerSession()
+             reports this device hasn't logged into this account before
+             AND the account has a passkey set (js/passkey.js). Hidden by
+             default - see showPasskeyStep() in the script below. -->
+        <div class="login-form" id="passkeyStep" style="display:none;">
+            <h1 class="login-title" style="margin:0 0 12px 0; font-size:24px; text-align:center;">New Device Detected</h1>
+            <p style="text-align:center; color:#bbb; font-size:14px; margin:0 0 24px;">
+                Enter your passkey to finish signing in on this device.
+            </p>
+
+            <input type="password" id="passkeyInput" class="amount-input" placeholder="Passkey" style="margin-bottom:16px;">
+
+            <button id="passkeySubmitBtn" class="invest-btn" style="width:100%; height:58px; margin-bottom:14px;">
+                CONTINUE
+            </button>
+
+            <div id="passkeyMessage" style="text-align:center; margin:10px 0; font-size:14px; min-height:24px;"></div>
+        </div>
     </div>
 
 <script>
@@ -98,13 +118,6 @@ function showMessage(text, color = "#ff4444") {
 // Helper: send user to the right place depending on whether
 // their Firestore profile is complete.
 async function routeAfterLogin(user) {
-
-    if (typeof window.registerSession === "function") {
-        await window.registerSession();
-        // `recognized` isn't acted on yet - see js/sessions.js for why
-        // (no OTP delivery channel wired up to actually challenge an
-        // unrecognized device with a code).
-    }
 
     const userDocRef = db.collection("users").doc(user.uid);
     const userDoc = await userDocRef.get();
@@ -142,6 +155,104 @@ async function routeAfterLogin(user) {
     window.location.href = "index.html";
 }
 
+const passkeyStep = document.getElementById("passkeyStep");
+const loginForm = document.querySelector(".login-form");
+const passkeyInput = document.getElementById("passkeyInput");
+const passkeySubmitBtn = document.getElementById("passkeySubmitBtn");
+const passkeyMessageDiv = document.getElementById("passkeyMessage");
+
+let pendingUser = null;
+let passkeyAttempts = 0;
+const MAX_PASSKEY_ATTEMPTS = 5;
+
+function showPasskeyStep(user) {
+    pendingUser = user;
+    loginForm.style.display = "none";
+    passkeyStep.style.display = "block";
+    passkeyInput.value = "";
+    passkeyInput.focus();
+}
+
+async function submitPasskey() {
+    if (!pendingUser) return;
+
+    const attempt = passkeyInput.value;
+    if (!attempt) return;
+
+    passkeySubmitBtn.disabled = true;
+    passkeySubmitBtn.textContent = "CHECKING...";
+
+    try {
+        const ok = await window.verifyPasskeyForUser(pendingUser.uid, attempt);
+
+        if (ok) {
+            passkeyMessageDiv.style.color = "lime";
+            passkeyMessageDiv.textContent = "Verified! Redirecting...";
+            const user = pendingUser;
+            pendingUser = null;
+            setTimeout(() => routeAfterLogin(user), 600);
+            return;
+        }
+
+        passkeyAttempts++;
+
+        if (passkeyAttempts >= MAX_PASSKEY_ATTEMPTS) {
+            passkeyMessageDiv.style.color = "#ff4444";
+            passkeyMessageDiv.textContent = "Too many attempts. Signing out...";
+            await auth.signOut();
+            setTimeout(() => window.location.reload(), 1500);
+            return;
+        }
+
+        passkeyMessageDiv.style.color = "#ff4444";
+        passkeyMessageDiv.textContent =
+            `Incorrect passkey (${MAX_PASSKEY_ATTEMPTS - passkeyAttempts} attempt(s) left).`;
+
+    } catch (err) {
+        console.error("Passkey check failed:", err);
+        passkeyMessageDiv.style.color = "#ff4444";
+        passkeyMessageDiv.textContent = "Something went wrong. Please try again.";
+    } finally {
+        passkeySubmitBtn.disabled = false;
+        passkeySubmitBtn.textContent = "CONTINUE";
+    }
+}
+
+passkeySubmitBtn.addEventListener("click", submitPasskey);
+passkeyInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitPasskey();
+});
+
+// Runs right after ANY successful sign-in (email/password or Google),
+// before routeAfterLogin. Registers/refreshes this device's session
+// (js/sessions.js) and, only if this device has never logged into this
+// account before AND the account has a passkey set (js/passkey.js),
+// blocks on the passkey step above instead of continuing straight in.
+async function handlePostAuth(user) {
+    let recognized = true;
+
+    if (typeof window.registerSession === "function") {
+        const result = await window.registerSession();
+        recognized = result.recognized;
+    }
+
+    if (recognized) {
+        await routeAfterLogin(user);
+        return;
+    }
+
+    const hasPasskey = typeof window.userHasPasskey === "function"
+        ? await window.userHasPasskey(user.uid)
+        : false;
+
+    if (hasPasskey) {
+        showPasskeyStep(user);
+    } else {
+        // New device, but nothing to challenge with yet - let them in.
+        await routeAfterLogin(user);
+    }
+}
+
 // Email/Password Login
 
 loginBtn.addEventListener('click', async () => {
@@ -170,7 +281,7 @@ loginBtn.addEventListener('click', async () => {
         showMessage("Login successful! Redirecting...", "lime");
 
         setTimeout(() => {
-            routeAfterLogin(user);
+            handlePostAuth(user);
         }, 800);
 
     }
@@ -245,7 +356,7 @@ googleBtn.addEventListener('click', async () => {
 
         showMessage("Login successful! Redirecting...", "lime");
 
-        await routeAfterLogin(user);
+        await handlePostAuth(user);
 
     }
     catch (error) {

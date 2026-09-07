@@ -19,12 +19,12 @@
 // malicious client could ignore the check. Treat it as "the honest
 // client respects being logged out," not airtight security.
 //
-// 2FA ON UNRECOGNIZED DEVICES IS NOT IMPLEMENTED HERE. `recognized:
-// false` (returned by registerSession below, the first time a device is
-// seen) is the hook point for that, but actually challenging with a
-// one-time code needs somewhere to SEND that code (email service, SMS
-// provider, or a TOTP secret set up in advance) - none of which exist
-// in this codebase yet, so nothing here fakes that step.
+// 2FA ON UNRECOGNIZED DEVICES: registerSession()'s `recognized: false`
+// is exactly the hook this was left here for - login.html now uses it
+// to decide whether to challenge for a passkey (see js/passkey.js and
+// the passkey step in login.html). If the account has no passkey set,
+// an unrecognized device still gets in - there's nothing to challenge
+// it with.
 
 function getOrCreateDeviceId() {
     let id = localStorage.getItem("deviceId");
