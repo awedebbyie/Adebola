@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Avispy - Aviator</title>
 
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
@@ -55,72 +58,118 @@
             padding: 16px 16px 10px;
         }
 
-        .spy-row {
-            background-color: #1f1f1f;
-            padding: 14px 16px;
+        /* Same circular logo treatment used on login.html, register.html,
+           and forgot-password.html. */
+        .logo-circle-wrap {
             display: flex;
-            align-items: center;
-            gap: 12px;
-            margin: 0 16px 2px;
-            border-radius: 6px;
-        }
-
-        .spy-avatar {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background: #333;
-            color: #fff;
-            display: flex;
-            align-items: center;
             justify-content: center;
-            font-weight: 700;
-            flex-shrink: 0;
+            margin: 20px 0 10px;
         }
 
-        .spy-info {
-            flex: 1;
-            min-width: 0;
+        .logo-circle {
+            width: 120px;
+            height: 120px;
+
+            border-radius: 50%;
+            object-fit: cover;
+
+            border: 4px solid #00aa44;
+
+            box-shadow: 0 0 20px rgba(0,170,68,0.4);
         }
 
-        .spy-name {
-            color: white;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .spy-detail {
-            color: var(--g-999);
-            font-size: 12px;
-            margin-top: 2px;
-        }
-
-        .spy-amount {
-            color: #ffcf5c;
-            font-weight: 700;
-            font-size: 14px;
-            text-align: right;
-            flex-shrink: 0;
-        }
-
-        .spy-mult {
-            color: #3ddc84;
-            font-size: 11px;
-            text-align: right;
-        }
-
-        .empty-note, .loading-note {
+        .login-note, .loading-note {
             color: var(--g-888);
             font-size: 13px;
             text-align: center;
             padding: 30px 20px;
         }
 
-        .refresh-note {
+        /* =========================
+           PERSONAL MONITORING DASHBOARD
+           ========================= */
+
+        .status-card {
+            background-color: #1f1f1f;
+            margin: 4px 16px 14px;
+            padding: 18px 16px;
+            border-radius: 10px;
+        }
+
+        .status-label {
+            color: var(--g-999);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-value {
+            color: white;
+            font-size: 26px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        .status-bar-track {
+            width: 100%;
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            margin-top: 14px;
+            overflow: hidden;
+        }
+
+        .status-bar-fill {
+            height: 100%;
+            background: #3ddc84;
+            border-radius: 4px;
+            transition: width 0.4s ease, background 0.4s ease;
+        }
+
+        .status-bar-fill.status-warning {
+            background: #ffcf5c;
+        }
+
+        .status-bar-fill.status-danger {
+            background: #ff5c5c;
+        }
+
+        .status-caption {
             color: var(--g-666);
             font-size: 11px;
-            text-align: center;
-            padding: 10px 16px 20px;
+            margin-top: 6px;
+        }
+
+        .reminder-card {
+            background-color: #1a2e22;
+            border: 1px solid #2a4a35;
+            margin: 0 16px 14px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            color: #b9f5cf;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .advisory-card {
+            background-color: #2e1a1a;
+            border: 1px solid #4a2a2a;
+            margin: 0 16px 14px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            color: #ffb9b9;
+            font-size: 13px;
+            line-height: 1.6;
+            display: none;
+        }
+
+        .advisory-card.visible {
+            display: block;
+        }
+
+        .advisory-card a {
+            color: #ff8a8a;
+            font-weight: 600;
         }
     </style>
     <link rel="stylesheet" href="theme.css">
@@ -138,24 +187,45 @@
         <div style="font-size:22px; cursor:pointer; color:white;" onclick="goHome()">🏠</div>
     </div>
 
-    <p class="section-note">
-        See what other players are winning, live. Names are partially
-        masked for privacy.
-    </p>
-
-    <div id="feed">
-        <p class="loading-note">Loading recent wins...</p>
+    <div class="logo-circle-wrap">
+        <img src="avispy-logo.png" alt="Avispy Logo" class="logo-circle" id="avispyLogo">
     </div>
 
-    <p class="refresh-note">Updates automatically every few seconds</p>
+    <p class="section-note">
+        Avispy keeps a private eye on your own play - a running check on
+        what you've lost overall, with a reminder to never invest more
+        than you can afford to lose, and a nudge to step back if things
+        add up to more than feels good.
+    </p>
+
+    <div id="dashboard">
+        <p class="loading-note">Loading your activity...</p>
+    </div>
 
 </div>
 
 <script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+        authDomain: "success-75f95.firebaseapp.com",
+        projectId: "success-75f95",
+        storageBucket: "success-75f95.firebasestorage.app",
+        messagingSenderId: "774097711994",
+        appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
     const supabaseClient = window.supabase.createClient(
         "https://axojmnizpewbewempaaa.supabase.co",
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4b2ptbml6cGV3YmV3ZW1wYWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDk3OTcsImV4cCI6MjA5ODA4NTc5N30._Ib3RhlMpPaUQoUVYDd6dS_gUOiaVsCBPBYEO30A8zc"
     );
+    window.supabaseClient = supabaseClient;
 
     function goBack() {
         window.history.back();
@@ -165,80 +235,68 @@
         window.location.href = 'index.html';
     }
 
-    function maskName(name) {
-        const clean = String(name || "Player").trim();
-        if (clean.length <= 2) return clean;
-        return clean[0] + "***" + clean[clean.length - 1];
-    }
-
-    function avatarInitial(name) {
-        return String(name || "P").trim().charAt(0).toUpperCase() || "P";
-    }
-
     function formatNaira(amount) {
         return "₦" + Number(amount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
     }
 
-    function timeAgo(isoString) {
-        const seconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
-        if (seconds < 60) return seconds + "s ago";
-        const minutes = Math.floor(seconds / 60);
-        if (minutes < 60) return minutes + "m ago";
-        const hours = Math.floor(minutes / 60);
-        return hours + "h ago";
-    }
+    // Reuses computeNetLoss() and NET_LOSS_ADVISORY_THRESHOLD directly
+    // from js/lossMonitor.js (loaded below) instead of duplicating that
+    // logic here - same numbers driving the automatic advisory on
+    // index.html, just shown persistently on this page too.
+    async function renderDashboard() {
+        const dashboard = document.getElementById("dashboard");
+        const user = auth.currentUser;
 
-    async function loadFeed() {
-        const feed = document.getElementById("feed");
-
-        // Same public data the leaderboard reads - recent cashed-out bets,
-        // biggest payouts first, capped to a reasonable feed length.
-        const { data: bets, error } = await supabaseClient
-            .from("bets")
-            .select("email, amount, profit, cash_out_multiplier, placed_at")
-            .eq("status", "cashed_out")
-            .order("placed_at", { ascending: false })
-            .limit(60);
-
-        if (error) {
-            console.error("Avispy load failed:", error);
-            feed.innerHTML = '<p class="empty-note">Couldn\'t load live activity right now.</p>';
+        if (!user) {
+            dashboard.innerHTML = '<p class="login-note">Log in to see your personal activity.</p>';
             return;
         }
 
-        // Biggest wins first among these recent ones, shown as a feed.
-        const sorted = (bets || [])
-            .filter((b) => Number(b.profit) > 0)
-            .sort((a, b) => Number(b.profit) - Number(a.profit))
-            .slice(0, 25);
+        const netLoss = await computeNetLoss(user.uid);
 
-        if (sorted.length === 0) {
-            feed.innerHTML = '<p class="empty-note">No recent wins to show yet.</p>';
+        if (netLoss == null) {
+            dashboard.innerHTML = '<p class="login-note">Couldn\'t load your activity right now.</p>';
             return;
         }
 
-        feed.innerHTML = sorted.map((bet) => {
-            const name = bet.email ? bet.email.split("@")[0] : "Player";
-            const masked = maskName(name);
-            return `
-                <div class="spy-row">
-                    <div class="spy-avatar">${avatarInitial(masked)}</div>
-                    <div class="spy-info">
-                        <div class="spy-name">${masked}</div>
-                        <div class="spy-detail">Staked ${formatNaira(bet.amount)} · ${timeAgo(bet.placed_at)}</div>
-                    </div>
-                    <div>
-                        <div class="spy-amount">${formatNaira(bet.profit)}</div>
-                        <div class="spy-mult">${Number(bet.cash_out_multiplier || 0).toFixed(2)}x</div>
-                    </div>
+        const threshold = NET_LOSS_ADVISORY_THRESHOLD;
+        const pct = Math.max(0, Math.min(100, (netLoss / threshold) * 100));
+
+        let barClass = "";
+        if (pct >= 100) barClass = "status-danger";
+        else if (pct >= 70) barClass = "status-warning";
+
+        const netLossDisplay = netLoss > 0 ? formatNaira(netLoss) : formatNaira(0);
+
+        dashboard.innerHTML = `
+            <div class="status-card">
+                <div class="status-label">Your net loss so far</div>
+                <div class="status-value">${netLossDisplay}</div>
+                <div class="status-bar-track">
+                    <div class="status-bar-fill ${barClass}" style="width:${pct}%;"></div>
                 </div>
-            `;
-        }).join("");
+                <div class="status-caption">${formatNaira(threshold)} is where we check in with you</div>
+            </div>
+
+            <div class="reminder-card">
+                Don't invest what you cannot afford to lose.
+            </div>
+
+            <div class="advisory-card ${netLoss > threshold ? "visible" : ""}">
+                It looks like you've lost a significant amount overall.
+                Please consider stepping back for a while, or deleting
+                your account, if this no longer feels good to you.
+                <br><br>
+                <a href="settings.html">Go to account settings →</a>
+            </div>
+        `;
     }
 
-    loadFeed();
-    setInterval(loadFeed, 5000);
+    auth.onAuthStateChanged(() => {
+        renderDashboard();
+    });
 </script>
+<script src="js/lossMonitor.js"></script>
 
 </body>
 </html>

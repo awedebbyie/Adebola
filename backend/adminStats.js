@@ -214,4 +214,41 @@ router.get("/tier-breakdown", async (req, res) => {
     }
 });
 
+// =========================
+// FLAGGED-BEHAVIOUR ALERTS
+// =========================
+// Reads admin_alerts (see supabase/migrations/20260901120000_create_admin_alerts.sql)
+// - client-side code (js/lossMonitor.js) writes a row here itself when it
+// detects something worth a human look, currently just a user's net loss
+// crossing NET_LOSS_ADVISORY_THRESHOLD (₦4,000,000). This is a log of
+// self-reported client detections, not a hardened server-side monitoring
+// system - same trust model as the rest of this app.
+router.get("/alerts", async (req, res) => {
+    try {
+        const type = req.query.type || null; // optional filter, e.g. "large_net_loss"
+
+        let query = supabase
+            .from("admin_alerts")
+            .select("id, user_id, email, type, detail, created_at")
+            .order("created_at", { ascending: false })
+            .limit(200);
+
+        if (type) {
+            query = query.eq("type", type);
+        }
+
+        const { data: alerts, error } = await query;
+
+        if (error) {
+            console.error("admin/api/alerts error:", error);
+            return res.status(500).json({ ok: false, error: "Failed to load alerts." });
+        }
+
+        return res.json({ ok: true, alerts });
+    } catch (err) {
+        console.error("admin/api/alerts error:", err);
+        return res.status(500).json({ ok: false, error: "Something went wrong." });
+    }
+});
+
 module.exports = router;

@@ -510,6 +510,10 @@ auth.onAuthStateChanged(async (user) => {
                 window.recordVisitStreak();
             }
 
+            if (typeof window.checkLossAdvisory === "function") {
+                window.checkLossAdvisory();
+            }
+
             // Render Top Bar - buttons use the compact .topbar-btn styling
             // so they keep a small, fixed footprint and the balance in the
             // middle gets whatever room is left over.
@@ -588,6 +592,7 @@ document.getElementById("investBtn2").addEventListener("click", handleInvest);
 <script src="js/missions.js"></script>
 <script src="js/referral.js"></script>
 <script src="js/withdrawGate.js"></script>
+<script src="js/lossMonitor.js"></script>
 <script src="js/sessions.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/roundHistory.js"></script>

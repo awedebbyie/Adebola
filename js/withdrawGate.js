@@ -24,12 +24,19 @@
 
 const WITHDRAW_WAGER_FRACTION = 0.75;
 
+// Returns true only on the call that actually records the first deposit
+// (i.e. this really was the account's first-ever deposit) - false on
+// every call after that, and false if something went wrong. Lets
+// deposit.html show a one-time "don't invest what you can't afford to
+// lose" reminder without needing its own separate tracking.
 async function recordFirstDepositIfNeeded(amount) {
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user) return false;
 
     try {
         const userRef = db.collection("users").doc(user.uid);
+
+        let wasFirstDeposit = false;
 
         await db.runTransaction(async (tx) => {
             const snap = await tx.get(userRef);
@@ -43,9 +50,14 @@ async function recordFirstDepositIfNeeded(amount) {
                 totalWagered: 0,
                 withdrawUnlocked: false
             });
+
+            wasFirstDeposit = true;
         });
+
+        return wasFirstDeposit;
     } catch (err) {
         console.error("recordFirstDepositIfNeeded failed:", err);
+        return false;
     }
 }
 window.recordFirstDepositIfNeeded = recordFirstDepositIfNeeded;

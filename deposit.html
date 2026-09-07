@@ -307,9 +307,16 @@ function payWithFlutterwave(){
             }
 
             // Only actually records anything the FIRST time a given
-            // account ever deposits - see js/withdrawGate.js.
+            // account ever deposits - see js/withdrawGate.js. Also tells
+            // us whether THIS deposit was that first one, so we can show
+            // a one-time responsible-gambling reminder right after it.
             if (typeof window.recordFirstDepositIfNeeded === "function") {
-                window.recordFirstDepositIfNeeded(result.amount);
+                const wasFirstDeposit = await window.recordFirstDepositIfNeeded(result.amount);
+                if (wasFirstDeposit) {
+                    setTimeout(() => {
+                        alert("Don't invest what you cannot afford to lose.");
+                    }, 300);
+                }
             }
 
             showMessage(
