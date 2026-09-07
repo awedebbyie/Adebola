@@ -8,6 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script src="js/missions.js"></script>
+    <script src="js/passkey.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
@@ -249,14 +250,14 @@
             
             <div class="section-title">Safety & Security</div>
             
-            <div class="popup-banner">
+            <div class="popup-banner" id="mfaPopupBanner">
                 Enable 2-Step Verification to protect your account
                 <span class="close" onclick="this.parentElement.style.display='none'">×</span>
             </div>
             
             <div class="menu-item" onclick="window.location.href='passkey.html'">
                 <span>Multifactor Authentication</span>
-                <span class="new-badge">New</span>
+                <span class="new-badge" id="mfaNewBadge">New</span>
                 <span style="font-size:20px;">›</span>
             </div>
 
@@ -296,6 +297,24 @@ if (typeof window.recordMissionEvent === "function") {
         if (user) window.recordMissionEvent("visited_settings");
     });
 }
+
+// Hide the "set up 2-step verification" banner and the MFA menu's "New"
+// badge once the user actually has a passkey set (js/passkey.js's
+// userHasPasskey() checks users/{uid}.passkeyHash) - both exist purely
+// to nudge someone who hasn't set one up yet, so once they have, showing
+// either just reads as the app not noticing they already did it.
+auth.onAuthStateChanged(async (user) => {
+    if (!user || typeof window.userHasPasskey !== "function") return;
+
+    const hasPasskey = await window.userHasPasskey(user.uid);
+    if (!hasPasskey) return;
+
+    const banner = document.getElementById("mfaPopupBanner");
+    const badge = document.getElementById("mfaNewBadge");
+
+    if (banner) banner.style.display = "none";
+    if (badge) badge.style.display = "none";
+});
 
         function goBack() {
             window.history.back();
