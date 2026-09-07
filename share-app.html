@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Share the App - Aviator</title>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="theme.css">
+    <script src="theme.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        body {
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-wrapper {
+            width: 25vw;
+            min-width: 380px;
+            max-width: 420px;
+            min-height: 100vh;
+            background: #121212;
+            color: #fff;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-sizing: border-box;
+            padding-bottom: 30px;
+        }
+
+        .header {
+            background-color: #e60000;
+            padding: 10px 16px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin: 0;
+        }
+
+        .section {
+            padding: 16px;
+        }
+
+        .info-block {
+            background-color: #171717;
+            padding: 14px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #ccc;
+            margin-bottom: 20px;
+        }
+
+        .info-block b {
+            color: #fff;
+        }
+
+        .link-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        #linkInput {
+            flex: 1;
+            min-width: 0;
+            background: #1a1a1a;
+            color: #fff;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 13px;
+        }
+
+        .copy-btn {
+            flex-shrink: 0;
+            background: #2a2a40;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 8px;
+            padding: 0 16px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .share-btn {
+            width: 100%;
+            height: 50px;
+            background: #00aa44;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        #message {
+            text-align: center;
+            font-size: 14px;
+            min-height: 20px;
+        }
+
+        .progress-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .progress-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #2a2a2a;
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        .progress-list li:last-child {
+            border-bottom: none;
+        }
+
+        .progress-done {
+            color: #3ddc84;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <div class="header">
+        <div onclick="goBack()" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            ←
+            <h1>Share the App</h1>
+        </div>
+        <div style="font-size:22px; cursor:pointer; color:white;" onclick="goHome()">🏠</div>
+    </div>
+
+    <div class="section">
+
+        <div class="info-block">
+            Share your link with a friend. Once they <b>sign up</b>,
+            <b>make a deposit</b>, <b>play 5 rounds</b>, and <b>share the
+            app themselves</b>, you get a reward added straight to your
+            balance. It keeps going - when someone they invite does the
+            same thing, your friend gets rewarded too.
+        </div>
+
+        <div class="link-row">
+            <input type="text" id="linkInput" readonly placeholder="Log in to get your link">
+            <button class="copy-btn" id="copyBtn">Copy</button>
+        </div>
+
+        <button class="share-btn" id="shareBtn">SHARE MY LINK</button>
+
+        <div id="message"></div>
+
+        <div class="section-title" style="background:#1f1f1f; padding:12px 16px; font-size:15px; font-weight:600; margin:22px 0 2px;">Your Progress</div>
+        <ul class="progress-list" id="progressList">
+            <li>Log in to see your referral progress</li>
+        </ul>
+
+    </div>
+</div>
+
+<script>
+    function goBack() { window.history.back(); }
+    function goHome() { window.location.href = 'index.html'; }
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+        authDomain: "success-75f95.firebaseapp.com",
+        projectId: "success-75f95",
+        storageBucket: "success-75f95.firebasestorage.app",
+        messagingSenderId: "774097711994",
+        appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const linkInput = document.getElementById("linkInput");
+    const copyBtn = document.getElementById("copyBtn");
+    const shareBtn = document.getElementById("shareBtn");
+    const messageDiv = document.getElementById("message");
+    const progressList = document.getElementById("progressList");
+
+    function showMessage(text, color) {
+        messageDiv.style.color = color;
+        messageDiv.textContent = text;
+    }
+
+    function renderProgress(progress) {
+        const p = progress || {};
+        const rounds = Number(p.roundsPlayed || 0);
+
+        // Note: this page shows YOUR OWN progress toward unlocking your
+        // referrer's reward (if someone referred you) - not a list of
+        // everyone you've referred, which Firestore's current data model
+        // here doesn't track per-referral, only via the single
+        // `referredBy` field on each referred user's own doc.
+        progressList.innerHTML = `
+            <li><span>Deposited</span>
+                <span class="${p.deposited ? 'progress-done' : ''}">${p.deposited ? 'Done' : 'Not yet'}</span></li>
+            <li><span>Rounds played</span>
+                <span class="${rounds >= 5 ? 'progress-done' : ''}">${rounds}/5</span></li>
+            <li><span>Shared the app</span>
+                <span class="${p.shared ? 'progress-done' : ''}">${p.shared ? 'Done' : 'Not yet'}</span></li>
+        `;
+    }
+
+    auth.onAuthStateChanged(async (user) => {
+        if (!user) {
+            linkInput.value = "";
+            linkInput.placeholder = "Log in to get your link";
+            progressList.innerHTML = "<li>Log in to see your referral progress</li>";
+            return;
+        }
+
+        linkInput.value = window.referralLinkForUser(user.uid);
+
+        try {
+            const doc = await db.collection("users").doc(user.uid).get();
+            renderProgress(doc.exists ? doc.data().referralProgress : null);
+        } catch (err) {
+            console.error("Failed to load referral progress:", err);
+        }
+    });
+
+    copyBtn.addEventListener("click", async () => {
+        if (!linkInput.value) return;
+
+        try {
+            await navigator.clipboard.writeText(linkInput.value);
+            showMessage("Link copied!", "#3ddc84");
+        } catch (err) {
+            linkInput.select();
+            document.execCommand("copy");
+            showMessage("Link copied!", "#3ddc84");
+        }
+
+        if (typeof window.markReferralProgress === "function") {
+            window.markReferralProgress("shared");
+        }
+    });
+
+    shareBtn.addEventListener("click", async () => {
+        if (!linkInput.value) {
+            showMessage("Please log in first.", "#ff5555");
+            return;
+        }
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: "Aviator",
+                    text: "Join me on Aviator!",
+                    url: linkInput.value
+                });
+
+                if (typeof window.markReferralProgress === "function") {
+                    window.markReferralProgress("shared");
+                }
+            } catch (err) {
+                // User cancelled the share sheet - not an error.
+            }
+        } else {
+            copyBtn.click();
+        }
+    });
+</script>
+
+<script src="js/referral.js"></script>
+
+</body>
+</html>

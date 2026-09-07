@@ -233,6 +233,10 @@ async function createBet(amount, betSlot, options = {}) {
 
         setSlotBetId(roundId, betSlot, bet.id);
 
+        if (typeof window.recordWagerAmount === "function") {
+            window.recordWagerAmount(amount);
+        }
+
         window.mySlotState[betSlot] = {
             id: bet.id,
             status: "Pending",
@@ -370,6 +374,10 @@ async function cashOut(betSlot) {
 
         console.log(`✅ Slot ${betSlot} cashed out at ${multiplier.toFixed(2)}x`);
 
+        if (typeof window.incrementReferralRounds === "function") {
+            window.incrementReferralRounds();
+        }
+
     } catch (error) {
 
         console.error("Cash out error:", error);
@@ -425,6 +433,10 @@ async function settleLostBets() {
         };
 
         clearSlotBetId(Number(slot));
+
+        if (typeof window.incrementReferralRounds === "function") {
+            window.incrementReferralRounds();
+        }
     }
 
     if (typeof window.refreshAllBetButtons === "function") {

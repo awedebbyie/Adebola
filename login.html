@@ -12,6 +12,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <link rel="stylesheet" href="theme.css">
 <script src="theme.js"></script>
+<script src="js/sessions.js"></script>
 </head>
 <body>
     <div class="login-container">
@@ -97,6 +98,13 @@ function showMessage(text, color = "#ff4444") {
 // Helper: send user to the right place depending on whether
 // their Firestore profile is complete.
 async function routeAfterLogin(user) {
+
+    if (typeof window.registerSession === "function") {
+        await window.registerSession();
+        // `recognized` isn't acted on yet - see js/sessions.js for why
+        // (no OTP delivery channel wired up to actually challenge an
+        // unrecognized device with a code).
+    }
 
     const userDocRef = db.collection("users").doc(user.uid);
     const userDoc = await userDocRef.get();

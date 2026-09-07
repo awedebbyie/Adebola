@@ -12,6 +12,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script> 
     <link rel="stylesheet" href="theme.css">
 <script src="theme.js"></script>
+<script src="js/sessions.js"></script>
 </head>    
 <body>    
     <div class="login-container">    
@@ -107,6 +108,24 @@ firebase.initializeApp(firebaseConfig);
     
 const auth = firebase.auth(); 
 const db = firebase.firestore();   
+
+// Referral capture: register.html?ref=<referrer-uid>. Ignored (left null)
+// if missing, malformed, or someone tries to refer themselves.
+const urlParams = new URLSearchParams(window.location.search);
+const referrerUid = (urlParams.get("ref") || "").trim() || null;
+
+function referralFieldsForNewUser(newUid) {
+    if (!referrerUid || referrerUid === newUid) return {};
+    return {
+        referredBy: referrerUid,
+        referralProgress: {
+            deposited: false,
+            roundsPlayed: 0,
+            shared: false,
+            rewardGiven: false
+        }
+    };
+}
     
 const registerBtn = document.getElementById('registerBtn');    
 const googleBtn = document.getElementById('googleBtn');    
@@ -247,7 +266,8 @@ registerBtn.addEventListener('click', async () => {
             gender: gender,
             phone: phone,
             dob: dob,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            ...referralFieldsForNewUser(user.uid)
         });
 
         // Save locally
@@ -266,6 +286,10 @@ registerBtn.addEventListener('click', async () => {
             "Account created! Redirecting...",
             "lime"
         );
+
+        if (typeof window.registerSession === "function") {
+            await window.registerSession();
+        }
 
         setTimeout(() => {
             window.location.href = "login.html";
@@ -359,7 +383,8 @@ googleBtn.addEventListener('click', async () => {
                 username: user.displayName || "",
                 email: user.email,
                 balance: 0,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                ...referralFieldsForNewUser(user.uid)
             });
         }
 
@@ -367,7 +392,11 @@ googleBtn.addEventListener('click', async () => {
             "Account created successfully",    
             "lime"    
         );    
-    
+
+        if (typeof window.registerSession === "function") {
+            await window.registerSession();
+        }
+
         window.location.href="complete-profile.html";    
     
     }    

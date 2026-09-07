@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete Account - Aviator</title>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="theme.css">
+    <script src="theme.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        body {
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-wrapper {
+            width: 25vw;
+            min-width: 380px;
+            max-width: 420px;
+            min-height: 100vh;
+            background: #121212;
+            color: #fff;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-sizing: border-box;
+            padding-bottom: 30px;
+        }
+
+        .header {
+            background-color: #e60000;
+            padding: 10px 16px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin: 0;
+        }
+
+        .section {
+            padding: 16px;
+        }
+
+        .warning-box {
+            background: rgba(230,0,0,0.12);
+            border: 1px solid rgba(230,0,0,0.4);
+            border-radius: 10px;
+            padding: 14px 16px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #ffb3b3;
+            margin-bottom: 20px;
+        }
+
+        .warning-box b {
+            color: #fff;
+        }
+
+        .warning-box ul {
+            margin: 8px 0 0;
+            padding-left: 18px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            color: #ccc;
+            margin-bottom: 6px;
+        }
+
+        input[type="password"], input[type="text"] {
+            width: 100%;
+            background: #1a1a1a;
+            color: #fff;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 14px;
+            box-sizing: border-box;
+            margin-bottom: 16px;
+        }
+
+        .delete-btn {
+            width: 100%;
+            height: 50px;
+            background: #e60000;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .delete-btn:disabled {
+            background: #333;
+            cursor: not-allowed;
+        }
+
+        #message {
+            text-align: center;
+            margin-top: 14px;
+            font-size: 14px;
+            min-height: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <div class="header">
+        <div onclick="goBack()" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            ←
+            <h1>Delete Account</h1>
+        </div>
+        <div style="font-size:22px; cursor:pointer; color:white;" onclick="goHome()">🏠</div>
+    </div>
+
+    <div class="section">
+
+        <div class="warning-box">
+            <b>This is permanent.</b> Deleting your account will:
+            <ul>
+                <li>Immediately erase your profile and balance</li>
+                <li>Free up your username and email for anyone else to use</li>
+                <li>Sign you out everywhere</li>
+            </ul>
+            This cannot be undone. Withdraw any remaining balance first if
+            you want to keep it.
+        </div>
+
+        <label for="passwordInput">Confirm your password</label>
+        <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password">
+
+        <label for="confirmInput">Type <b>DELETE</b> to confirm</label>
+        <input type="text" id="confirmInput" placeholder="DELETE" autocomplete="off">
+
+        <button id="deleteBtn" class="delete-btn">PERMANENTLY DELETE MY ACCOUNT</button>
+
+        <div id="message"></div>
+    </div>
+</div>
+
+<script>
+    function goBack() { window.history.back(); }
+    function goHome() { window.location.href = 'index.html'; }
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+        authDomain: "success-75f95.firebaseapp.com",
+        projectId: "success-75f95",
+        storageBucket: "success-75f95.firebasestorage.app",
+        messagingSenderId: "774097711994",
+        appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const deleteBtn = document.getElementById("deleteBtn");
+    const messageDiv = document.getElementById("message");
+
+    function showMessage(text, color) {
+        messageDiv.style.color = color;
+        messageDiv.textContent = text;
+    }
+
+    deleteBtn.addEventListener("click", async () => {
+        const user = auth.currentUser;
+
+        if (!user) {
+            showMessage("You need to be logged in to do this.", "#ff5555");
+            return;
+        }
+
+        const password = document.getElementById("passwordInput").value;
+        const confirmText = document.getElementById("confirmInput").value.trim();
+
+        if (confirmText !== "DELETE") {
+            showMessage('Type "DELETE" exactly to confirm.', "#ff5555");
+            return;
+        }
+
+        if (!password) {
+            showMessage("Enter your password to confirm.", "#ff5555");
+            return;
+        }
+
+        const confirmed = confirm(
+            "Are you absolutely sure? Your account and balance will be permanently deleted."
+        );
+        if (!confirmed) return;
+
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = "DELETING...";
+
+        try {
+            // Re-authenticate first - Firebase requires a recent login
+            // before it will allow deleting the account, and this also
+            // double-checks the password actually belongs to this user.
+            const credential = firebase.auth.EmailAuthProvider.credential(
+                user.email,
+                password
+            );
+            await user.reauthenticateWithCredential(credential);
+
+            // Free up the claimed username, if any, before removing the
+            // profile doc, so someone else can register it afterward.
+            const userRef = db.collection("users").doc(user.uid);
+            const userSnap = await userRef.get();
+            const username = userSnap.exists ? userSnap.data().username : null;
+
+            if (username) {
+                await db.collection("usernames")
+                    .doc(username.trim().toLowerCase())
+                    .delete()
+                    .catch((err) => console.warn("Username cleanup failed:", err));
+            }
+
+            await db.collection("missionProgress").doc(user.uid).delete().catch(() => {});
+            await userRef.delete();
+
+            await user.delete();
+
+            localStorage.removeItem("userData");
+            sessionStorage.clear();
+
+            alert("Your account has been deleted.");
+            window.location.replace("index.html");
+
+        } catch (err) {
+            console.error("Delete account failed:", err);
+
+            if (err.code === "auth/wrong-password") {
+                showMessage("Incorrect password.", "#ff5555");
+            } else if (err.code === "auth/requires-recent-login") {
+                showMessage("Please log out and back in, then try again.", "#ff5555");
+            } else {
+                showMessage(err.message || "Couldn't delete account. Please try again.", "#ff5555");
+            }
+
+            deleteBtn.disabled = false;
+            deleteBtn.textContent = "PERMANENTLY DELETE MY ACCOUNT";
+        }
+    });
+</script>
+
+</body>
+</html>

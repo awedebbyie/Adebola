@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Play - Aviator</title>
+    <link rel="stylesheet" href="theme.css">
+    <script src="theme.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        body {
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-wrapper {
+            width: 25vw;
+            min-width: 380px;
+            max-width: 420px;
+            min-height: 100vh;
+            background: #121212;
+            color: #fff;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-sizing: border-box;
+            padding-bottom: 30px;
+        }
+
+        .header {
+            background-color: #e60000;
+            padding: 10px 16px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin: 0;
+        }
+
+        .section {
+            padding: 16px;
+        }
+
+        .section-title {
+            background-color: #1f1f1f;
+            padding: 12px 16px;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 18px 0 2px;
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .info-block {
+            background-color: #171717;
+            padding: 14px 16px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #ccc;
+        }
+
+        .info-block b {
+            color: #fff;
+        }
+
+        .info-block ul {
+            margin: 8px 0 0;
+            padding-left: 18px;
+        }
+
+        .info-block li {
+            margin-bottom: 6px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <div class="header">
+        <div onclick="goBack()" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            ←
+            <h1>How to Play</h1>
+        </div>
+        <div style="font-size:22px; cursor:pointer; color:white;" onclick="goHome()">🏠</div>
+    </div>
+
+    <div class="section">
+
+        <div class="section-title">The Basics</div>
+        <div class="info-block">
+            Every round, a plane takes off and a multiplier climbs from
+            <b>1.00x</b> upward. Place a bet before the round starts, then
+            cash out any time while the plane is flying to lock in your
+            stake &times; the multiplier at that moment. If the plane
+            "flies away" (crashes) before you cash out, that bet is lost.
+        </div>
+
+        <div class="section-title">Placing a Bet</div>
+        <div class="info-block">
+            <ul>
+                <li>Enter an amount, or tap one of the quick amount buttons.</li>
+                <li>Tap <b>INVEST</b> before the countdown ends - bets can't
+                    be placed once the round is already flying.</li>
+                <li>You can run two bets at once, one in each betting slot.</li>
+            </ul>
+        </div>
+
+        <div class="section-title">Cashing Out</div>
+        <div class="info-block">
+            Once the round is flying, your bet button turns into a
+            <b>CASH OUT</b> button showing your current payout. Tap it any
+            time before the crash to collect that amount. There's no
+            "right" moment - cashing out earlier is safer, waiting longer
+            can pay more, but risks the round crashing first.
+        </div>
+
+        <div class="section-title">Auto Bet &amp; Auto Cash Out</div>
+        <div class="info-block">
+            Switch a betting slot to the <b>Auto</b> tab to automate it:
+            <ul>
+                <li><b>Auto Bet</b> - automatically places the same bet
+                    amount at the start of every new round.</li>
+                <li><b>Auto Cash Out</b> - automatically cashes out once the
+                    multiplier reaches the value you set.</li>
+            </ul>
+            Both can be turned off at any time from the same panel.
+        </div>
+
+        <div class="section-title">Provably Fair</div>
+        <div class="info-block">
+            Every round's outcome is generated in a way you can verify
+            independently. Tap <b>Verify</b> on the fairness bar above the
+            graph to see the current round's seed and hash, or look up any
+            past round's result.
+        </div>
+
+        <div class="section-title">Play Responsibly</div>
+        <div class="info-block">
+            Only bet amounts you're comfortable losing, and take breaks
+            between sessions. If you ever feel like play is becoming a
+            problem, that's worth stepping back for.
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function goBack() { window.history.back(); }
+    function goHome() { window.location.href = 'index.html'; }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sessions - Aviator</title>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="theme.css">
+    <script src="theme.js"></script>
+    <script src="js/sessions.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        body {
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-wrapper {
+            width: 25vw;
+            min-width: 380px;
+            max-width: 420px;
+            min-height: 100vh;
+            background: #121212;
+            color: #fff;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-sizing: border-box;
+            padding-bottom: 30px;
+        }
+
+        .header {
+            background-color: #e60000;
+            padding: 10px 16px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin: 0;
+        }
+
+        .section {
+            padding: 16px;
+        }
+
+        .section-note {
+            color: #999;
+            font-size: 13.5px;
+            line-height: 1.5;
+            margin: 0 0 16px;
+        }
+
+        .session-item {
+            background-color: #1f1f1f;
+            padding: 14px 16px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .session-device {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .session-meta {
+            font-size: 12.5px;
+            color: #999;
+        }
+
+        .current-badge {
+            font-size: 11px;
+            font-weight: bold;
+            color: #3ddc84;
+            background: rgba(0,255,136,0.12);
+            padding: 3px 8px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        .logout-session-btn {
+            flex-shrink: 0;
+            background: #e60000;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #emptyState, #loadingState {
+            text-align: center;
+            color: #999;
+            font-size: 14px;
+            padding: 30px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <div class="header">
+        <div onclick="goBack()" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            ←
+            <h1>Sessions</h1>
+        </div>
+        <div style="font-size:22px; cursor:pointer; color:white;" onclick="goHome()">🏠</div>
+    </div>
+
+    <div class="section">
+        <p class="section-note">
+            Every device that's logged into your account, most recent
+            first. Don't recognize one, or stopped using it? Log it out
+            below - it'll be signed out next time it checks in.
+        </p>
+
+        <div id="loadingState">Loading sessions...</div>
+        <div id="emptyState" style="display:none;">No sessions found.</div>
+        <div id="sessionList"></div>
+    </div>
+</div>
+
+<script>
+    function goBack() { window.history.back(); }
+    function goHome() { window.location.href = 'index.html'; }
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+        authDomain: "success-75f95.firebaseapp.com",
+        projectId: "success-75f95",
+        storageBucket: "success-75f95.firebasestorage.app",
+        messagingSenderId: "774097711994",
+        appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    function formatWhen(ts) {
+        if (!ts || !ts.toDate) return "Unknown";
+        const d = ts.toDate();
+        return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
+            " at " + d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    }
+
+    async function loadSessions(user) {
+        const listEl = document.getElementById("sessionList");
+        const loadingEl = document.getElementById("loadingState");
+        const emptyEl = document.getElementById("emptyState");
+        const thisDeviceId = window.getOrCreateDeviceId();
+
+        loadingEl.style.display = "block";
+        emptyEl.style.display = "none";
+        listEl.innerHTML = "";
+
+        try {
+            const snap = await db.collection("users").doc(user.uid)
+                .collection("sessions")
+                .orderBy("lastSeen", "desc")
+                .get();
+
+            loadingEl.style.display = "none";
+
+            if (snap.empty) {
+                emptyEl.style.display = "block";
+                return;
+            }
+
+            snap.forEach((doc) => {
+                const data = doc.data();
+                const isCurrent = doc.id === thisDeviceId;
+                const isActive = data.active !== false;
+
+                const item = document.createElement("div");
+                item.className = "session-item";
+
+                item.innerHTML = `
+                    <div>
+                        <div class="session-device">${data.deviceName || "Unknown device"}</div>
+                        <div class="session-meta">Last active ${formatWhen(data.lastSeen)}</div>
+                        ${isCurrent ? '<span class="current-badge">This device</span>' : ''}
+                        ${!isActive ? '<span class="session-meta">Logged out</span>' : ''}
+                    </div>
+                `;
+
+                if (!isCurrent && isActive) {
+                    const btn = document.createElement("button");
+                    btn.className = "logout-session-btn";
+                    btn.textContent = "Log out";
+                    btn.addEventListener("click", async () => {
+                        btn.disabled = true;
+                        btn.textContent = "...";
+                        try {
+                            await doc.ref.update({ active: false });
+                            loadSessions(user);
+                        } catch (err) {
+                            console.error("Failed to log out session:", err);
+                            btn.disabled = false;
+                            btn.textContent = "Log out";
+                        }
+                    });
+                    item.appendChild(btn);
+                }
+
+                listEl.appendChild(item);
+            });
+
+        } catch (err) {
+            console.error("Failed to load sessions:", err);
+            loadingEl.textContent = "Couldn't load sessions.";
+        }
+    }
+
+    auth.onAuthStateChanged((user) => {
+        if (!user) {
+            window.location.replace("login.html");
+            return;
+        }
+        loadSessions(user);
+    });
+</script>
+
+</body>
+</html>

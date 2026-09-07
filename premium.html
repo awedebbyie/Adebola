@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium - Aviator</title>
+    <link rel="stylesheet" href="theme.css">
+    <script src="theme.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        body {
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-wrapper {
+            width: 25vw;
+            min-width: 380px;
+            max-width: 420px;
+            min-height: 100vh;
+            background: #121212;
+            color: #fff;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-sizing: border-box;
+            padding-bottom: 30px;
+        }
+
+        .header {
+            background-color: #e60000;
+            padding: 10px 16px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin: 0;
+        }
+
+        .section {
+            padding: 16px;
+        }
+
+        .menu-item {
+            background-color: #1f1f1f;
+            padding: 16px;
+            margin-bottom: 2px;
+            font-size: 16px;
+        }
+
+        /* TODO: this whole block is a placeholder - swap it out once the
+           actual premium features/pricing are decided. Nothing about
+           tiers, perks, or pricing has been invented here on purpose. */
+        .placeholder-card {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .placeholder-badge {
+            font-size: 46px;
+            margin-bottom: 14px;
+        }
+
+        .placeholder-card h2 {
+            font-size: 20px;
+            margin: 0 0 10px;
+        }
+
+        .placeholder-card p {
+            color: #999;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <div class="header">
+        <div onclick="goBack()" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            ←
+            <h1>Premium</h1>
+        </div>
+        <div style="font-size:22px; cursor:pointer; color:white;" onclick="goHome()">🏠</div>
+    </div>
+
+    <div class="section">
+        <div class="menu-item placeholder-card">
+            <div class="placeholder-badge">✨</div>
+            <h2>Premium Features</h2>
+            <p>Details on what's included are coming soon.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    function goBack() { window.history.back(); }
+    function goHome() { window.location.href = 'index.html'; }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report a Problem - Aviator</title>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="theme.css">
+    <script src="theme.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        body {
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-wrapper {
+            width: 25vw;
+            min-width: 380px;
+            max-width: 420px;
+            min-height: 100vh;
+            background: #121212;
+            color: #fff;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-sizing: border-box;
+            padding-bottom: 30px;
+        }
+
+        .header {
+            background-color: #e60000;
+            padding: 10px 16px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin: 0;
+        }
+
+        .section {
+            padding: 16px;
+        }
+
+        .section-note {
+            color: #999;
+            font-size: 13.5px;
+            line-height: 1.5;
+            margin: 0 0 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            color: #ccc;
+            margin-bottom: 6px;
+        }
+
+        select, textarea {
+            width: 100%;
+            background: #1a1a1a;
+            color: #fff;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+            box-sizing: border-box;
+            margin-bottom: 16px;
+        }
+
+        textarea {
+            min-height: 130px;
+            resize: vertical;
+        }
+
+        .submit-btn {
+            width: 100%;
+            height: 50px;
+            background: #00aa44;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .submit-btn:disabled {
+            background: #333;
+            cursor: not-allowed;
+        }
+
+        #message {
+            text-align: center;
+            margin-top: 14px;
+            font-size: 14px;
+            min-height: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <div class="header">
+        <div onclick="goBack()" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            ←
+            <h1>Report a Problem</h1>
+        </div>
+        <div style="font-size:22px; cursor:pointer; color:white;" onclick="goHome()">🏠</div>
+    </div>
+
+    <div class="section">
+        <p class="section-note">
+            Ran into a bug, a payment issue, or something not working right?
+            Let us know below and we'll look into it.
+        </p>
+
+        <label for="category">Category</label>
+        <select id="category">
+            <option value="bug">Bug / Something's broken</option>
+            <option value="payment">Deposit or withdrawal issue</option>
+            <option value="account">Account issue</option>
+            <option value="other">Other</option>
+        </select>
+
+        <label for="description">What happened?</label>
+        <textarea id="description" placeholder="Describe the problem - the more detail, the faster we can help."></textarea>
+
+        <button id="submitBtn" class="submit-btn">SUBMIT REPORT</button>
+
+        <div id="message"></div>
+    </div>
+</div>
+
+<script>
+    function goBack() { window.history.back(); }
+    function goHome() { window.location.href = 'index.html'; }
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+        authDomain: "success-75f95.firebaseapp.com",
+        projectId: "success-75f95",
+        storageBucket: "success-75f95.firebasestorage.app",
+        messagingSenderId: "774097711994",
+        appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const submitBtn = document.getElementById("submitBtn");
+    const messageDiv = document.getElementById("message");
+
+    function showMessage(text, color) {
+        messageDiv.style.color = color;
+        messageDiv.textContent = text;
+    }
+
+    submitBtn.addEventListener("click", async () => {
+        const user = auth.currentUser;
+
+        if (!user) {
+            showMessage("Please log in before submitting a report.", "#ff5555");
+            return;
+        }
+
+        const category = document.getElementById("category").value;
+        const description = document.getElementById("description").value.trim();
+
+        if (!description) {
+            showMessage("Please describe the problem first.", "#ff5555");
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = "SUBMITTING...";
+
+        try {
+            await db.collection("reports").add({
+                uid: user.uid,
+                email: user.email || null,
+                category: category,
+                description: description,
+                status: "open",
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            showMessage("Thanks - your report has been submitted.", "#3ddc84");
+            document.getElementById("description").value = "";
+
+        } catch (err) {
+            console.error("Report submit failed:", err);
+            showMessage("Couldn't submit your report. Please try again.", "#ff5555");
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "SUBMIT REPORT";
+        }
+    });
+</script>
+
+</body>
+</html>

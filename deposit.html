@@ -87,6 +87,8 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 </script>
 <script src="js/missions.js"></script>
+<script src="js/referral.js"></script>
+<script src="js/withdrawGate.js"></script>
 <script>
 
 // 🔥 Live balance display - keeps the top bar in sync with Firestore,
@@ -296,6 +298,18 @@ function payWithFlutterwave(){
             // proof anything was actually paid.
             if (Number(result.amount) >= 50000 && typeof window.recordMissionEvent === "function") {
                 window.recordMissionEvent("deposited_50k");
+            }
+
+            // Any server-verified deposit (not just the 50k mission
+            // threshold above) counts toward the referral reward.
+            if (typeof window.markReferralProgress === "function") {
+                window.markReferralProgress("deposited");
+            }
+
+            // Only actually records anything the FIRST time a given
+            // account ever deposits - see js/withdrawGate.js.
+            if (typeof window.recordFirstDepositIfNeeded === "function") {
+                window.recordFirstDepositIfNeeded(result.amount);
             }
 
             showMessage(

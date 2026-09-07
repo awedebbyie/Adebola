@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdrawal Requirement - Aviator</title>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="theme.css">
+    <script src="theme.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        body {
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-wrapper {
+            width: 25vw;
+            min-width: 380px;
+            max-width: 420px;
+            min-height: 100vh;
+            background: #121212;
+            color: #fff;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-sizing: border-box;
+            padding-bottom: 30px;
+        }
+
+        .header {
+            background-color: #e60000;
+            padding: 10px 16px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin: 0;
+        }
+
+        .section {
+            padding: 16px;
+        }
+
+        .lock-badge {
+            text-align: center;
+            font-size: 46px;
+            margin: 10px 0 6px;
+        }
+
+        .headline {
+            text-align: center;
+            font-size: 19px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .info-block {
+            background-color: #171717;
+            padding: 14px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #ccc;
+            margin-bottom: 20px;
+        }
+
+        .info-block b {
+            color: #fff;
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 12px;
+            background: #262626;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #00aa44;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #999;
+            margin-bottom: 22px;
+        }
+
+        .primary-btn {
+            width: 100%;
+            height: 50px;
+            background: #00aa44;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .secondary-btn {
+            width: 100%;
+            height: 46px;
+            background: #222;
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 10px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <div class="header">
+        <div onclick="goBack()" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            ←
+            <h1>Withdrawal Requirement</h1>
+        </div>
+        <div style="font-size:22px; cursor:pointer; color:white;" onclick="goHome()">🏠</div>
+    </div>
+
+    <div class="section">
+
+        <div id="lockedView" style="display:none;">
+            <div class="lock-badge">🔒</div>
+            <div class="headline">Almost there</div>
+
+            <div class="info-block">
+                You have to play through <b>75%</b> of your first deposit
+                before you can withdraw. This only applies once - after
+                you clear it, you'll never see this page again when you
+                tap Withdraw.
+            </div>
+
+            <div class="progress-track">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-label">
+                <span id="wageredLabel">₦0</span>
+                <span id="thresholdLabel">of ₦0</span>
+            </div>
+
+            <button class="secondary-btn" id="checkAgainBtn">CHECK AGAIN</button>
+        </div>
+
+        <div id="unlockedView" style="display:none;">
+            <div class="lock-badge">✅</div>
+            <div class="headline">You're all set</div>
+            <div class="info-block">
+                You've met the requirement - withdrawals are unlocked for
+                good.
+            </div>
+            <button class="primary-btn" onclick="window.location.href='withdraw.html'">GO TO WITHDRAW</button>
+        </div>
+
+        <div id="loadingView">
+            <p style="text-align:center; color:#999;">Checking your status...</p>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function goBack() { window.history.back(); }
+    function goHome() { window.location.href = 'index.html'; }
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+        authDomain: "success-75f95.firebaseapp.com",
+        projectId: "success-75f95",
+        storageBucket: "success-75f95.firebasestorage.app",
+        messagingSenderId: "774097711994",
+        appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    function formatNaira(n) {
+        return "₦" + Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
+    }
+
+    async function refreshStatus() {
+        const lockedView = document.getElementById("lockedView");
+        const unlockedView = document.getElementById("unlockedView");
+        const loadingView = document.getElementById("loadingView");
+
+        loadingView.style.display = "block";
+        lockedView.style.display = "none";
+        unlockedView.style.display = "none";
+
+        const status = await window.getWithdrawGateStatus();
+
+        loadingView.style.display = "none";
+
+        if (!status.locked) {
+            unlockedView.style.display = "block";
+            return;
+        }
+
+        lockedView.style.display = "block";
+
+        const pct = Math.min(100, (status.wagered / status.threshold) * 100);
+        document.getElementById("progressFill").style.width = pct + "%";
+        document.getElementById("wageredLabel").textContent = formatNaira(status.wagered) + " wagered";
+        document.getElementById("thresholdLabel").textContent = "of " + formatNaira(status.threshold);
+    }
+
+    document.getElementById("checkAgainBtn").addEventListener("click", refreshStatus);
+
+    auth.onAuthStateChanged((user) => {
+        if (!user) {
+            window.location.replace("login.html");
+            return;
+        }
+        refreshStatus();
+    });
+</script>
+
+<script src="js/withdrawGate.js"></script>
+
+</body>
+</html>

@@ -456,7 +456,20 @@ window.addEventListener('resize', () => {
 // Other functions
 function showSettings() { window.location.href = "settings.html"; }
 function deposit() { window.location.href = "deposit.html"; }
-function withdraw() { window.location.href = "withdraw.html"; }
+
+async function withdraw() {
+    try {
+        const status = await window.getWithdrawGateStatus();
+        if (status.locked) {
+            window.location.href = "withdraw-requirement.html";
+            return;
+        }
+    } catch (err) {
+        console.error("Withdraw gate check failed:", err);
+        // Fail open rather than trap a user who can't reach the check.
+    }
+    window.location.href = "withdraw.html";
+}
 
 function handleInvest() {
     const user = auth.currentUser;
@@ -540,6 +553,17 @@ auth.onAuthStateChanged(async (user) => {
                     console.error("❌ Balance listener error:", error);
                 });
 
+            // === SESSION REVOCATION CHECK ===
+            // If this device was "logged out" from sessions.html (on any
+            // device), this catches it within ~30s and signs out locally.
+            if (typeof window.enforceSessionRevocation === "function") {
+                window.enforceSessionRevocation();
+                if (!window.__sessionRevocationInterval) {
+                    window.__sessionRevocationInterval =
+                        setInterval(window.enforceSessionRevocation, 30000);
+                }
+            }
+
         } catch (err) {
             console.error("Auth error:", err);
         }
@@ -562,6 +586,9 @@ document.getElementById("investBtn2").addEventListener("click", handleInvest);
 
 <script src="js/supabase.js"></script>
 <script src="js/missions.js"></script>
+<script src="js/referral.js"></script>
+<script src="js/withdrawGate.js"></script>
+<script src="js/sessions.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/roundHistory.js"></script>
 <script src="js/verifyFairness.js"></script>

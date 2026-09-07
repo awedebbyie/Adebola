@@ -64,10 +64,60 @@ html.theme-light .spy-row{
 
 html.theme-light .menu-item,
 html.theme-light .section-title,
+html.theme-light .dark-mode-options,
 html.theme-light .tier-row.current,
 html.theme-light .info-value,
 html.theme-light .username,
 html.theme-light .spy-name,
 html.theme-light .login-title{
     color:#000000;
+}
+
+/* ---- 4. Graph axes (.x-axis / .y-axis on the index page) ----
+   These are plain white bars drawn over the graph. White-on-
+   white in light mode makes them disappear, so they flip to
+   black in light mode and stay their original white in dark
+   mode - nothing else about the graph (curve, dots, helicopter,
+   grid) is touched. ---- */
+
+html.theme-dark .y-axis,
+html.theme-dark .x-axis{
+    background:#ffffff;
+}
+
+html.theme-light .y-axis,
+html.theme-light .x-axis{
+    background:#000000;
+}
+
+/* ---- 5. Container border shading (every page, both themes) ----
+   A soft dark glow around the outer edge of the main container
+   (.game-container / .app-wrapper / .login-container), so the
+   box reads as a distinct card instead of looking borderless -
+   most noticeable in light mode on a wide/desktop screen. This
+   is NOT theme-conditional on purpose: it's the same subtle
+   shadow in both themes, applied consistently on every page
+   (some pages already had this exact shadow on their own
+   .app-wrapper/.game-container; this just makes sure every page
+   gets it, including the ones that didn't). ---- */
+
+.game-container,
+.app-wrapper,
+.login-container{
+    box-shadow:0 0 30px rgba(0,0,0,0.3);
+}
+
+/* ---- 6. Dark-mode: literal dark/black text -> white ----
+   Every place in the project where text color was literally black/
+   near-black (color:black / #000), regardless of what's behind it.
+   Requested as unconditional, unlike section 3 above - same-color
+   text-on-background is harder to read even where it wasn't fully
+   invisible. Nothing else (backgrounds, other text colors) changes
+   here - only these specific selectors, and only their color. ---- */
+
+html.theme-dark .tab-btn.active,
+html.theme-dark .range-btn.active,
+html.theme-dark .chart-range-btn.active,
+html.theme-dark .box button{
+    color:#ffffff;
 }

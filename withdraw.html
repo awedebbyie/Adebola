@@ -11,6 +11,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <link rel="stylesheet" href="theme.css">
 <script src="theme.js"></script>
+<script src="js/withdrawGate.js"></script>
 </head>
 <body>
     <div class="login-container">
@@ -113,6 +114,17 @@ auth.onAuthStateChanged(async (user) => {
     if (!user) {
         location.replace("login.html");
         return;
+    }
+
+    // Guards direct navigation to this URL - the topbar Withdraw button
+    // already checks this before ever linking here, but this page
+    // shouldn't rely on that being the only way in.
+    if (typeof window.getWithdrawGateStatus === "function") {
+        const status = await window.getWithdrawGateStatus();
+        if (status.locked) {
+            location.replace("withdraw-requirement.html");
+            return;
+        }
     }
 
     currentUser = user;
