@@ -7,7 +7,8 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="https://checkout.flutterwave.com/v3.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
@@ -50,53 +51,46 @@
             margin: 0;
         }
 
-        .tier-card {
-            margin: 16px;
-            padding: 24px 20px;
-            border-radius: 14px;
+        .hero {
+            margin: 18px 16px 6px;
+            padding: 28px 20px;
+            border-radius: 16px;
             text-align: center;
             background: linear-gradient(135deg, #7b2ff7 0%, #5417b8 100%);
         }
 
-        .tier-badge {
-            font-size: 34px;
-            margin-bottom: 6px;
+        .hero-icon {
+            font-size: 38px;
+            margin-bottom: 8px;
         }
 
-        .tier-name {
+        .hero-title {
             font-size: 22px;
             font-weight: 700;
             color: white;
         }
 
-        .tier-wagered {
-            color: rgba(255,255,255,0.8);
+        .hero-sub {
+            color: rgba(255,255,255,0.85);
             font-size: 13px;
-            margin-top: 4px;
+            margin-top: 8px;
+            line-height: 1.6;
+            padding: 0 6px;
         }
 
-        .progress-track {
-            margin: 18px 4px 6px;
-            height: 8px;
-            border-radius: 4px;
+        .active-badge {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 6px 14px;
+            border-radius: 20px;
             background: rgba(255,255,255,0.2);
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: #ffcf5c;
-            border-radius: 4px;
-            transition: width 0.4s ease;
-        }
-
-        .progress-label {
-            color: rgba(255,255,255,0.75);
-            font-size: 12px;
+            color: #ffcf5c;
+            font-size: 12.5px;
+            font-weight: 700;
         }
 
         .section {
-            padding: 0 16px 16px;
+            padding: 6px 16px 16px;
         }
 
         .section-title {
@@ -108,38 +102,116 @@
             color: white;
         }
 
-        .tier-row {
+        .feature-row {
             background-color: #1f1f1f;
             padding: 14px 16px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            gap: 12px;
             margin-bottom: 2px;
-            color: var(--g-ccc);
+            color: #ccc;
             font-size: 14px;
         }
 
-        .tier-row.current {
-            background-color: #2a2a2a;
+        .feature-row.unlocked {
             color: white;
-            font-weight: 600;
         }
 
-        .tier-row .perk {
-            font-size: 12px;
-            color: var(--g-888);
+        .feature-icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .feature-lock {
+            margin-left: auto;
+            font-size: 15px;
+            opacity: 0.6;
+        }
+
+        .plans-row {
+            display: flex;
+            gap: 10px;
+            padding: 4px 0 6px;
+        }
+
+        .plan-card {
+            flex: 1;
+            background: #1f1f1f;
+            border: 2px solid #333;
+            border-radius: 12px;
+            padding: 16px 12px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .plan-card.selected {
+            border-color: #7b2ff7;
+            background: #241a38;
+        }
+
+        .plan-card.best-value::before {
+            content: "BEST VALUE";
+            display: block;
+            font-size: 9px;
+            font-weight: 700;
+            color: #ffcf5c;
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        .plan-name {
+            color: #ccc;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .plan-price {
+            color: white;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .plan-period {
+            color: #888;
+            font-size: 11px;
             margin-top: 2px;
         }
 
+        .subscribe-btn {
+            width: 100%;
+            margin-top: 14px;
+            background: linear-gradient(135deg, #7b2ff7 0%, #5417b8 100%);
+            color: white;
+            border: none;
+            padding: 16px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .subscribe-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
         .loading-note {
-            color: var(--g-888);
+            color: #888;
             font-size: 13px;
             text-align: center;
             padding: 40px 20px;
         }
+
+        .status-msg {
+            text-align: center;
+            font-size: 13px;
+            color: #ffaa00;
+            padding: 8px 16px 0;
+            min-height: 16px;
+        }
     </style>
-    <link rel="stylesheet" href="theme.css">
-<script src="theme.js"></script>
 </head>
 <body>
 
@@ -154,7 +226,7 @@
     </div>
 
     <div id="content">
-        <p class="loading-note">Loading your loyalty status...</p>
+        <p class="loading-note">Loading...</p>
     </div>
 
 </div>
@@ -173,11 +245,7 @@
         firebase.initializeApp(firebaseConfig);
     }
     const auth = firebase.auth();
-
-    const supabaseClient = window.supabase.createClient(
-        "https://axojmnizpewbewempaaa.supabase.co",
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4b2ptbml6cGV3YmV3ZW1wYWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDk3OTcsImV4cCI6MjA5ODA4NTc5N30._Ib3RhlMpPaUQoUVYDd6dS_gUOiaVsCBPBYEO30A8zc"
-    );
+    const db = firebase.firestore();
 
     function goBack() {
         window.history.back();
@@ -187,102 +255,211 @@
         window.location.href = 'index.html';
     }
 
-    function formatNaira(amount) {
-        return "₦" + Number(amount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
-    }
-
-    // Tiers based on ALL-TIME total wagered (sum of every bet's amount,
-    // win or lose - wagering activity, not just winnings). Thresholds are
-    // in Naira. Adjust freely - this is the only place they're defined.
-    const TIERS = [
-        { name: "Bronze", badge: "🥉", min: 0 },
-        { name: "Silver", badge: "🥈", min: 50000 },
-        { name: "Gold", badge: "🥇", min: 200000 },
-        { name: "Platinum", badge: "💎", min: 1000000 }
-    ];
-
-    const PERKS = {
-        Bronze: "Standard support",
-        Silver: "Priority support",
-        Gold: "Priority support + exclusive promotions",
-        Platinum: "Priority support + exclusive promotions + early access to new features"
+    // Prices must match supabase/functions/verify-premium-payment - that
+    // function independently verifies the paid amount against these same
+    // numbers, so changing a price here alone does nothing; change it in
+    // both places.
+    const PLANS = {
+        monthly:   { amount: 15000, days: 30, label: "Monthly" },
+        quarterly: { amount: 40050, days: 90, label: "3 Months" }
     };
 
-    function tierForAmount(amount) {
-        let current = TIERS[0];
-        for (const tier of TIERS) {
-            if (amount >= tier.min) current = tier;
-        }
-        return current;
+    const FEATURES = [
+        { icon: "🎖️", text: "Exclusive Aviloyalty badge on your profile" },
+        { icon: "⚡", text: "Priority customer support" },
+        { icon: "💸", text: "Higher withdrawal limits" },
+        { icon: "🎁", text: "Access to exclusive promotions" },
+        { icon: "🚀", text: "Early access to new features" }
+    ];
+
+    let selectedPlan = "quarterly";
+    let currentUser = null;
+
+    function formatDate(iso) {
+        return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
     }
 
-    function nextTier(current) {
-        const idx = TIERS.findIndex((t) => t.name === current.name);
-        return idx >= 0 && idx < TIERS.length - 1 ? TIERS[idx + 1] : null;
-    }
-
-    async function loadLoyalty(uid) {
+    function renderLocked() {
         const content = document.getElementById("content");
-
-        const { data: bets, error } = await supabaseClient
-            .from("bets")
-            .select("amount")
-            .eq("user_id", uid);
-
-        if (error) {
-            console.error("Aviloyalty load failed:", error);
-            content.innerHTML = '<p class="loading-note">Couldn\'t load your loyalty status right now.</p>';
-            return;
-        }
-
-        const totalWagered = (bets || []).reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
-        const current = tierForAmount(totalWagered);
-        const next = nextTier(current);
-
-        let progressPct = 100;
-        let progressLabel = "Highest tier reached";
-        if (next) {
-            const span = next.min - current.min;
-            const into = totalWagered - current.min;
-            progressPct = Math.max(0, Math.min(100, (into / span) * 100));
-            progressLabel = `${formatNaira(next.min - totalWagered)} more wagered to reach ${next.name}`;
-        }
-
-        const tierRows = TIERS.map((tier) => {
-            const isCurrent = tier.name === current.name;
-            return `
-                <div class="tier-row ${isCurrent ? "current" : ""}">
-                    <div>
-                        ${tier.badge} ${tier.name}
-                        <div class="perk">${PERKS[tier.name]}</div>
-                    </div>
-                    <div>${formatNaira(tier.min)}+</div>
-                </div>
-            `;
-        }).join("");
-
         content.innerHTML = `
-            <div class="tier-card">
-                <div class="tier-badge">${current.badge}</div>
-                <div class="tier-name">${current.name}</div>
-                <div class="tier-wagered">${formatNaira(totalWagered)} wagered all-time</div>
-                <div class="progress-track"><div class="progress-fill" style="width:${progressPct}%"></div></div>
-                <div class="progress-label">${progressLabel}</div>
+            <div class="hero">
+                <div class="hero-icon">🔒</div>
+                <div class="hero-title">Go Premium</div>
+                <div class="hero-sub">
+                    Pledge your loyalty and unlock premium features.
+                    Every subscription helps keep Aviator running and growing
+                    for everyone.
+                </div>
             </div>
 
             <div class="section">
-                <div class="section-title">Tiers</div>
-                ${tierRows}
+                <div class="section-title">Premium Features</div>
+                ${FEATURES.map((f) => `
+                    <div class="feature-row">
+                        <span class="feature-icon">${f.icon}</span>
+                        <span>${f.text}</span>
+                        <span class="feature-lock">🔒</span>
+                    </div>
+                `).join("")}
+            </div>
+
+            <div class="section">
+                <div class="section-title">Choose a Plan</div>
+                <div class="plans-row">
+                    <div class="plan-card" id="plan-monthly" onclick="selectPlan('monthly')">
+                        <div class="plan-name">Monthly</div>
+                        <div class="plan-price">₦${PLANS.monthly.amount.toLocaleString()}</div>
+                        <div class="plan-period">per month</div>
+                    </div>
+                    <div class="plan-card best-value" id="plan-quarterly" onclick="selectPlan('quarterly')">
+                        <div class="plan-name">3 Months</div>
+                        <div class="plan-price">₦${PLANS.quarterly.amount.toLocaleString()}</div>
+                        <div class="plan-period">per 3 months</div>
+                    </div>
+                </div>
+                <button class="subscribe-btn" id="subscribeBtn" onclick="startCheckout()">Go Premium</button>
+                <div class="status-msg" id="statusMsg"></div>
             </div>
         `;
+        selectPlan(selectedPlan);
+    }
+
+    function renderUnlocked(premiumUntil) {
+        const content = document.getElementById("content");
+        content.innerHTML = `
+            <div class="hero">
+                <div class="hero-icon">✨</div>
+                <div class="hero-title">You're Premium</div>
+                <div class="hero-sub">Thank you for pledging your loyalty.</div>
+                <div class="active-badge">Active until ${formatDate(premiumUntil)}</div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Your Features</div>
+                ${FEATURES.map((f) => `
+                    <div class="feature-row unlocked">
+                        <span class="feature-icon">${f.icon}</span>
+                        <span>${f.text}</span>
+                        <span class="feature-lock">✅</span>
+                    </div>
+                `).join("")}
+            </div>
+
+            <div class="section">
+                <div class="section-title">Extend Your Plan</div>
+                <div class="plans-row">
+                    <div class="plan-card" id="plan-monthly" onclick="selectPlan('monthly')">
+                        <div class="plan-name">Monthly</div>
+                        <div class="plan-price">₦${PLANS.monthly.amount.toLocaleString()}</div>
+                        <div class="plan-period">per month</div>
+                    </div>
+                    <div class="plan-card best-value" id="plan-quarterly" onclick="selectPlan('quarterly')">
+                        <div class="plan-name">3 Months</div>
+                        <div class="plan-price">₦${PLANS.quarterly.amount.toLocaleString()}</div>
+                        <div class="plan-period">per 3 months</div>
+                    </div>
+                </div>
+                <button class="subscribe-btn" id="subscribeBtn" onclick="startCheckout()">Extend</button>
+                <div class="status-msg" id="statusMsg"></div>
+            </div>
+        `;
+        selectPlan(selectedPlan);
+    }
+
+    function selectPlan(plan) {
+        selectedPlan = plan;
+        document.querySelectorAll(".plan-card").forEach((el) => el.classList.remove("selected"));
+        const el = document.getElementById("plan-" + plan);
+        if (el) el.classList.add("selected");
+    }
+
+    function startCheckout() {
+        if (!currentUser) return;
+
+        const plan = PLANS[selectedPlan];
+        const btn = document.getElementById("subscribeBtn");
+        const statusMsg = document.getElementById("statusMsg");
+
+        btn.disabled = true;
+        btn.textContent = "Processing...";
+
+        const paymentRef = "AVILOYALTY-" + Date.now();
+
+        FlutterwaveCheckout({
+            public_key: "FLWPUBK_TEST-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-X",
+            tx_ref: paymentRef,
+            amount: plan.amount,
+            currency: "NGN",
+            payment_options: "card,banktransfer,ussd",
+            customer: { email: currentUser.email },
+
+            callback: function (response) {
+                (async () => {
+                    try {
+                        statusMsg.textContent = "Verifying payment...";
+
+                        const verify = await fetch(
+                            "https://axojmnizpewbewempaaa.supabase.co/functions/v1/verify-premium-payment",
+                            {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                    uid: currentUser.uid,
+                                    transaction_id: response.transaction_id,
+                                    tx_ref: response.tx_ref,
+                                    plan: selectedPlan
+                                })
+                            }
+                        );
+
+                        const result = await verify.json();
+
+                        if (!result.success) {
+                            throw new Error(result.error || "Verification failed");
+                        }
+
+                        statusMsg.style.color = "#3ddc84";
+                        statusMsg.textContent = "You're premium! Refreshing...";
+
+                        setTimeout(() => loadStatus(), 1200);
+                    } catch (err) {
+                        console.error("Premium payment verification failed:", err);
+                        statusMsg.style.color = "#ff5c5c";
+                        statusMsg.textContent = "Payment could not be verified. Contact support if you were charged.";
+                        btn.disabled = false;
+                        btn.textContent = "Go Premium";
+                    }
+                })();
+            },
+
+            onclose: function () {
+                btn.disabled = false;
+                btn.textContent = "Go Premium";
+            }
+        });
+    }
+
+    async function loadStatus() {
+        const userDoc = await db.collection("users").doc(currentUser.uid).get();
+        const data = userDoc.exists ? userDoc.data() : {};
+        const premiumUntil = data.premiumUntil;
+
+        const isActive = premiumUntil && new Date(premiumUntil).getTime() > Date.now();
+
+        if (isActive) {
+            renderUnlocked(premiumUntil);
+        } else {
+            renderLocked();
+        }
     }
 
     auth.onAuthStateChanged((user) => {
         if (user) {
-            loadLoyalty(user.uid);
+            currentUser = user;
+            loadStatus();
         } else {
             document.getElementById("content").innerHTML =
-                '<p class="loading-note">Log in to see your loyalty status.</p>';
+                '<p class="loading-note">Log in to view Aviloyalty.</p>';
         }
     });
 </script>

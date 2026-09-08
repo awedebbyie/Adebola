@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="theme.css">
 <script src="theme.js"></script>
 <script src="js/withdrawGate.js"></script>
+<script src="js/notifications.js"></script>
 </head>
 <body>
     <div class="login-container">
@@ -205,6 +206,14 @@ async function handleWithdrawal() {
                 "Withdrawal request submitted!",
                 "lime"
             );
+
+            if (typeof window.notifyIfEnabled === "function") {
+                window.notifyIfEnabled(
+                    "transactions",
+                    "Withdrawal requested 🏦",
+                    `₦${Number(amount).toLocaleString(undefined, { maximumFractionDigits: 0 })} withdrawal is being processed`
+                );
+            }
 
             amountInput.value = "";
 

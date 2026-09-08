@@ -7,7 +7,6 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
@@ -51,129 +50,124 @@
             margin: 0;
         }
 
-        .section-note {
-            color: var(--g-888);
-            font-size: 13px;
-            line-height: 1.5;
-            padding: 16px 16px 10px;
+        .brand-block {
+            text-align: center;
+            padding: 18px 16px 4px;
         }
 
-        /* Same circular logo treatment used on login.html, register.html,
-           and forgot-password.html. */
-        .logo-circle-wrap {
-            display: flex;
-            justify-content: center;
-            margin: 20px 0 10px;
-        }
-
-        .logo-circle {
-            width: 120px;
-            height: 120px;
-
+        .brand-logo {
+            width: 108px;
+            height: 108px;
             border-radius: 50%;
             object-fit: cover;
-
-            border: 4px solid #00aa44;
-
-            box-shadow: 0 0 20px rgba(0,170,68,0.4);
+            border: 2px solid #7b2ff7;
         }
 
-        .login-note, .loading-note {
-            color: var(--g-888);
-            font-size: 13px;
+        .brand-tagline {
+            color: #aaa;
+            font-size: 12.5px;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+
+        .responsible-note {
+            color: #777;
+            font-size: 11.5px;
             text-align: center;
-            padding: 30px 20px;
+            padding: 4px 24px 18px;
+            line-height: 1.5;
         }
 
-        /* =========================
-           PERSONAL MONITORING DASHBOARD
-           ========================= */
-
-        .status-card {
-            background-color: #1f1f1f;
-            margin: 4px 16px 14px;
-            padding: 18px 16px;
-            border-radius: 10px;
+        .range-bar {
+            display: flex;
+            gap: 8px;
+            padding: 14px 16px 4px;
         }
 
-        .status-label {
-            color: var(--g-999);
+        .range-btn {
+            flex: 1;
+            padding: 8px 4px;
+            border-radius: 8px;
+            border: none;
+            background: #1f1f1f;
+            color: #999;
             font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-weight: 600;
+            cursor: pointer;
         }
 
-        .status-value {
+        .range-btn.active {
+            background: #7b2ff7;
             color: white;
-            font-size: 26px;
+        }
+
+        .profit-hero {
+            margin: 16px;
+            padding: 32px 20px;
+            border-radius: 16px;
+            text-align: center;
+            background: linear-gradient(135deg, #7b2ff7 0%, #5417b8 100%);
+        }
+
+        .profit-label {
+            color: rgba(255,255,255,0.8);
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .profit-amount {
+            color: #ffcf5c;
+            font-size: 38px;
+            font-weight: 800;
+            margin-top: 8px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .profit-icon {
+            font-size: 30px;
+            margin-bottom: 4px;
+        }
+
+        .profit-sub {
+            color: rgba(255,255,255,0.75);
+            font-size: 12.5px;
+            margin-top: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            padding: 0 16px 16px;
+        }
+
+        .stat-card {
+            background: #1f1f1f;
+            border-radius: 10px;
+            padding: 14px;
+        }
+
+        .stat-label {
+            color: #999;
+            font-size: 11.5px;
+        }
+
+        .stat-value {
+            color: white;
+            font-size: 17px;
             font-weight: 700;
             margin-top: 4px;
         }
 
-        .status-bar-track {
-            width: 100%;
-            height: 8px;
-            background: #333;
-            border-radius: 4px;
-            margin-top: 14px;
-            overflow: hidden;
-        }
-
-        .status-bar-fill {
-            height: 100%;
-            background: #3ddc84;
-            border-radius: 4px;
-            transition: width 0.4s ease, background 0.4s ease;
-        }
-
-        .status-bar-fill.status-warning {
-            background: #ffcf5c;
-        }
-
-        .status-bar-fill.status-danger {
-            background: #ff5c5c;
-        }
-
-        .status-caption {
-            color: var(--g-666);
-            font-size: 11px;
-            margin-top: 6px;
-        }
-
-        .reminder-card {
-            background-color: #1a2e22;
-            border: 1px solid #2a4a35;
-            margin: 0 16px 14px;
-            padding: 14px 16px;
-            border-radius: 10px;
-            color: #b9f5cf;
+        .loading-note {
+            color: #888;
             font-size: 13px;
-            line-height: 1.5;
-        }
-
-        .advisory-card {
-            background-color: #2e1a1a;
-            border: 1px solid #4a2a2a;
-            margin: 0 16px 14px;
-            padding: 14px 16px;
-            border-radius: 10px;
-            color: #ffb9b9;
-            font-size: 13px;
-            line-height: 1.6;
-            display: none;
-        }
-
-        .advisory-card.visible {
-            display: block;
-        }
-
-        .advisory-card a {
-            color: #ff8a8a;
-            font-weight: 600;
+            text-align: center;
+            padding: 40px 20px;
         }
     </style>
-    <link rel="stylesheet" href="theme.css">
-<script src="theme.js"></script>
 </head>
 <body>
 
@@ -187,20 +181,23 @@
         <div style="font-size:22px; cursor:pointer; color:white;" onclick="goHome()">🏠</div>
     </div>
 
-    <div class="logo-circle-wrap">
-        <img src="avispy-logo.png" alt="Avispy Logo" class="logo-circle" id="avispyLogo">
+    <div class="brand-block">
+        <img src="avispy-logo.png" alt="Avispy" class="brand-logo">
+        <div class="brand-tagline">Avispy keeps a private eye on your profit.</div>
     </div>
 
-    <p class="section-note">
-        Avispy keeps a private eye on your own play - a running check on
-        what you've lost overall, with a reminder to never invest more
-        than you can afford to lose, and a nudge to step back if things
-        add up to more than feels good.
-    </p>
-
-    <div id="dashboard">
-        <p class="loading-note">Loading your activity...</p>
+    <div class="range-bar">
+        <button class="range-btn active" data-range="today">Today</button>
+        <button class="range-btn" data-range="7d">7 Days</button>
+        <button class="range-btn" data-range="30d">30 Days</button>
+        <button class="range-btn" data-range="all">All Time</button>
     </div>
+
+    <div id="content">
+        <p class="loading-note">Loading your profit...</p>
+    </div>
+
+    <p class="responsible-note">Don't invest what you cannot afford to lose.</p>
 
 </div>
 
@@ -217,86 +214,126 @@
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
-
     const auth = firebase.auth();
-    const db = firebase.firestore();
 
-    const supabaseClient = window.supabase.createClient(
+    const sb = window.supabase.createClient(
         "https://axojmnizpewbewempaaa.supabase.co",
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4b2ptbml6cGV3YmV3ZW1wYWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDk3OTcsImV4cCI6MjA5ODA4NTc5N30._Ib3RhlMpPaUQoUVYDd6dS_gUOiaVsCBPBYEO30A8zc"
     );
-    window.supabaseClient = supabaseClient;
 
-    function goBack() {
-        window.history.back();
-    }
-
-    function goHome() {
-        window.location.href = 'index.html';
-    }
+    function goBack() { window.history.back(); }
+    function goHome() { window.location.href = "index.html"; }
 
     function formatNaira(amount) {
         return "₦" + Number(amount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
     }
 
-    // Reuses computeNetLoss() and NET_LOSS_ADVISORY_THRESHOLD directly
-    // from js/lossMonitor.js (loaded below) instead of duplicating that
-    // logic here - same numbers driving the automatic advisory on
-    // index.html, just shown persistently on this page too.
-    async function renderDashboard() {
-        const dashboard = document.getElementById("dashboard");
-        const user = auth.currentUser;
+    function rangeToStartDate(range) {
+        const now = new Date();
+        if (range === "today") return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+        if (range === "7d") return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        if (range === "30d") return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        return null; // all time
+    }
 
-        if (!user) {
-            dashboard.innerHTML = '<p class="login-note">Log in to see your personal activity.</p>';
+    let currentUid = null;
+    let currentRange = "today";
+
+    async function loadProfit(range) {
+        currentRange = range;
+        document.querySelectorAll(".range-btn").forEach((btn) => {
+            btn.classList.toggle("active", btn.dataset.range === range);
+        });
+
+        const content = document.getElementById("content");
+        if (!currentUid) return;
+
+        content.innerHTML = '<p class="loading-note">Loading your profit...</p>';
+
+        let query = sb
+            .from("bets")
+            .select("amount, status, profit")
+            .eq("user_id", currentUid)
+            .in("status", ["cashed_out", "lost"]); // settled bets only
+
+        const startDate = rangeToStartDate(range);
+        if (startDate) {
+            query = query.gte("placed_at", startDate);
+        }
+
+        const { data: bets, error } = await query;
+
+        if (error) {
+            console.error("Avispy load failed:", error);
+            content.innerHTML = '<p class="loading-note">Couldn\'t load your profit right now.</p>';
             return;
         }
 
-        const netLoss = await computeNetLoss(user.uid);
+        let totalStaked = 0;
+        let totalWon = 0;
+        let winCount = 0;
+        let lossCount = 0;
 
-        if (netLoss == null) {
-            dashboard.innerHTML = '<p class="login-note">Couldn\'t load your activity right now.</p>';
-            return;
+        for (const bet of bets) {
+            const amount = Number(bet.amount) || 0;
+            const profit = Number(bet.profit) || 0;
+            totalStaked += amount;
+            if (bet.status === "cashed_out") {
+                totalWon += profit;
+                winCount++;
+            } else {
+                lossCount++;
+            }
         }
 
-        const threshold = NET_LOSS_ADVISORY_THRESHOLD;
-        const pct = Math.max(0, Math.min(100, (netLoss / threshold) * 100));
+        const netProfit = totalWon - totalStaked;
 
-        let barClass = "";
-        if (pct >= 100) barClass = "status-danger";
-        else if (pct >= 70) barClass = "status-warning";
+        // The whole point of this page: once you're net-negative, it
+        // shows ₦0, never a loss. A separate page for tracking losses is
+        // a deliberately different, later feature - this one is only
+        // ever meant to be something worth screenshotting.
+        const displayProfit = Math.max(0, netProfit);
+        const isNetPositive = netProfit > 0;
 
-        const netLossDisplay = netLoss > 0 ? formatNaira(netLoss) : formatNaira(0);
+        content.innerHTML = `
+            <div class="profit-hero">
+                <div class="profit-icon">${isNetPositive ? "🚀" : "✈️"}</div>
+                <div class="profit-label">Your Profit</div>
+                <div class="profit-amount">${formatNaira(displayProfit)}</div>
+                <div class="profit-sub">${isNetPositive ? "Flex on your friends 😎" : "Every flight starts somewhere"}</div>
+            </div>
 
-        dashboard.innerHTML = `
-            <div class="status-card">
-                <div class="status-label">Your net loss so far</div>
-                <div class="status-value">${netLossDisplay}</div>
-                <div class="status-bar-track">
-                    <div class="status-bar-fill ${barClass}" style="width:${pct}%;"></div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Won</div>
+                    <div class="stat-value">${formatNaira(totalWon)}</div>
                 </div>
-                <div class="status-caption">${formatNaira(threshold)} is where we check in with you</div>
-            </div>
-
-            <div class="reminder-card">
-                Don't invest what you cannot afford to lose.
-            </div>
-
-            <div class="advisory-card ${netLoss > threshold ? "visible" : ""}">
-                It looks like you've lost a significant amount overall.
-                Please consider stepping back for a while, or deleting
-                your account, if this no longer feels good to you.
-                <br><br>
-                <a href="settings.html">Go to account settings →</a>
+                <div class="stat-card">
+                    <div class="stat-label">Rounds Won</div>
+                    <div class="stat-value">${winCount}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Rounds Lost</div>
+                    <div class="stat-value">${lossCount}</div>
+                </div>
             </div>
         `;
     }
 
-    auth.onAuthStateChanged(() => {
-        renderDashboard();
+    document.querySelectorAll(".range-btn").forEach((btn) => {
+        btn.addEventListener("click", () => loadProfit(btn.dataset.range));
+    });
+
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            currentUid = user.uid;
+            loadProfit(currentRange);
+        } else {
+            document.getElementById("content").innerHTML =
+                '<p class="loading-note">Log in to see your profit.</p>';
+        }
     });
 </script>
-<script src="js/lossMonitor.js"></script>
 
 </body>
 </html>

@@ -121,6 +121,48 @@
     .tier-legend .off{
         color:#ff5c5c;
     }
+    .anomaly-section{
+        margin:28px 18px 24px;
+    }
+    .anomaly-note{
+        font-size:12px;
+        color:#999;
+        margin:6px 0 14px;
+        line-height:1.5;
+    }
+    .anomaly-loading{
+        color:#999;
+        font-size:13px;
+    }
+    .anomaly-card{
+        background:#2a1414;
+        border:1px solid #6b2020;
+        border-radius:10px;
+        padding:14px;
+        margin-bottom:10px;
+    }
+    .anomaly-email{
+        font-weight:bold;
+        color:#ff8080;
+        font-size:14px;
+        margin-bottom:6px;
+    }
+    .anomaly-discrepancy{
+        color:#ff5c5c;
+        font-weight:bold;
+        font-size:16px;
+        margin-bottom:8px;
+    }
+    .anomaly-breakdown{
+        font-size:12px;
+        color:#ccc;
+        line-height:1.7;
+    }
+    .anomaly-clean{
+        color:#3ddc84;
+        font-size:13px;
+        padding:10px 0;
+    }
 </style>
 </head>
 <body>
@@ -186,6 +228,20 @@
             </div>
             <div class="tier-legend" id="tierLegend"></div>
         </div>
+    </div>
+
+    <div class="anomaly-section">
+        <div class="chart-header">
+            <h2>⚠️ Balance Anomalies</h2>
+            <button class="range-btn" id="recheckBtn" style="padding:4px 10px;">Recheck</button>
+        </div>
+        <p class="anomaly-note">
+            Flags any account whose actual balance is higher than deposits,
+            minus withdrawals, minus every bet staked, plus real cash-out
+            winnings can explain. An entry here means either a bug or a
+            genuine exploit - not something to ignore.
+        </p>
+        <div id="anomalyList"><p class="anomaly-loading">Checking...</p></div>
     </div>
 </main>
 
@@ -412,10 +468,58 @@
         btn.addEventListener("click", () => loadProfitTrend(Number(btn.dataset.days)));
     });
 
+    function formatNairaFull(amount) {
+        const n = Number(amount) || 0;
+        const sign = n < 0 ? "-" : "";
+        return sign + "₦" + Math.abs(n).toLocaleString("en-NG", { maximumFractionDigits: 2 });
+    }
+
+    async function loadAnomalies() {
+        const list = document.getElementById("anomalyList");
+        list.innerHTML = '<p class="anomaly-loading">Checking...</p>';
+
+        try {
+            const res = await fetch(BACKEND_URL + "/admin/api/reconcile", {
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+
+            if (!data.ok) {
+                list.innerHTML = '<p class="anomaly-note">Failed to check: ' + (data.error || "unknown error") + '</p>';
+                return;
+            }
+
+            if (data.anomalies.length === 0) {
+                list.innerHTML = '<p class="anomaly-clean">✅ No anomalies found across ' + data.checkedUsers + ' accounts checked.</p>';
+                return;
+            }
+
+            list.innerHTML = data.anomalies.map((a) => `
+                <div class="anomaly-card">
+                    <div class="anomaly-email">${a.email}</div>
+                    <div class="anomaly-discrepancy">+${formatNairaFull(a.discrepancy)} unexplained</div>
+                    <div class="anomaly-breakdown">
+                        Actual balance: ${formatNairaFull(a.actualBalance)}<br>
+                        Expected balance: ${formatNairaFull(a.expectedBalance)}<br>
+                        (Deposits: ${formatNairaFull(a.deposits)} · Withdrawals: ${formatNairaFull(a.withdrawals)} ·
+                        Staked: ${formatNairaFull(a.staked)} · Winnings: ${formatNairaFull(a.winnings)})<br>
+                        UID: ${a.uid}
+                    </div>
+                </div>
+            `).join("");
+        } catch (err) {
+            console.error("Anomaly check failed:", err);
+            list.innerHTML = '<p class="anomaly-note">Something went wrong checking for anomalies.</p>';
+        }
+    }
+
+    document.getElementById("recheckBtn").addEventListener("click", loadAnomalies);
+
     checkSession();
     loadStats("today");
     loadTierBreakdown("today");
     loadProfitTrend(7);
+    loadAnomalies();
 </script>
 
 </body>

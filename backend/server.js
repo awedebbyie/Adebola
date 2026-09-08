@@ -28,6 +28,11 @@ app.use("/admin/auth", adminAuth.router);
 const adminStats = require("./adminStats");
 app.use("/admin/api", adminStats);
 
+// Balance reconciliation / anomaly detection - flags unexplained balance
+// increases. Every route guarded the same way - see backend/adminSecurity.js.
+const adminSecurity = require("./adminSecurity");
+app.use("/admin/api", adminSecurity);
+
 const FLW_SECRET_KEY = process.env.FLW_SECRET_KEY;
 
 app.post("/verify-payment", async (req, res) => {

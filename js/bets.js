@@ -358,6 +358,14 @@ async function cashOut(betSlot) {
             balance: firebase.firestore.FieldValue.increment(winnings)
         });
 
+        if (typeof window.notifyIfEnabled === "function") {
+            window.notifyIfEnabled(
+                "roundResults",
+                "You cashed out! 🎉",
+                `Won ₦${winnings.toLocaleString(undefined, { maximumFractionDigits: 0 })} at ${multiplier.toFixed(2)}x`
+            );
+        }
+
         window.mySlotState[betSlot] = {
             id: betId,
             status: "Cashed Out",
