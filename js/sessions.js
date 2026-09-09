@@ -19,12 +19,14 @@
 // malicious client could ignore the check. Treat it as "the honest
 // client respects being logged out," not airtight security.
 //
-// 2FA ON UNRECOGNIZED DEVICES: registerSession()'s `recognized: false`
-// is exactly the hook this was left here for - login.html now uses it
-// to decide whether to challenge for a passkey (see js/passkey.js and
-// the passkey step in login.html). If the account has no passkey set,
-// an unrecognized device still gets in - there's nothing to challenge
-// it with.
+// 2FA ON NON-CREATION DEVICES: isCurrentDeviceCreationDevice() (below)
+// is what login.html now uses to decide whether to challenge for a
+// passkey (see js/passkey.js and the passkey step in login.html) -
+// EVERY login from any device other than the one the account was
+// created on gets challenged, every time, not just the first time
+// that device is seen. If the account has no passkey set, a
+// non-creation device still gets in - there's nothing to challenge it
+// with.
 
 function getOrCreateDeviceId() {
     let id = localStorage.getItem("deviceId");
@@ -85,6 +87,65 @@ async function isDeviceRecognized() {
     }
 }
 window.isDeviceRecognized = isDeviceRecognized;
+
+// Read-only check: is THIS device the one the account was created on?
+// login.html uses this (instead of isDeviceRecognized()) to decide
+// whether to require a passkey - unlike isDeviceRecognized(), this
+// stays false forever for a non-creation device, so it keeps
+// challenging that device on every login, not just its first one.
+//
+// Mirrors the fallback sessions.html already uses for listing: a
+// session doc's own isCreationDevice field is authoritative when
+// present, but accounts created before that field existed won't have
+// it set on any doc, so in that case whichever session has the
+// earliest firstSeen is treated as the creation device instead.
+async function isCurrentDeviceCreationDevice() {
+    const user = auth.currentUser;
+    if (!user) return true; // fail open - consistent with the rest of this file
+
+    const deviceId = getOrCreateDeviceId();
+
+    try {
+        const snap = await db.collection("users").doc(user.uid)
+            .collection("sessions").doc(deviceId).get();
+
+        // A device that has never logged into this account before can't
+        // be the creation device - no need for the fallback query below.
+        if (!snap.exists) return false;
+
+        if (snap.data().isCreationDevice) return true;
+
+        const allSnap = await db.collection("users").doc(user.uid)
+            .collection("sessions").get();
+
+        let anyFlagged = false;
+        let earliestId = null;
+        let earliestTime = null;
+
+        allSnap.forEach((doc) => {
+            const data = doc.data();
+            if (data.isCreationDevice) anyFlagged = true;
+
+            const firstSeenMs = data.firstSeen && data.firstSeen.toDate
+                ? data.firstSeen.toDate().getTime()
+                : null;
+
+            if (firstSeenMs != null && (earliestTime == null || firstSeenMs < earliestTime)) {
+                earliestTime = firstSeenMs;
+                earliestId = doc.id;
+            }
+        });
+
+        // If some other doc genuinely holds the flag, this one isn't it -
+        // only fall back to "earliest firstSeen" when nothing is flagged.
+        if (anyFlagged) return false;
+        return earliestId === deviceId;
+    } catch (err) {
+        console.error("isCurrentDeviceCreationDevice failed:", err);
+        return true; // fail open - a network blip here shouldn't lock someone out
+    }
+}
+window.isCurrentDeviceCreationDevice = isCurrentDeviceCreationDevice;
 
 // Call once a device's login is actually being let through: it was
 // already recognized, OR it just passed its passkey challenge, OR there

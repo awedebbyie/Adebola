@@ -76,10 +76,11 @@
             </div>
         </div>
 
-        <!-- Shown instead of the form above, only when registerSession()
-             reports this device hasn't logged into this account before
-             AND the account has a passkey set (js/passkey.js). Hidden by
-             default - see showPasskeyStep() in the script below. -->
+        <!-- Shown instead of the form above, on every login where this
+             ISN'T the account's creation device (js/sessions.js'
+             isCurrentDeviceCreationDevice()) AND the account has a
+             passkey set (js/passkey.js). Hidden by default - see
+             showPasskeyStep() in the script below. -->
         <div class="login-form" id="passkeyStep" style="display:none;">
             <h1 class="login-title" style="margin:0 0 12px 0; font-size:24px; text-align:center;">New Device Detected</h1>
             <p style="text-align:center; color:#bbb; font-size:14px; margin:0 0 24px;">
@@ -378,19 +379,22 @@ passkeyInput.addEventListener("keydown", (e) => {
 });
 
 // Runs right after ANY successful sign-in (email/password or Google),
-// before routeAfterLogin. Checks (read-only) whether this device has
-// logged into this account before and, only if not AND the account has
-// a passkey set (js/passkey.js), blocks on the passkey step above
-// instead of continuing straight in. The device only actually gets
-// registered as recognized (js/sessions.js) once it's genuinely been let
-// through - already known, just passed its passkey challenge, or had
-// nothing to challenge it with - never before that.
+// before routeAfterLogin. Checks (read-only) whether THIS device is the
+// account's creation device and, only if it's not AND the account has a
+// passkey set (js/passkey.js), blocks on the passkey step above instead
+// of continuing straight in. Unlike the old "unrecognized device" check,
+// this runs every single time a non-creation device logs in - it never
+// stops asking just because that device has passed the check before.
+// The device's session doc only actually gets written/refreshed
+// (js/sessions.js) once it's genuinely been let through - creation
+// device, just passed its passkey challenge, or had nothing to
+// challenge it with - never before that.
 async function handlePostAuth(user) {
-    const recognized = typeof window.isDeviceRecognized === "function"
-        ? await window.isDeviceRecognized()
+    const isCreationDevice = typeof window.isCurrentDeviceCreationDevice === "function"
+        ? await window.isCurrentDeviceCreationDevice()
         : true;
 
-    if (recognized) {
+    if (isCreationDevice) {
         if (typeof window.registerSession === "function") {
             await window.registerSession(); // just refreshes lastSeen/active
         }
@@ -405,8 +409,8 @@ async function handlePostAuth(user) {
     if (hasPasskey) {
         showPasskeyStep(user); // NOT registered yet - only on a successful submitPasskey()
     } else {
-        // New device, but nothing to challenge with yet - let them in,
-        // and register it now since there was nothing to fail.
+        // Not the creation device, but nothing to challenge with - let
+        // them in, and register/refresh this device's session normally.
         if (typeof window.registerSession === "function") {
             await window.registerSession();
         }

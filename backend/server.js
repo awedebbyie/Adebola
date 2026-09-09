@@ -146,14 +146,6 @@ app.post("/verify-payment", async (req, res) => {
   }
 });
 // ================= WITHDRAW =================
-// The 75%-of-first-deposit wagering gate (js/withdrawGate.js) was only
-// ever checked client-side in withdraw.html - a page redirect, not an
-// actual block. Anyone calling this endpoint directly (or with the
-// client-side check patched/skipped) could withdraw before meeting it.
-// This mirrors the same fields/threshold read there (firstDepositAmount,
-// totalWagered, withdrawUnlocked), but as the actual, unbypassable gate.
-const WITHDRAW_WAGER_FRACTION = 0.75;
-
 app.post("/withdraw", async (req, res) => {
 
   try {
@@ -201,25 +193,6 @@ app.post("/withdraw", async (req, res) => {
           };
         }
 
-        const userData = userSnap.data();
-
-        // Same logic as js/withdrawGate.js's getWithdrawGateStatus():
-        // no first deposit on record -> gate never triggered, allow.
-        // withdrawUnlocked once true -> allow forever. Otherwise, block
-        // until 75% of that first deposit has been wagered.
-        if (userData.firstDepositAmount && !userData.withdrawUnlocked) {
-          const wagered = Number(userData.totalWagered || 0);
-          const threshold = Number(userData.firstDepositAmount) * WITHDRAW_WAGER_FRACTION;
-
-          if (wagered < threshold) {
-            return {
-              status: "wagerRequirementNotMet",
-              wagered,
-              threshold
-            };
-          }
-        }
-
         const currentBalance =
           Number(userSnap.data().balance || 0);
 
@@ -259,16 +232,6 @@ app.post("/withdraw", async (req, res) => {
           error: "User not found"
         });
 
-      case "wagerRequirementNotMet":
-        return res.json({
-          success: false,
-          error: "You need to wager more before you can withdraw",
-          wagerRequirement: {
-            wagered: result.wagered,
-            threshold: result.threshold
-          }
-        });
-
       case "insufficientFunds":
         return res.json({
           success: false,
@@ -296,62 +259,6 @@ app.post("/withdraw", async (req, res) => {
   }
 
 });
-// ================= CHECK EMAIL =================
-// Used by login.html (and could be reused by register.html) to reliably
-// tell whether an email already has an account, and if so which sign-in
-// provider(s) it has. This has to be a backend call using the Admin SDK -
-// the client-side fetchSignInMethodsForEmail() is unreliable for this on
-// most current Firebase projects: with Email Enumeration Protection
-// enabled (the default for newer projects), it always returns an empty
-// array regardless of whether the email is registered, specifically so a
-// client can't fingerprint which emails exist. The Admin SDK isn't
-// subject to that restriction.
-//
-// NOTE: this endpoint intentionally answers "does this email exist" for
-// an unauthenticated caller, which is inherently a (mild) email
-// enumeration surface - that's a deliberate tradeoff to support "tell the
-// user to sign in with Google" / "offer to create an account" instead of
-// a generic failure. It only ever returns exists + provider IDs, nothing
-// else about the account.
-app.post("/auth/check-email", async (req, res) => {
-
-  try {
-
-    const email = String(req.body.email || "").trim().toLowerCase();
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailPattern.test(email)) {
-      return res.status(400).json({ error: "Invalid email" });
-    }
-
-    try {
-
-      const userRecord = await admin.auth().getUserByEmail(email);
-
-      return res.json({
-        exists: true,
-        providers: userRecord.providerData.map((p) => p.providerId)
-      });
-
-    } catch (err) {
-
-      if (err.code === "auth/user-not-found") {
-        return res.json({ exists: false, providers: [] });
-      }
-
-      throw err;
-    }
-
-  } catch (error) {
-
-    console.error("check-email error:", error);
-
-    res.status(500).json({ error: "Something went wrong" });
-
-  }
-
-});
-
 app.listen(3000, () => {
   console.log("Server running on port 3000");
 });
