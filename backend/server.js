@@ -146,6 +146,14 @@ app.post("/verify-payment", async (req, res) => {
   }
 });
 // ================= WITHDRAW =================
+// The 75%-of-first-deposit wagering gate (js/withdrawGate.js) was only
+// ever checked client-side in withdraw.html - a page redirect, not an
+// actual block. Anyone calling this endpoint directly (or with the
+// client-side check patched/skipped) could withdraw before meeting it.
+// This mirrors the same fields/threshold read there (firstDepositAmount,
+// totalWagered, withdrawUnlocked), but as the actual, unbypassable gate.
+const WITHDRAW_WAGER_FRACTION = 0.75;
+
 app.post("/withdraw", async (req, res) => {
 
   try {
@@ -193,6 +201,25 @@ app.post("/withdraw", async (req, res) => {
           };
         }
 
+        const userData = userSnap.data();
+
+        // Same logic as js/withdrawGate.js's getWithdrawGateStatus():
+        // no first deposit on record -> gate never triggered, allow.
+        // withdrawUnlocked once true -> allow forever. Otherwise, block
+        // until 75% of that first deposit has been wagered.
+        if (userData.firstDepositAmount && !userData.withdrawUnlocked) {
+          const wagered = Number(userData.totalWagered || 0);
+          const threshold = Number(userData.firstDepositAmount) * WITHDRAW_WAGER_FRACTION;
+
+          if (wagered < threshold) {
+            return {
+              status: "wagerRequirementNotMet",
+              wagered,
+              threshold
+            };
+          }
+        }
+
         const currentBalance =
           Number(userSnap.data().balance || 0);
 
@@ -230,6 +257,16 @@ app.post("/withdraw", async (req, res) => {
         return res.json({
           success: false,
           error: "User not found"
+        });
+
+      case "wagerRequirementNotMet":
+        return res.json({
+          success: false,
+          error: "You need to wager more before you can withdraw",
+          wagerRequirement: {
+            wagered: result.wagered,
+            threshold: result.threshold
+          }
         });
 
       case "insufficientFunds":

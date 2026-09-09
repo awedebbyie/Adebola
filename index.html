@@ -557,16 +557,42 @@ auth.onAuthStateChanged(async (user) => {
                     console.error("❌ Balance listener error:", error);
                 });
 
-            // === SESSION REVOCATION CHECK ===
-            // If this device was "logged out" from sessions.html (on any
-            // device), this catches it within ~30s and signs out locally.
-            if (typeof window.enforceSessionRevocation === "function") {
-                window.enforceSessionRevocation();
-                if (!window.__sessionRevocationInterval) {
-                    window.__sessionRevocationInterval =
-                        setInterval(window.enforceSessionRevocation, 30000);
+            // === SESSION REVOCATION CHECK, then SESSION TRACKING ===
+            // Order matters here: registerSession() unconditionally sets
+            // active:true on an existing session doc (that's how it
+            // refreshes lastSeen on a normal login) - calling it before,
+            // or racing it with, enforceSessionRevocation() would
+            // silently flip active back to true before the revocation
+            // check ever saw it false, undoing a remote "Log out" from
+            // sessions.html without the device ever actually being
+            // signed out. Await the revocation check first, and only
+            // register/refresh this session if it didn't just sign us
+            // out.
+            //
+            // registerSession() itself used to only run from login.html/
+            // register.html - so a device that's been continuously
+            // signed in via Firebase's persisted (LOCAL) session, without
+            // ever hitting a fresh login since this feature shipped,
+            // never got a session doc written at all. sessions.html can
+            // only list what's actually been written, so that device -
+            // sometimes the very one you're using right now - just never
+            // showed up. Registering here too means every device that's
+            // ever actually used the app ends up tracked, not just ones
+            // that freshly logged in.
+            (async () => {
+                if (typeof window.enforceSessionRevocation === "function") {
+                    await window.enforceSessionRevocation();
+
+                    if (!window.__sessionRevocationInterval) {
+                        window.__sessionRevocationInterval =
+                            setInterval(window.enforceSessionRevocation, 30000);
+                    }
                 }
-            }
+
+                if (auth.currentUser && typeof window.registerSession === "function") {
+                    window.registerSession();
+                }
+            })();
 
         } catch (err) {
             console.error("Auth error:", err);

@@ -195,6 +195,11 @@ async function handleWithdrawal() {
 
         if (!result.success) {
 
+            if (result.wagerRequirement) {
+                location.replace("withdraw-requirement.html");
+                return;
+            }
+
             showMessage(
                 result.error || "Withdrawal failed",
                 "red"
