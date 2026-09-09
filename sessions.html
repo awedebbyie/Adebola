@@ -135,6 +135,10 @@
             Every device that's logged into your account, most recent
             first. Don't recognize one, or stopped using it? Log it out
             below - it'll be signed out next time it checks in.
+            <br><br>
+            Your account's original device is never logged out this way,
+            even remotely - that way you can always get back in, even if
+            every other device gets compromised or logged out.
         </p>
 
         <div id="loadingState">Loading sessions...</div>
@@ -191,10 +195,40 @@
                 return;
             }
 
+            // The device flagged isCreationDevice (set in register.html,
+            // via js/sessions.js) is permanently protected from being
+            // logged out remotely - without that guarantee, someone could
+            // revoke every session and lock themselves out for good with
+            // no device left that's guaranteed to still work. Accounts
+            // created before this field existed won't have one flagged,
+            // so fall back to whichever session has the earliest
+            // firstSeen - same guarantee, just inferred instead of
+            // recorded at the time.
+            let protectedId = null;
+            let earliestId = null;
+            let earliestTime = null;
+
+            snap.forEach((doc) => {
+                const data = doc.data();
+                if (data.isCreationDevice) protectedId = doc.id;
+
+                const firstSeenMs = data.firstSeen && data.firstSeen.toDate
+                    ? data.firstSeen.toDate().getTime()
+                    : null;
+
+                if (firstSeenMs != null && (earliestTime == null || firstSeenMs < earliestTime)) {
+                    earliestTime = firstSeenMs;
+                    earliestId = doc.id;
+                }
+            });
+
+            if (!protectedId) protectedId = earliestId;
+
             snap.forEach((doc) => {
                 const data = doc.data();
                 const isCurrent = doc.id === thisDeviceId;
                 const isActive = data.active !== false;
+                const isProtected = doc.id === protectedId;
 
                 const item = document.createElement("div");
                 item.className = "session-item";
@@ -204,11 +238,12 @@
                         <div class="session-device">${data.deviceName || "Unknown device"}</div>
                         <div class="session-meta">Last active ${formatWhen(data.lastSeen)}</div>
                         ${isCurrent ? '<span class="current-badge">This device</span>' : ''}
+                        ${isProtected ? '<span class="current-badge" style="color:#ffcf5c; background:rgba(255,207,92,0.12);">Account creation device</span>' : ''}
                         ${!isActive ? '<span class="session-meta">Logged out</span>' : ''}
                     </div>
                 `;
 
-                if (!isCurrent && isActive) {
+                if (!isCurrent && !isProtected && isActive) {
                     const btn = document.createElement("button");
                     btn.className = "logout-session-btn";
                     btn.textContent = "Log out";

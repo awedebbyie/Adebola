@@ -146,8 +146,13 @@
             you want to keep it.
         </div>
 
-        <label for="passwordInput">Confirm your password</label>
+        <label for="passwordInput" id="passwordLabel">Confirm your password</label>
         <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password">
+
+        <p id="googleReauthNote" style="display:none; color:var(--g-ccc); font-size:13px; margin:-6px 0 16px;">
+            Your account signed up with Google - you'll confirm via a
+            Google sign-in prompt instead of a password.
+        </p>
 
         <label for="confirmInput">Type <b>DELETE</b> to confirm</label>
         <input type="text" id="confirmInput" placeholder="DELETE" autocomplete="off">
@@ -178,6 +183,27 @@
 
     const deleteBtn = document.getElementById("deleteBtn");
     const messageDiv = document.getElementById("message");
+    const passwordInput = document.getElementById("passwordInput");
+    const passwordLabel = document.getElementById("passwordLabel");
+    const googleReauthNote = document.getElementById("googleReauthNote");
+
+    // A Google-signed-in account has no password to confirm with - the
+    // old version of this page required one anyway, which meant delete
+    // could never actually succeed for those accounts. Detect the real
+    // provider and adjust the form instead of assuming password auth.
+    let isGoogleAccount = false;
+
+    auth.onAuthStateChanged((user) => {
+        if (!user) return;
+
+        isGoogleAccount = user.providerData.some((p) => p.providerId === "google.com");
+
+        if (isGoogleAccount) {
+            passwordInput.style.display = "none";
+            passwordLabel.style.display = "none";
+            googleReauthNote.style.display = "block";
+        }
+    });
 
     function showMessage(text, color) {
         messageDiv.style.color = color;
@@ -200,7 +226,7 @@
             return;
         }
 
-        if (!password) {
+        if (!isGoogleAccount && !password) {
             showMessage("Enter your password to confirm.", "#ff5555");
             return;
         }
@@ -215,13 +241,20 @@
 
         try {
             // Re-authenticate first - Firebase requires a recent login
-            // before it will allow deleting the account, and this also
-            // double-checks the password actually belongs to this user.
-            const credential = firebase.auth.EmailAuthProvider.credential(
-                user.email,
-                password
-            );
-            await user.reauthenticateWithCredential(credential);
+            // before it will allow deleting the account. Which method
+            // depends on how this account actually signed in: a Google
+            // account has no password to check, so it needs its own
+            // popup-based re-auth instead of EmailAuthProvider.
+            if (isGoogleAccount) {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                await user.reauthenticateWithPopup(provider);
+            } else {
+                const credential = firebase.auth.EmailAuthProvider.credential(
+                    user.email,
+                    password
+                );
+                await user.reauthenticateWithCredential(credential);
+            }
 
             // Free up the claimed username, if any, before removing the
             // profile doc, so someone else can register it afterward.
@@ -250,10 +283,18 @@
         } catch (err) {
             console.error("Delete account failed:", err);
 
-            if (err.code === "auth/wrong-password") {
-                showMessage("Incorrect password.", "#ff5555");
+            // Recent Firebase SDK versions return auth/invalid-credential
+            // for a wrong password instead of the older auth/wrong-password
+            // - without this, that case fell through to the raw Firebase
+            // error string below ("Firebase: The supplied auth credential
+            // is incorrect... (auth/invalid-credential)."), which reads
+            // like a broken app rather than just a wrong password.
+            if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+                showMessage("Incorrect password. Please try again.", "#ff5555");
             } else if (err.code === "auth/requires-recent-login") {
                 showMessage("Please log out and back in, then try again.", "#ff5555");
+            } else if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
+                showMessage("Google confirmation was cancelled. Please try again.", "#ff5555");
             } else {
                 showMessage(err.message || "Couldn't delete account. Please try again.", "#ff5555");
             }

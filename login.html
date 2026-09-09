@@ -41,6 +41,12 @@
                 </a>
             </div>
 
+            <div style="text-align:center; margin-bottom:20px;">
+                <a href="#" id="contactSupportLink" style="color:#bbb; text-decoration:none; font-size:13px;">
+                    Contact Support
+                </a>
+            </div>
+
             <button id="loginBtn" class="invest-btn" style="width:100%; height:58px; margin-bottom:20px;">
                 LOGIN
             </button>
@@ -115,12 +121,77 @@ function showMessage(text, color = "#ff4444") {
     messageDiv.textContent = text;
 }
 
+// "Contact Support" sends a real email containing a sign-in link
+// (Firebase's built-in passwordless email-link sign-in - no custom email
+// service needed), which opens reactivate.html. That page then asks for
+// their CURRENT password (not a new one) and reactivates the account if
+// it's correct - see reactivate.html for that part.
+document.getElementById("contactSupportLink").addEventListener("click", async (e) => {
+    e.preventDefault();
+
+    const explained = confirm(
+        "If your account has been deactivated, we'll email you a secure " +
+        "link. Opening it will ask you to confirm your CURRENT password " +
+        "(you won't need to change it) - if it's correct, your account " +
+        "is reactivated immediately.\n\n" +
+        "Continue and enter your email address?"
+    );
+    if (!explained) return;
+
+    const email = (document.getElementById("email").value || "").trim()
+        || prompt("Enter the email address on your account:");
+
+    if (!email) return;
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+        showMessage("Please enter a valid email address");
+        return;
+    }
+
+    try {
+        const actionCodeSettings = {
+            url: window.location.origin + window.location.pathname.replace(/[^/]*$/, "") + "reactivate.html",
+            handleCodeInApp: true
+        };
+
+        await auth.sendSignInLinkToEmail(email, actionCodeSettings);
+
+        // reactivate.html needs this to complete the sign-in when the
+        // link is opened on this same device/browser. If it's opened
+        // elsewhere instead, that page just asks for the email again.
+        window.localStorage.setItem("emailForReactivation", email);
+
+        showMessage(
+            "If that email is registered, we've sent a reactivation link - " +
+            "check your inbox (and spam folder).",
+            "#00ff88"
+        );
+    } catch (error) {
+        console.error(error);
+        showMessage(error.message || "Something went wrong. Please try again.");
+    }
+});
+
 // Helper: send user to the right place depending on whether
 // their Firestore profile is complete.
 async function routeAfterLogin(user) {
 
     const userDocRef = db.collection("users").doc(user.uid);
     const userDoc = await userDocRef.get();
+
+    if (userDoc.exists && userDoc.data().deactivated) {
+        // Firebase has already verified their credentials by this point
+        // (that's how we got here) - sign them back out immediately
+        // rather than let them proceed anywhere past this page. Use
+        // "Contact Support" above to reactivate.
+        await auth.signOut();
+        showMessage(
+            "This account has been deactivated. Use \"Contact Support\" below if you'd like it reactivated.",
+            "#ff4444"
+        );
+        return;
+    }
 
     if (!userDoc.exists) {
         await userDocRef.set({
@@ -190,6 +261,9 @@ async function submitPasskey() {
             passkeyMessageDiv.textContent = "Verified! Redirecting...";
             const user = pendingUser;
             pendingUser = null;
+            if (typeof window.registerSession === "function") {
+                await window.registerSession();
+            }
             setTimeout(() => routeAfterLogin(user), 600);
             return;
         }
@@ -224,19 +298,22 @@ passkeyInput.addEventListener("keydown", (e) => {
 });
 
 // Runs right after ANY successful sign-in (email/password or Google),
-// before routeAfterLogin. Registers/refreshes this device's session
-// (js/sessions.js) and, only if this device has never logged into this
-// account before AND the account has a passkey set (js/passkey.js),
-// blocks on the passkey step above instead of continuing straight in.
+// before routeAfterLogin. Checks (read-only) whether this device has
+// logged into this account before and, only if not AND the account has
+// a passkey set (js/passkey.js), blocks on the passkey step above
+// instead of continuing straight in. The device only actually gets
+// registered as recognized (js/sessions.js) once it's genuinely been let
+// through - already known, just passed its passkey challenge, or had
+// nothing to challenge it with - never before that.
 async function handlePostAuth(user) {
-    let recognized = true;
-
-    if (typeof window.registerSession === "function") {
-        const result = await window.registerSession();
-        recognized = result.recognized;
-    }
+    const recognized = typeof window.isDeviceRecognized === "function"
+        ? await window.isDeviceRecognized()
+        : true;
 
     if (recognized) {
+        if (typeof window.registerSession === "function") {
+            await window.registerSession(); // just refreshes lastSeen/active
+        }
         await routeAfterLogin(user);
         return;
     }
@@ -246,9 +323,13 @@ async function handlePostAuth(user) {
         : false;
 
     if (hasPasskey) {
-        showPasskeyStep(user);
+        showPasskeyStep(user); // NOT registered yet - only on a successful submitPasskey()
     } else {
-        // New device, but nothing to challenge with yet - let them in.
+        // New device, but nothing to challenge with yet - let them in,
+        // and register it now since there was nothing to fail.
+        if (typeof window.registerSession === "function") {
+            await window.registerSession();
+        }
         await routeAfterLogin(user);
     }
 }

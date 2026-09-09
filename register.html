@@ -288,7 +288,7 @@ registerBtn.addEventListener('click', async () => {
         );
 
         if (typeof window.registerSession === "function") {
-            await window.registerSession();
+            await window.registerSession(true); // this call happens at account creation
         }
 
         setTimeout(() => {
@@ -394,7 +394,7 @@ googleBtn.addEventListener('click', async () => {
         );    
 
         if (typeof window.registerSession === "function") {
-            await window.registerSession();
+            await window.registerSession(true); // this call happens at account creation
         }
 
         window.location.href="complete-profile.html";    

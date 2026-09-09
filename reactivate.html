@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reactivate Account - Aviator</title>
+
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        body {
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-wrapper {
+            width: 25vw;
+            min-width: 380px;
+            max-width: 420px;
+            height: 100vh;
+            background: #121212;
+            box-shadow: 0 0 30px rgba(0,0,0,0.3);
+            overflow-y: auto;
+        }
+
+        .header {
+            background-color: #e60000;
+            padding: 10px 16px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin: 0;
+        }
+
+        .section {
+            padding: 20px 16px;
+        }
+
+        .info-note {
+            color: var(--g-999, #999);
+            font-size: 13px;
+            line-height: 1.6;
+            padding: 4px 4px 16px;
+        }
+
+        label {
+            display: block;
+            color: var(--g-ccc, #ccc);
+            font-size: 13px;
+            margin: 18px 0 6px;
+        }
+
+        input[type="password"] {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #1a1a1a;
+            color: white;
+            font-size: 15px;
+        }
+
+        .reactivate-btn {
+            margin-top: 22px;
+            background: #00aa44;
+            color: white;
+            border: none;
+            padding: 16px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 10px;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .reactivate-btn:disabled {
+            background: #333;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+        #message {
+            font-size: 13px;
+            margin-top: 14px;
+            min-height: 16px;
+            line-height: 1.5;
+        }
+
+        .loading-note {
+            color: var(--g-999, #999);
+            font-size: 13px;
+            text-align: center;
+            padding: 30px 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <div class="header">
+        <h1>Reactivate Account</h1>
+        <div style="font-size:22px; cursor:pointer; color:white;" onclick="window.location.href='login.html'">🏠</div>
+    </div>
+
+    <div id="content">
+        <p class="loading-note">Verifying your link...</p>
+    </div>
+
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCd2RbRPpx_qnU7W99ohe8el0rSpcYyIOU",
+        authDomain: "success-75f95.firebaseapp.com",
+        projectId: "success-75f95",
+        storageBucket: "success-75f95.firebasestorage.app",
+        messagingSenderId: "774097711994",
+        appId: "1:774097711994:web:cb2729f49ed1348b2ddcc3"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const content = document.getElementById("content");
+
+    function showPasswordStep() {
+        content.innerHTML = `
+            <div class="section">
+                <p class="info-note">
+                    Link verified. Enter your CURRENT password to reactivate
+                    your account - this does not change your password.
+                </p>
+
+                <label for="passwordInput">Current password</label>
+                <input type="password" id="passwordInput" autocomplete="current-password">
+
+                <div id="message"></div>
+
+                <button class="reactivate-btn" id="reactivateBtn">Reactivate My Account</button>
+            </div>
+        `;
+
+        const passwordInput = document.getElementById("passwordInput");
+        const reactivateBtn = document.getElementById("reactivateBtn");
+        const messageDiv = document.getElementById("message");
+
+        function showMessage(text, color) {
+            messageDiv.style.color = color;
+            messageDiv.textContent = text;
+        }
+
+        reactivateBtn.addEventListener("click", async () => {
+            const user = auth.currentUser;
+
+            if (!user) {
+                showMessage("Your session expired - please use the \"Contact Support\" link again.", "#ff5c5c");
+                return;
+            }
+
+            const password = passwordInput.value;
+            if (!password) {
+                showMessage("Enter your current password.", "#ff5c5c");
+                return;
+            }
+
+            reactivateBtn.disabled = true;
+            reactivateBtn.textContent = "Checking...";
+
+            try {
+                // reauthenticateWithCredential verifies the password
+                // WITHOUT changing it - exactly what we need here.
+                const credential = firebase.auth.EmailAuthProvider.credential(
+                    user.email,
+                    password
+                );
+                await user.reauthenticateWithCredential(credential);
+
+                const userRef = db.collection("users").doc(user.uid);
+                const snap = await userRef.get();
+
+                if (!snap.exists || !snap.data().deactivated) {
+                    showMessage("This account isn't deactivated.", "#00ff88");
+                    reactivateBtn.textContent = "Reactivate My Account";
+                    reactivateBtn.disabled = false;
+                    return;
+                }
+
+                await userRef.set({
+                    deactivated: false,
+                    reactivatedAt: new Date().toISOString()
+                }, { merge: true });
+
+                showMessage("Your account has been reactivated! Redirecting to login...", "#00ff88");
+                setTimeout(() => window.location.href = "login.html", 1500);
+
+            } catch (err) {
+                console.error(err);
+
+                if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+                    showMessage("Incorrect password.", "#ff5c5c");
+                } else {
+                    showMessage(err.message || "Something went wrong. Please try again.", "#ff5c5c");
+                }
+
+                reactivateBtn.disabled = false;
+                reactivateBtn.textContent = "Reactivate My Account";
+            }
+        });
+
+        passwordInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") reactivateBtn.click();
+        });
+    }
+
+    (async function completeSignIn() {
+        if (!auth.isSignInWithEmailLink(window.location.href)) {
+            content.innerHTML = '<p class="loading-note">This link is invalid or has expired. Please use "Contact Support" on the login page to request a new one.</p>';
+            return;
+        }
+
+        let email = window.localStorage.getItem("emailForReactivation");
+
+        if (!email) {
+            // Opened on a different device/browser than the one that
+            // requested it - we don't have the email remembered locally.
+            email = window.prompt(
+                "One more step: please type in your email address again.\n\n" +
+                "This just happens when you open this link on a different " +
+                "phone, computer, or browser than the one you used to ask " +
+                "for it - totally normal, nothing's wrong. Just enter the " +
+                "same email address you used before and you're good to go."
+            );
+        }
+
+        if (!email) {
+            content.innerHTML = '<p class="loading-note">An email address is needed to continue. Please reopen the link and enter it when prompted.</p>';
+            return;
+        }
+
+        try {
+            await auth.signInWithEmailLink(email, window.location.href);
+            window.localStorage.removeItem("emailForReactivation");
+            showPasswordStep();
+        } catch (err) {
+            console.error(err);
+            content.innerHTML = `<p class="loading-note">This link is invalid, expired, or already used. Please use "Contact Support" on the login page to request a new one.</p>`;
+        }
+    })();
+</script>
+
+</body>
+</html>

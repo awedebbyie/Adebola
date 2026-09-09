@@ -3,196 +3,1078 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="robots" content="noindex, nofollow" />
-<title>Login</title>
-<!-- Deliberately generic <title> and no other page on the site links
-     here - the filename itself (admin-f3b642e6.html) is the only way
-     to find this page. That alone is NOT the real protection though -
-     the actual protection is the 2-step server-side gate below. Even
-     someone who finds this URL still needs the admin email inbox AND
-     the passcode. -->
+<title>Panel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
 <style>
     body{
         margin:0;
         min-height:100vh;
-        display:flex;
-        align-items:center;
-        justify-content:center;
         background:#0f0f1a;
         color:#fff;
         font-family:system-ui, sans-serif;
     }
-    .box{
-        width:100%;
-        max-width:340px;
-        padding:24px;
+    .top{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        padding:14px 18px;
+        border-bottom:1px solid #333;
+    }
+    button{
+        padding:8px 14px;
+        border-radius:6px;
+        border:1px solid #555;
+        background:#2a2a40;
+        color:#fff;
+        cursor:pointer;
+        font-size:13px;
+    }
+    main{
+        padding:24px 18px;
+    }
+    .range-bar{
+        display:flex;
+        gap:8px;
+        margin-bottom:18px;
+    }
+    .range-btn.active{
+        background:#00ff88;
+        color:#000;
+        border-color:#00ff88;
+    }
+    .stats-grid{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:12px;
+    }
+    .stat-card{
         background:#1a1a2e;
         border:1px solid #333;
-        border-radius:12px;
+        border-radius:10px;
+        padding:14px;
     }
-    h1{
-        font-size:16px;
-        margin:0 0 4px;
+    .stat-label{
+        font-size:12px;
+        color:#999;
+        margin-bottom:6px;
     }
-    p.step-label{
-        margin:0 0 16px;
+    .stat-value{
+        font-size:20px;
+        font-weight:bold;
+    }
+    .stat-value.positive{ color:#3ddc84; }
+    .stat-value.negative{ color:#ff5c5c; }
+    .stat-note{
+        font-size:11px;
+        color:#666;
+        margin-top:16px;
+    }
+    .chart-section{
+        margin-top:28px;
+    }
+    .chart-header{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        margin-bottom:10px;
+    }
+    .chart-header h2{
+        font-size:14px;
+        margin:0;
+        color:#ccc;
+    }
+    .chart-range-bar{
+        display:flex;
+        gap:6px;
+    }
+    .chart-range-btn{
+        padding:4px 10px;
+        font-size:12px;
+    }
+    .chart-range-btn.active{
+        background:#00ff88;
+        color:#000;
+        border-color:#00ff88;
+    }
+    .chart-box{
+        background:#1a1a2e;
+        border:1px solid #333;
+        border-radius:10px;
+        padding:14px;
+        height:260px;
+    }
+    .charts-row{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:16px;
+    }
+    .tier-legend{
+        margin-top:10px;
         font-size:12px;
         color:#999;
     }
-    input{
-        width:100%;
-        box-sizing:border-box;
-        padding:10px;
-        margin-bottom:12px;
-        border-radius:6px;
-        border:1px solid #444;
-        background:#0f0f1a;
-        color:#fff;
-        font-size:14px;
+    .tier-legend div{
+        display:flex;
+        justify-content:space-between;
+        padding:2px 0;
     }
-    button{
-        width:100%;
-        padding:10px;
-        border-radius:6px;
-        border:none;
-        background:#00ff88;
-        color:#000;
-        font-weight:bold;
-        cursor:pointer;
-        font-size:14px;
-    }
-    button:disabled{
-        opacity:0.5;
-        cursor:default;
-    }
-    .error{
+    .tier-legend .off{
         color:#ff5c5c;
+    }
+    .anomaly-section{
+        margin:28px 18px 24px;
+    }
+    .anomaly-note{
+        font-size:12px;
+        color:#999;
+        margin:6px 0 14px;
+        line-height:1.5;
+    }
+    .anomaly-loading{
+        color:#999;
         font-size:13px;
-        margin:-4px 0 12px;
-        min-height:16px;
     }
-    .step{
-        display:none;
+    .anomaly-card{
+        background:#2a1414;
+        border:1px solid #6b2020;
+        border-radius:10px;
+        padding:14px;
+        margin-bottom:10px;
     }
-    .step.active{
-        display:block;
+    .anomaly-email{
+        font-weight:bold;
+        color:#ff8080;
+        font-size:14px;
+        margin-bottom:6px;
+    }
+    .anomaly-discrepancy{
+        color:#ff5c5c;
+        font-weight:bold;
+        font-size:16px;
+        margin-bottom:8px;
+    }
+    .anomaly-breakdown{
+        font-size:12px;
+        color:#ccc;
+        line-height:1.7;
+    }
+    .anomaly-clean{
+        color:#3ddc84;
+        font-size:13px;
+        padding:10px 0;
+    }
+    .section-heading{
+        font-size:15px;
+        color:#eee;
+        margin:0 0 12px;
+        padding-top:6px;
+    }
+    .overview-grid{
+        display:grid;
+        grid-template-columns:1fr 1fr 1fr;
+        gap:12px;
+        margin-bottom:8px;
+    }
+    .overview-grid .stat-value{
+        font-size:18px;
+    }
+    .stat-sub{
+        font-size:11px;
+        color:#777;
+        margin-top:4px;
+    }
+    .two-col{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:16px;
+    }
+    .bucket-row{
+        display:flex;
+        justify-content:space-between;
+        padding:6px 0;
+        border-bottom:1px solid #262636;
+        font-size:13px;
+    }
+    .bucket-row:last-child{
+        border-bottom:none;
+    }
+    .bucket-count{
+        color:#ccc;
+        font-weight:bold;
+    }
+    .feed-item{
+        padding:8px 0;
+        border-bottom:1px solid #262636;
+        font-size:12.5px;
+        color:#ccc;
+        line-height:1.5;
+    }
+    .feed-item:last-child{
+        border-bottom:none;
+    }
+    .feed-item .feed-main{
+        color:#fff;
+    }
+    .feed-item .feed-win{
+        color:#3ddc84;
+    }
+    .feed-item .feed-loss{
+        color:#ff5c5c;
+    }
+    .feed-empty{
+        color:#666;
+        font-size:12.5px;
+        padding:10px 0;
+    }
+    .live-strip{
+        display:flex;
+        gap:12px;
+        flex-wrap:wrap;
+    }
+    .live-pill{
+        background:#1a1a2e;
+        border:1px solid #333;
+        border-radius:8px;
+        padding:10px 16px;
+        flex:1;
+        min-width:120px;
+    }
+    .live-pill .stat-label{
+        margin-bottom:4px;
+    }
+    .live-pill .stat-value{
+        font-size:18px;
+    }
+    .takeover-card{
+        background:#2a2414;
+        border:1px solid #6b5a20;
+        border-radius:10px;
+        padding:14px;
+        margin-bottom:10px;
+    }
+    .takeover-email{
+        font-weight:bold;
+        color:#ffcf5c;
+        font-size:14px;
+        margin-bottom:6px;
+    }
+    .takeover-count{
+        color:#ffcf5c;
+        font-weight:bold;
+        font-size:14px;
+        margin-bottom:8px;
+    }
+    .takeover-devices{
+        font-size:12px;
+        color:#ccc;
+        line-height:1.7;
+    }
+    .takeover-clean{
+        color:#3ddc84;
+        font-size:13px;
+        padding:10px 0;
     }
 </style>
 </head>
 <body>
 
-<div class="box">
-    <h1>Admin Login</h1>
-    <p class="step-label" id="stepLabel">Step 1 of 2 — Email</p>
-    <div class="error" id="errorMsg"></div>
-
-    <!-- Step 1: email -->
-    <div class="step active" id="stepEmail">
-        <input type="email" id="emailInput" placeholder="Email" autocomplete="username" />
-        <button id="startBtn">Send code</button>
-    </div>
-
-    <!-- Step 2: email code -->
-    <div class="step" id="stepEmailCode">
-        <input type="text" id="emailCodeInput" placeholder="6-digit email code" inputmode="numeric" maxlength="6" />
-        <button id="verifyEmailBtn">Verify</button>
-    </div>
-
-    <!-- Step 3: passcode -->
-    <div class="step" id="stepPasscode">
-        <input type="password" id="passcodeInput" placeholder="Passcode" autocomplete="current-password" />
-        <button id="verifyPasscodeBtn">Unlock</button>
-    </div>
+<div class="top">
+    <strong>Admin Panel</strong>
+    <button id="logoutBtn">Log out</button>
 </div>
 
+<main>
+    <h2 class="section-heading">Overview</h2>
+    <div class="overview-grid">
+        <div class="stat-card">
+            <div class="stat-label">Total users</div>
+            <div class="stat-value" id="ovTotalUsers">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Active users (on a streak)</div>
+            <div class="stat-value" id="ovActiveUsers">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">New users today</div>
+            <div class="stat-value" id="ovNewToday">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Placed a bet today</div>
+            <div class="stat-value" id="ovBetToday">—</div>
+            <div class="stat-sub" id="ovBetTodaySub"></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total deposits</div>
+            <div class="stat-value" id="ovDeposits">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total withdrawals</div>
+            <div class="stat-value" id="ovWithdrawals">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Pending withdrawals</div>
+            <div class="stat-value" id="ovPendingWithdrawals">—</div>
+            <div class="stat-sub" id="ovPendingWithdrawalsSub"></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">7-day retention</div>
+            <div class="stat-value" id="ovRetention">—</div>
+            <div class="stat-sub" id="ovRetentionSub"></div>
+        </div>
+    </div>
+
+    <div class="two-col" style="margin-top:24px;">
+        <div>
+            <h2 class="section-heading">Days since last active</h2>
+            <div class="chart-box" style="height:auto; padding:14px;" id="inactivityBuckets">
+                <p class="anomaly-loading">Loading...</p>
+            </div>
+        </div>
+
+        <div>
+            <h2 class="section-heading">Live round</h2>
+            <div class="live-strip">
+                <div class="live-pill">
+                    <div class="stat-label">Status</div>
+                    <div class="stat-value" id="liveStatus">—</div>
+                </div>
+                <div class="live-pill">
+                    <div class="stat-label">Multiplier</div>
+                    <div class="stat-value" id="liveMultiplier">—</div>
+                </div>
+                <div class="live-pill">
+                    <div class="stat-label">Players in round</div>
+                    <div class="stat-value" id="livePlayers">—</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="two-col" style="margin-top:24px;">
+        <div>
+            <h2 class="section-heading">Recent bets</h2>
+            <div class="chart-box" style="height:320px; overflow-y:auto; padding:6px 14px;" id="recentBets">
+                <p class="anomaly-loading">Loading...</p>
+            </div>
+        </div>
+
+        <div>
+            <h2 class="section-heading">Recent registrations</h2>
+            <div class="chart-box" style="height:320px; overflow-y:auto; padding:6px 14px;" id="recentRegistrations">
+                <p class="anomaly-loading">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="section-heading" style="margin-top:28px;">Financial performance</h2>
+
+    <div class="range-bar">
+        <button class="range-btn" data-range="today">Today</button>
+        <button class="range-btn" data-range="7d">7 days</button>
+        <button class="range-btn" data-range="30d">30 days</button>
+        <button class="range-btn" data-range="all">All time</button>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">House profit</div>
+            <div class="stat-value" id="statHouseProfit">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total wagered</div>
+            <div class="stat-value" id="statWagered">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total paid out</div>
+            <div class="stat-value" id="statPaidOut">—</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Bets (won / lost)</div>
+            <div class="stat-value" id="statBets">—</div>
+        </div>
+    </div>
+
+    <p class="stat-note">
+        "House profit" only counts settled bets (cashed out or lost) -
+        active/in-progress bets aren't included yet. Negative means the
+        house paid out more than it collected in this period.
+    </p>
+
+    <div class="charts-row">
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2>Daily house profit</h2>
+                <div class="chart-range-bar">
+                    <button class="chart-range-btn" data-days="7">7 days</button>
+                    <button class="chart-range-btn" data-days="30">30 days</button>
+                </div>
+            </div>
+            <div class="chart-box">
+                <canvas id="profitTrendChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2>Tier A/B/C distribution (this range)</h2>
+            </div>
+            <div class="chart-box">
+                <canvas id="tierChart"></canvas>
+            </div>
+            <div class="tier-legend" id="tierLegend"></div>
+        </div>
+    </div>
+
+    <div class="charts-row" style="margin-top:24px;">
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2>New users &amp; bets per day</h2>
+                <div class="chart-range-bar">
+                    <button class="chart-range-btn growth-range-btn" data-days="7">7 days</button>
+                    <button class="chart-range-btn growth-range-btn" data-days="30">30 days</button>
+                </div>
+            </div>
+            <div class="chart-box">
+                <canvas id="growthChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2>Deposits vs withdrawals (all time)</h2>
+            </div>
+            <div class="chart-box">
+                <canvas id="cashflowChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="anomaly-section">
+        <div class="chart-header">
+            <h2>⚠️ Balance Anomalies</h2>
+            <button class="range-btn" id="recheckBtn" style="padding:4px 10px;">Recheck</button>
+        </div>
+        <p class="anomaly-note">
+            Flags any account whose actual balance is higher than deposits,
+            minus withdrawals, minus every bet staked, plus real cash-out
+            winnings can explain. An entry here means either a bug or a
+            genuine exploit - not something to ignore.
+        </p>
+        <div id="anomalyList"><p class="anomaly-loading">Checking...</p></div>
+    </div>
+
+    <div class="anomaly-section">
+        <div class="chart-header">
+            <h2>🔍 Takeover Watch</h2>
+            <button class="range-btn" id="recheckTakeoverBtn" style="padding:4px 10px;">Recheck</button>
+        </div>
+        <p class="anomaly-note">
+            Flags accounts with 3+ brand-new devices logging in within the
+            last 48 hours - a common pattern when someone is actively
+            trying to break into an account from different places. This is
+            a heuristic, not proof - a user setting up a new phone can
+            also trigger it. Worth a look, not an automatic verdict.
+        </p>
+        <div id="takeoverList"><p class="anomaly-loading">Checking...</p></div>
+    </div>
+</main>
+
 <script>
-    // Update this to your deployed backend's URL (same as withdraw.html
-    // uses "http://localhost:3000" as a dev placeholder - swap both when
-    // you deploy).
+    // Same placeholder as the login page - update both when you deploy.
     const BACKEND_URL = "http://localhost:3000";
 
-    let sessionToken = null;
+    const adminToken = localStorage.getItem("adminToken");
+    console.log("DEBUG panel: adminToken from localStorage:", adminToken);
 
-    const errorMsg = document.getElementById("errorMsg");
-    const stepLabel = document.getElementById("stepLabel");
+    async function checkSession() {
+        if (!adminToken) {
+            console.log("DEBUG panel: no token in localStorage - redirecting to login.");
+            window.location.href = "admin-f3b642e6.html";
+            return;
+        }
 
-    function showStep(id, label) {
-        document.querySelectorAll(".step").forEach((el) => el.classList.remove("active"));
-        document.getElementById(id).classList.add("active");
-        stepLabel.textContent = label;
-        errorMsg.textContent = "";
+        try {
+            const res = await fetch(BACKEND_URL + "/admin/auth/session", {
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+            console.log("DEBUG panel: /session response:", data);
+
+            if (!data.valid) {
+                console.log("DEBUG panel: session invalid - redirecting to login.");
+                localStorage.removeItem("adminToken");
+                window.location.href = "admin-f3b642e6.html";
+            }
+        } catch (err) {
+            // If the backend is unreachable, fail closed - don't leave
+            // the panel visibly rendered while we can't actually confirm
+            // the session is real.
+            console.log("DEBUG panel: /session request THREW an error:", err);
+            window.location.href = "admin-f3b642e6.html";
+        }
     }
 
-    async function postJSON(path, body) {
-        const res = await fetch(BACKEND_URL + path, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body)
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+        try {
+            await fetch(BACKEND_URL + "/admin/auth/logout", {
+                method: "POST",
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+        } catch (err) {
+            // Log out client-side regardless of whether the request landed.
+        }
+        localStorage.removeItem("adminToken");
+        window.location.href = "admin-f3b642e6.html";
+    });
+
+    function formatNaira(amount) {
+        const n = Number(amount) || 0;
+        return "₦" + n.toLocaleString("en-NG", { maximumFractionDigits: 0 });
+    }
+
+    async function loadStats(range) {
+        document.querySelectorAll(".range-btn").forEach((btn) => {
+            btn.classList.toggle("active", btn.dataset.range === range);
         });
-        return res.json();
+
+        try {
+            const res = await fetch(BACKEND_URL + "/admin/api/stats?range=" + range, {
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+
+            if (!data.ok) {
+                console.error("Stats load failed:", data.error);
+                return;
+            }
+
+            const profitEl = document.getElementById("statHouseProfit");
+            profitEl.textContent = formatNaira(data.houseProfit);
+            profitEl.classList.toggle("positive", data.houseProfit >= 0);
+            profitEl.classList.toggle("negative", data.houseProfit < 0);
+
+            document.getElementById("statWagered").textContent = formatNaira(data.totalWagered);
+            document.getElementById("statPaidOut").textContent = formatNaira(data.totalPaidOut);
+            document.getElementById("statBets").textContent =
+                data.betCount + " (" + data.winCount + " / " + data.lossCount + ")";
+        } catch (err) {
+            console.error("Stats load error:", err);
+        }
     }
 
-    document.getElementById("startBtn").addEventListener("click", async () => {
-        const email = document.getElementById("emailInput").value.trim();
-        if (!email) return;
-
-        const btn = document.getElementById("startBtn");
-        btn.disabled = true;
-        try {
-            const data = await postJSON("/admin/auth/start", { email });
-            // Always proceeds to the code step regardless of whether the
-            // email was actually correct - the server never reveals that,
-            // on purpose. A wrong email just means no code ever arrives.
-            sessionToken = data.sessionToken || null;
-            showStep("stepEmailCode", "Step 2 of 2 — Email code");
-        } catch (err) {
-            errorMsg.textContent = "Something went wrong. Try again.";
-        } finally {
-            btn.disabled = false;
-        }
+    document.querySelectorAll(".range-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            loadStats(btn.dataset.range);
+            loadTierBreakdown(btn.dataset.range);
+        });
     });
 
-    document.getElementById("verifyEmailBtn").addEventListener("click", async () => {
-        const code = document.getElementById("emailCodeInput").value.trim();
-        if (!code || !sessionToken) return;
+    let tierChart = null;
 
-        const btn = document.getElementById("verifyEmailBtn");
-        btn.disabled = true;
+    async function loadTierBreakdown(range) {
+        if (typeof Chart === "undefined") return;
+
         try {
-            const data = await postJSON("/admin/auth/verify-email", { sessionToken, code });
+            const res = await fetch(BACKEND_URL + "/admin/api/tier-breakdown?range=" + range, {
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+
             if (!data.ok) {
-                errorMsg.textContent = data.error || "Incorrect code.";
+                console.error("Tier breakdown load failed:", data.error);
                 return;
             }
-            showStep("stepPasscode", "Final step — Passcode");
+
+            const labels = ["Tier A (1.00x-4.07x)", "Tier B (4.07x-10.09x)", "Tier C (10.09x-20.09x)"];
+            const values = [data.tierA.count, data.tierB.count, data.tierC.count];
+            const colors = ["#4da6ff", "#b366ff", "#ff4dd8"];
+
+            const ctx = document.getElementById("tierChart").getContext("2d");
+
+            if (tierChart) {
+                tierChart.data.datasets[0].data = values;
+                tierChart.update();
+            } else {
+                tierChart = new Chart(ctx, {
+                    type: "pie",
+                    data: {
+                        labels,
+                        datasets: [{ data: values, backgroundColor: colors }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: "bottom", labels: { color: "#ccc", font: { size: 10 } } }
+                        }
+                    }
+                });
+            }
+
+            const legend = document.getElementById("tierLegend");
+            legend.innerHTML = "";
+            [
+                { name: "Tier A", data: data.tierA },
+                { name: "Tier B", data: data.tierB },
+                { name: "Tier C", data: data.tierC }
+            ].forEach((tier) => {
+                const deviation = Math.abs(tier.data.pct - tier.data.expectedPct);
+                const row = document.createElement("div");
+                row.innerHTML =
+                    `<span>${tier.name}: ${tier.data.count} rounds</span>` +
+                    `<span class="${deviation > 5 ? "off" : ""}">${tier.data.pct}% (expected ${tier.data.expectedPct}%)</span>`;
+                legend.appendChild(row);
+            });
+
+            if (data.total < 100) {
+                const note = document.createElement("div");
+                note.textContent = `Only ${data.total} rounds in this range - too small a sample to draw conclusions from yet.`;
+                legend.appendChild(note);
+            }
         } catch (err) {
-            errorMsg.textContent = "Something went wrong. Try again.";
-        } finally {
-            btn.disabled = false;
+            console.error("Tier breakdown load error:", err);
         }
-    });
+    }
 
-    document.getElementById("verifyPasscodeBtn").addEventListener("click", async () => {
-        const passcode = document.getElementById("passcodeInput").value;
-        if (!passcode || !sessionToken) return;
+    let profitChart = null;
 
-        const btn = document.getElementById("verifyPasscodeBtn");
-        btn.disabled = true;
+    async function loadProfitTrend(days) {
+        if (typeof Chart === "undefined") {
+            console.error("Chart.js didn't load - check your internet connection or an ad blocker/extension may be blocking cdnjs.cloudflare.com.");
+            return;
+        }
+
+        document.querySelectorAll(".chart-range-btn:not(.growth-range-btn)").forEach((btn) => {
+            btn.classList.toggle("active", Number(btn.dataset.days) === days);
+        });
+
         try {
-            const data = await postJSON("/admin/auth/verify-passcode", { sessionToken, passcode });
+            const res = await fetch(BACKEND_URL + "/admin/api/profit-trend?days=" + days, {
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+
             if (!data.ok) {
-                errorMsg.textContent = data.error || "Incorrect passcode.";
+                console.error("Trend load failed:", data.error);
                 return;
             }
-            // Stored client-side only for this one browser/device - never
-            // sent anywhere except back to /admin/auth/* as a Bearer token.
-            localStorage.setItem("adminToken", data.adminToken);
-            window.location.href = "admin-panel-f3b642e6.html";
+
+            const labels = data.days.map((d) => d.date.slice(5)); // "MM-DD"
+            const values = data.days.map((d) => d.profit);
+            const barColors = values.map((v) => (v >= 0 ? "#3ddc84" : "#ff5c5c"));
+
+            const ctx = document.getElementById("profitTrendChart").getContext("2d");
+
+            if (profitChart) {
+                profitChart.data.labels = labels;
+                profitChart.data.datasets[0].data = values;
+                profitChart.data.datasets[0].backgroundColor = barColors;
+                profitChart.update();
+                return;
+            }
+
+            profitChart = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels,
+                    datasets: [{
+                        label: "House profit (₦)",
+                        data: values,
+                        backgroundColor: barColors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: "#999" }, grid: { color: "#2a2a2a" } },
+                        y: { ticks: { color: "#999" }, grid: { color: "#2a2a2a" } }
+                    }
+                }
+            });
         } catch (err) {
-            errorMsg.textContent = "Something went wrong. Try again.";
-        } finally {
-            btn.disabled = false;
+            console.error("Trend load error:", err);
         }
+    }
+
+    document.querySelectorAll(".chart-range-btn:not(.growth-range-btn)").forEach((btn) => {
+        btn.addEventListener("click", () => loadProfitTrend(Number(btn.dataset.days)));
     });
+
+    function formatNairaFull(amount) {
+        const n = Number(amount) || 0;
+        const sign = n < 0 ? "-" : "";
+        return sign + "₦" + Math.abs(n).toLocaleString("en-NG", { maximumFractionDigits: 2 });
+    }
+
+    async function loadAnomalies() {
+        const list = document.getElementById("anomalyList");
+        list.innerHTML = '<p class="anomaly-loading">Checking...</p>';
+
+        try {
+            const res = await fetch(BACKEND_URL + "/admin/api/reconcile", {
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+
+            if (!data.ok) {
+                list.innerHTML = '<p class="anomaly-note">Failed to check: ' + (data.error || "unknown error") + '</p>';
+                return;
+            }
+
+            if (data.anomalies.length === 0) {
+                list.innerHTML = '<p class="anomaly-clean">✅ No anomalies found across ' + data.checkedUsers + ' accounts checked.</p>';
+                return;
+            }
+
+            list.innerHTML = data.anomalies.map((a) => `
+                <div class="anomaly-card">
+                    <div class="anomaly-email">${a.email}</div>
+                    <div class="anomaly-discrepancy">+${formatNairaFull(a.discrepancy)} unexplained</div>
+                    <div class="anomaly-breakdown">
+                        Actual balance: ${formatNairaFull(a.actualBalance)}<br>
+                        Expected balance: ${formatNairaFull(a.expectedBalance)}<br>
+                        (Deposits: ${formatNairaFull(a.deposits)} · Withdrawals: ${formatNairaFull(a.withdrawals)} ·
+                        Staked: ${formatNairaFull(a.staked)} · Winnings: ${formatNairaFull(a.winnings)})<br>
+                        UID: ${a.uid}
+                    </div>
+                </div>
+            `).join("");
+        } catch (err) {
+            console.error("Anomaly check failed:", err);
+            list.innerHTML = '<p class="anomaly-note">Something went wrong checking for anomalies.</p>';
+        }
+    }
+
+    document.getElementById("recheckBtn").addEventListener("click", loadAnomalies);
+
+    function timeAgo(iso) {
+        if (!iso) return "unknown";
+        const ms = Date.now() - new Date(iso).getTime();
+        const mins = Math.floor(ms / 60000);
+        if (mins < 1) return "just now";
+        if (mins < 60) return mins + "m ago";
+        const hours = Math.floor(mins / 60);
+        if (hours < 24) return hours + "h ago";
+        const days = Math.floor(hours / 24);
+        return days + "d ago";
+    }
+
+    // =========================
+    // OVERVIEW + RETENTION + INACTIVITY
+    // =========================
+    async function loadUserHealth() {
+        try {
+            const res = await fetch(BACKEND_URL + "/admin/api/user-health", {
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+            if (!data.ok) {
+                console.error("user-health load failed:", data.error);
+                return;
+            }
+
+            document.getElementById("ovTotalUsers").textContent = data.totalUsers.toLocaleString();
+            document.getElementById("ovActiveUsers").textContent = data.activeUsers.toLocaleString();
+            document.getElementById("ovNewToday").textContent = data.newUsersToday.toLocaleString();
+
+            const retEl = document.getElementById("ovRetention");
+            const retSubEl = document.getElementById("ovRetentionSub");
+            if (data.retention.pct == null) {
+                retEl.textContent = "—";
+                retSubEl.textContent = "Not enough account history yet (7+ days old)";
+            } else {
+                retEl.textContent = data.retention.pct + "%";
+                retSubEl.textContent = data.retention.retainedUsers + " of " + data.retention.eligibleUsers + " eligible users";
+            }
+
+            const bucketsEl = document.getElementById("inactivityBuckets");
+            bucketsEl.innerHTML = data.inactivityBuckets.map((b) =>
+                `<div class="bucket-row"><span>${b.label}</span><span class="bucket-count">${b.count.toLocaleString()}</span></div>`
+            ).join("");
+        } catch (err) {
+            console.error("user-health load error:", err);
+        }
+    }
+
+    // =========================
+    // BET PARTICIPATION
+    // =========================
+    async function loadBetParticipation() {
+        try {
+            const res = await fetch(BACKEND_URL + "/admin/api/bet-participation", {
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+            if (!data.ok) {
+                console.error("bet-participation load failed:", data.error);
+                return;
+            }
+
+            document.getElementById("ovBetToday").textContent = data.pct + "%";
+            document.getElementById("ovBetTodaySub").textContent =
+                data.usersWhoPlacedBetToday.toLocaleString() + " placed · " +
+                data.usersWhoDidNotPlaceBetToday.toLocaleString() + " have not";
+        } catch (err) {
+            console.error("bet-participation load error:", err);
+        }
+    }
+
+    // =========================
+    // CASH FLOW OVERVIEW CARDS + CHART
+    // =========================
+    let cashflowChart = null;
+
+    async function loadCashflow() {
+        try {
+            const res = await fetch(BACKEND_URL + "/admin/api/cashflow", {
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+            if (!data.ok) {
+                console.error("cashflow load failed:", data.error);
+                return;
+            }
+
+            document.getElementById("ovDeposits").textContent = formatNaira(data.totalDeposits);
+            document.getElementById("ovWithdrawals").textContent = formatNaira(data.totalWithdrawals);
+            document.getElementById("ovPendingWithdrawals").textContent = formatNaira(data.pendingWithdrawals);
+            document.getElementById("ovPendingWithdrawalsSub").textContent =
+                data.pendingWithdrawalCount + " request" + (data.pendingWithdrawalCount === 1 ? "" : "s");
+
+            if (typeof Chart === "undefined") return;
+
+            const ctx = document.getElementById("cashflowChart").getContext("2d");
+            const values = [data.totalDeposits, data.totalWithdrawals];
+
+            if (cashflowChart) {
+                cashflowChart.data.datasets[0].data = values;
+                cashflowChart.update();
+                return;
+            }
+
+            cashflowChart = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: ["Deposits", "Withdrawals"],
+                    datasets: [{
+                        data: values,
+                        backgroundColor: ["#3ddc84", "#ff8800"]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: "#999" }, grid: { color: "#2a2a2a" } },
+                        y: { ticks: { color: "#999" }, grid: { color: "#2a2a2a" } }
+                    }
+                }
+            });
+        } catch (err) {
+            console.error("cashflow load error:", err);
+        }
+    }
+
+    // =========================
+    // LIVE ROUND
+    // =========================
+    async function loadLiveRound() {
+        try {
+            const res = await fetch(BACKEND_URL + "/admin/api/live-round", {
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+            if (!data.ok) {
+                console.error("live-round load failed:", data.error);
+                return;
+            }
+
+            document.getElementById("liveStatus").textContent = data.round ? data.round.status : "—";
+            document.getElementById("liveMultiplier").textContent =
+                data.round && data.round.multiplier != null ? Number(data.round.multiplier).toFixed(2) + "x" : "—";
+            document.getElementById("livePlayers").textContent = data.playersInRound.toLocaleString();
+        } catch (err) {
+            console.error("live-round load error:", err);
+        }
+    }
+
+    // =========================
+    // RECENT ACTIVITY
+    // =========================
+    async function loadRecentActivity() {
+        try {
+            const res = await fetch(BACKEND_URL + "/admin/api/recent-activity", {
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+            if (!data.ok) {
+                console.error("recent-activity load failed:", data.error);
+                return;
+            }
+
+            const betsEl = document.getElementById("recentBets");
+            if (data.recentBets.length === 0) {
+                betsEl.innerHTML = '<p class="feed-empty">No bets yet.</p>';
+            } else {
+                betsEl.innerHTML = data.recentBets.map((b) => {
+                    let statusText = "pending";
+                    let statusClass = "";
+                    if (b.status === "cashed_out") {
+                        statusText = "won " + formatNaira(b.profit) + " at " + Number(b.cash_out_multiplier).toFixed(2) + "x";
+                        statusClass = "feed-win";
+                    } else if (b.status === "lost") {
+                        statusText = "lost";
+                        statusClass = "feed-loss";
+                    }
+                    return `<div class="feed-item">
+                        <span class="feed-main">${b.email || "(no email)"}</span> staked ${formatNaira(b.amount)} -
+                        <span class="${statusClass}">${statusText}</span>
+                        <div>${timeAgo(b.placed_at)}</div>
+                    </div>`;
+                }).join("");
+            }
+
+            const regEl = document.getElementById("recentRegistrations");
+            if (data.recentRegistrations.length === 0) {
+                regEl.innerHTML = '<p class="feed-empty">No registrations yet.</p>';
+            } else {
+                regEl.innerHTML = data.recentRegistrations.map((u) =>
+                    `<div class="feed-item">
+                        <span class="feed-main">${u.username || u.email}</span>
+                        <div>${u.email} · ${timeAgo(u.createdAt)}</div>
+                    </div>`
+                ).join("");
+            }
+        } catch (err) {
+            console.error("recent-activity load error:", err);
+        }
+    }
+
+    // =========================
+    // GROWTH TREND CHART (new users + bets per day)
+    // =========================
+    let growthChart = null;
+
+    async function loadGrowthTrend(days) {
+        if (typeof Chart === "undefined") return;
+
+        document.querySelectorAll(".growth-range-btn").forEach((btn) => {
+            btn.classList.toggle("active", Number(btn.dataset.days) === days);
+        });
+
+        try {
+            const res = await fetch(BACKEND_URL + "/admin/api/growth-trend?days=" + days, {
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+            if (!data.ok) {
+                console.error("growth-trend load failed:", data.error);
+                return;
+            }
+
+            const labels = data.days.map((d) => d.date.slice(5));
+            const newUsers = data.days.map((d) => d.newUsers);
+            const bets = data.days.map((d) => d.bets);
+
+            const ctx = document.getElementById("growthChart").getContext("2d");
+
+            if (growthChart) {
+                growthChart.data.labels = labels;
+                growthChart.data.datasets[0].data = newUsers;
+                growthChart.data.datasets[1].data = bets;
+                growthChart.update();
+                return;
+            }
+
+            growthChart = new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels,
+                    datasets: [
+                        { label: "New users", data: newUsers, borderColor: "#4da6ff", backgroundColor: "transparent" },
+                        { label: "Bets", data: bets, borderColor: "#b366ff", backgroundColor: "transparent" }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: "bottom", labels: { color: "#ccc", font: { size: 10 } } } },
+                    scales: {
+                        x: { ticks: { color: "#999" }, grid: { color: "#2a2a2a" } },
+                        y: { ticks: { color: "#999" }, grid: { color: "#2a2a2a" } }
+                    }
+                }
+            });
+        } catch (err) {
+            console.error("growth-trend load error:", err);
+        }
+    }
+
+    document.querySelectorAll(".growth-range-btn").forEach((btn) => {
+        btn.addEventListener("click", () => loadGrowthTrend(Number(btn.dataset.days)));
+    });
+
+    // =========================
+    // TAKEOVER WATCH
+    // =========================
+    async function loadTakeoverWatch() {
+        const list = document.getElementById("takeoverList");
+        list.innerHTML = '<p class="anomaly-loading">Checking...</p>';
+
+        try {
+            const res = await fetch(BACKEND_URL + "/admin/api/takeover-watch", {
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+
+            if (!data.ok) {
+                list.innerHTML = '<p class="anomaly-note">Failed to check: ' + (data.error || "unknown error") + '</p>';
+                return;
+            }
+
+            if (data.flagged.length === 0) {
+                list.innerHTML = '<p class="takeover-clean">✅ No accounts with unusual new-device activity in the last ' + data.windowHours + 'h.</p>';
+                return;
+            }
+
+            list.innerHTML = data.flagged.map((f) => `
+                <div class="takeover-card">
+                    <div class="takeover-email">${f.email}</div>
+                    <div class="takeover-count">${f.newDeviceCount} new devices in the last ${data.windowHours}h</div>
+                    <div class="takeover-devices">
+                        ${f.devices.map((d) => `${d.deviceName} - ${timeAgo(d.firstSeen)}`).join("<br>")}
+                        <br>UID: ${f.uid}
+                    </div>
+                </div>
+            `).join("");
+        } catch (err) {
+            console.error("Takeover watch check failed:", err);
+            list.innerHTML = '<p class="anomaly-note">Something went wrong checking for takeover activity.</p>';
+        }
+    }
+
+    document.getElementById("recheckTakeoverBtn").addEventListener("click", loadTakeoverWatch);
+
+    checkSession();
+    loadStats("today");
+    loadTierBreakdown("today");
+    loadProfitTrend(7);
+    loadAnomalies();
+    loadUserHealth();
+    loadBetParticipation();
+    loadCashflow();
+    loadLiveRound();
+    loadRecentActivity();
+    loadGrowthTrend(7);
+    loadTakeoverWatch();
+
+    // Live round refreshes on its own timer, same spirit as the game's
+    // own 250ms poll - just much lighter (5s) since this is a
+    // once-per-glance admin view, not something driving an animation.
+    setInterval(loadLiveRound, 5000);
 </script>
 
 </body>

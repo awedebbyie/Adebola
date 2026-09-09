@@ -33,6 +33,12 @@ app.use("/admin/api", adminStats);
 const adminSecurity = require("./adminSecurity");
 app.use("/admin/api", adminSecurity);
 
+// User overview, retention, inactivity buckets, bet participation, live
+// round, recent activity, growth trends, takeover watch. Every route
+// guarded the same way - see backend/adminUsers.js.
+const adminUsers = require("./adminUsers");
+app.use("/admin/api", adminUsers);
+
 const FLW_SECRET_KEY = process.env.FLW_SECRET_KEY;
 
 app.post("/verify-payment", async (req, res) => {

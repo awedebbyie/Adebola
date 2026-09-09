@@ -59,10 +59,46 @@ function describeDevice() {
 }
 window.describeDevice = describeDevice;
 
-// Call once, right after a successful login. Returns { recognized,
-// deviceId } - recognized is false the very first time this device has
-// ever logged into this account.
-async function registerSession() {
+// Read-only check: has this device ever logged into this account
+// before? Does NOT create or modify anything - safe to call before
+// deciding whether a passkey challenge is even needed. This is the
+// piece that was missing before: the old registerSession() created the
+// session doc the moment it ran, which happened BEFORE the passkey
+// challenge - so a device that failed or abandoned that challenge was
+// already marked "recognized" for its next attempt, skipping the
+// challenge entirely the second time. Checking first, and only
+// registering the device once it's actually been let in (further down
+// in this file, and in login.html), closes that gap.
+async function isDeviceRecognized() {
+    const user = auth.currentUser;
+    if (!user) return true;
+
+    const deviceId = getOrCreateDeviceId();
+
+    try {
+        const snap = await db.collection("users").doc(user.uid)
+            .collection("sessions").doc(deviceId).get();
+        return snap.exists;
+    } catch (err) {
+        console.error("isDeviceRecognized failed:", err);
+        return true; // fail open - a network blip here shouldn't lock someone out
+    }
+}
+window.isDeviceRecognized = isDeviceRecognized;
+
+// Call once a device's login is actually being let through: it was
+// already recognized, OR it just passed its passkey challenge, OR there
+// was nothing to challenge it with. Creates the session doc (first
+// time) or refreshes lastSeen/active (every time after). Pass
+// isCreation=true from register.html specifically - that flags this
+// device as the account's creation device (isCreationDevice), which
+// sessions.html then refuses to ever let get logged out remotely.
+// Without that guarantee, someone could revoke every session including
+// the one device you know for certain still works, and lock themselves
+// out for good with no way back in.
+// Returns { recognized, deviceId } - recognized reflects whether this
+// device already had a session doc BEFORE this call.
+async function registerSession(isCreation) {
     const user = auth.currentUser;
     if (!user) return { recognized: true };
 
@@ -79,7 +115,8 @@ async function registerSession() {
                 deviceName: describeDevice(),
                 firstSeen: firebase.firestore.FieldValue.serverTimestamp(),
                 lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-                active: true
+                active: true,
+                isCreationDevice: !!isCreation
             });
         } else {
             await sessionRef.update({
