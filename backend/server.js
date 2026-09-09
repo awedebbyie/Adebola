@@ -259,6 +259,62 @@ app.post("/withdraw", async (req, res) => {
   }
 
 });
+// ================= CHECK EMAIL =================
+// Used by login.html (and could be reused by register.html) to reliably
+// tell whether an email already has an account, and if so which sign-in
+// provider(s) it has. This has to be a backend call using the Admin SDK -
+// the client-side fetchSignInMethodsForEmail() is unreliable for this on
+// most current Firebase projects: with Email Enumeration Protection
+// enabled (the default for newer projects), it always returns an empty
+// array regardless of whether the email is registered, specifically so a
+// client can't fingerprint which emails exist. The Admin SDK isn't
+// subject to that restriction.
+//
+// NOTE: this endpoint intentionally answers "does this email exist" for
+// an unauthenticated caller, which is inherently a (mild) email
+// enumeration surface - that's a deliberate tradeoff to support "tell the
+// user to sign in with Google" / "offer to create an account" instead of
+// a generic failure. It only ever returns exists + provider IDs, nothing
+// else about the account.
+app.post("/auth/check-email", async (req, res) => {
+
+  try {
+
+    const email = String(req.body.email || "").trim().toLowerCase();
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(email)) {
+      return res.status(400).json({ error: "Invalid email" });
+    }
+
+    try {
+
+      const userRecord = await admin.auth().getUserByEmail(email);
+
+      return res.json({
+        exists: true,
+        providers: userRecord.providerData.map((p) => p.providerId)
+      });
+
+    } catch (err) {
+
+      if (err.code === "auth/user-not-found") {
+        return res.json({ exists: false, providers: [] });
+      }
+
+      throw err;
+    }
+
+  } catch (error) {
+
+    console.error("check-email error:", error);
+
+    res.status(500).json({ error: "Something went wrong" });
+
+  }
+
+});
+
 app.listen(3000, () => {
   console.log("Server running on port 3000");
 });

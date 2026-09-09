@@ -146,6 +146,76 @@
     const db = firebase.firestore();
     const content = document.getElementById("content");
 
+    function showGoogleStep() {
+        content.innerHTML = `
+            <div class="section">
+                <p class="info-note">
+                    Link verified. Confirm via Google sign-in to reactivate
+                    your account - this account has no password set.
+                </p>
+
+                <div id="message"></div>
+
+                <button class="reactivate-btn" id="reactivateBtn">Continue with Google</button>
+            </div>
+        `;
+
+        const reactivateBtn = document.getElementById("reactivateBtn");
+        const messageDiv = document.getElementById("message");
+
+        function showMessage(text, color) {
+            messageDiv.style.color = color;
+            messageDiv.textContent = text;
+        }
+
+        reactivateBtn.addEventListener("click", async () => {
+            const user = auth.currentUser;
+
+            if (!user) {
+                showMessage("Your session expired - please use the \"Contact Support\" link again.", "#ff5c5c");
+                return;
+            }
+
+            reactivateBtn.disabled = true;
+            reactivateBtn.textContent = "Checking...";
+
+            try {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                await user.reauthenticateWithPopup(provider);
+
+                const userRef = db.collection("users").doc(user.uid);
+                const snap = await userRef.get();
+
+                if (!snap.exists || !snap.data().deactivated) {
+                    showMessage("This account isn't deactivated.", "#00ff88");
+                    reactivateBtn.textContent = "Continue with Google";
+                    reactivateBtn.disabled = false;
+                    return;
+                }
+
+                await userRef.set({
+                    deactivated: false,
+                    reactivatedAt: new Date().toISOString()
+                }, { merge: true });
+
+                showMessage("Your account has been reactivated! Redirecting to login...", "#00ff88");
+                setTimeout(() => window.location.href = "login.html", 1500);
+
+            } catch (err) {
+                console.error(err);
+
+                if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
+                    showMessage("Google confirmation was cancelled. Please try again.", "#ff5c5c");
+                } else {
+                    showMessage(err.message || "Something went wrong. Please try again.", "#ff5c5c");
+                }
+
+                reactivateBtn.disabled = false;
+                reactivateBtn.textContent = "Continue with Google";
+            }
+        });
+    }
+
     function showPasswordStep() {
         content.innerHTML = `
             <div class="section">
@@ -263,7 +333,18 @@
         try {
             await auth.signInWithEmailLink(email, window.location.href);
             window.localStorage.removeItem("emailForReactivation");
-            showPasswordStep();
+
+            const providerIds = (auth.currentUser.providerData || []).map((p) => p.providerId);
+            const hasPassword = providerIds.includes("password");
+            const hasGoogle = providerIds.includes("google.com");
+
+            if (hasPassword) {
+                showPasswordStep();
+            } else if (hasGoogle) {
+                showGoogleStep();
+            } else {
+                content.innerHTML = '<p class="loading-note">We couldn\'t determine how to verify your account. Please use "Contact Support" on the login page.</p>';
+            }
         } catch (err) {
             console.error(err);
             content.innerHTML = `<p class="loading-note">This link is invalid, expired, or already used. Please use "Contact Support" on the login page to request a new one.</p>`;

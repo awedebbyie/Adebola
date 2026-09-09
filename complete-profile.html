@@ -39,6 +39,19 @@
 
             <input type="tel" id="phone" class="amount-input" placeholder="Phone Number" style="margin-bottom:20px;">
 
+            <!-- Only shown for accounts that signed up with Google and
+                 have no password credential yet - see the providerData
+                 check in onAuthStateChanged below. Hidden by default so
+                 it never appears for accounts that already have a
+                 password (Google-linked or not). -->
+            <div id="passwordSection" style="display:none; margin-bottom:20px;">
+                <p style="color:#bbb; font-size:13px; margin:0 0 10px 0;">
+                    You signed up with Google. Set a password so you can still log in if Google sign-in ever fails - it won't affect your Google sign-in, you'll be able to use either.
+                </p>
+                <input type="password" id="newPassword" class="amount-input" placeholder="Password (min 6 characters)" style="margin-bottom:10px;">
+                <input type="password" id="confirmPassword" class="amount-input" placeholder="Confirm password">
+            </div>
+
             <!-- Checkboxes -->
             <div style="margin: 15px 0 20px 0; color: #ddd; font-size: 14px;">
                 <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;">
@@ -123,6 +136,20 @@ auth.onAuthStateChanged(async (user) => {
         if (data.gender) document.getElementById('gender').value = data.gender;
         if (data.phone) document.getElementById('phone').value = data.phone;
 
+        // Google-signup accounts have no password credential until they
+        // set one here (or via login.html's "Continue with Google" ->
+        // this page flow). Checking providerData directly (rather than
+        // asking the backend) is fine here since this is about the
+        // currently-signed-in user's own provider list, not a lookup on
+        // an arbitrary email.
+        const providerIds = (user.providerData || []).map((p) => p.providerId);
+        const isGoogleOnly = providerIds.includes("google.com") && !providerIds.includes("password");
+
+        if (isGoogleOnly) {
+            document.getElementById("passwordSection").style.display = "block";
+            requiresPassword = true;
+        }
+
         updateSaveButtonState();
 
     } catch (error) {
@@ -132,6 +159,7 @@ auth.onAuthStateChanged(async (user) => {
 });
 
 let currentUser = null;
+let requiresPassword = false;
 let previousUsername = null;
 
 function isProfileComplete(data) {
@@ -205,6 +233,21 @@ saveBtn.addEventListener('click', async () => {
         return showMessage("You must be at least 18");
     }
 
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+
+    if (requiresPassword) {
+        if (!newPassword || !confirmPassword) {
+            return showMessage("Please set a password so you can still log in if Google sign-in ever fails");
+        }
+        if (newPassword.length < 6) {
+            return showMessage("Password must be at least 6 characters");
+        }
+        if (newPassword !== confirmPassword) {
+            return showMessage("Passwords do not match");
+        }
+    }
+
     saveBtn.disabled = true;
     saveBtn.textContent = "CHECKING USERNAME...";
 
@@ -213,6 +256,29 @@ saveBtn.addEventListener('click', async () => {
             saveBtn.disabled = false;
             saveBtn.textContent = "SAVE & CONTINUE";
             return showMessage("That username is already taken");
+        }
+
+        if (requiresPassword) {
+            saveBtn.textContent = "SETTING PASSWORD...";
+
+            try {
+                const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, newPassword);
+                await currentUser.linkWithCredential(credential);
+            } catch (linkErr) {
+                console.error("Password link error:", linkErr);
+                saveBtn.disabled = false;
+                saveBtn.textContent = "SAVE & CONTINUE";
+
+                if (linkErr.code === "auth/credential-already-in-use" || linkErr.code === "auth/email-already-in-use") {
+                    return showMessage("That email already has a password set on another account.");
+                } else if (linkErr.code === "auth/weak-password") {
+                    return showMessage("Password is too weak. Try a longer one.");
+                } else if (linkErr.code === "auth/requires-recent-login") {
+                    return showMessage("For security, please log out and back in, then try setting a password again.");
+                } else {
+                    return showMessage("Could not set password. You can try again later from Settings.");
+                }
+            }
         }
 
         saveBtn.textContent = "SAVING...";

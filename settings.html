@@ -262,6 +262,11 @@
                 <span style="font-size:20px;">›</span>
             </div>
 
+            <div class="menu-item" onclick="window.location.href='set-password.html'">
+                <span id="passwordMenuLabel">Password</span>
+                <span style="font-size:20px;">›</span>
+            </div>
+
             <div class="menu-item" onclick="window.location.href='sessions.html'">Sessions <span style="font-size:20px;">›</span></div>
             <div class="menu-item" onclick="window.location.href='withdraw-requirement.html'">Withdrawal Requirement <span style="font-size:20px;">›</span></div>
             
@@ -297,6 +302,17 @@ if (typeof window.recordMissionEvent === "function") {
         if (user) window.recordMissionEvent("visited_settings");
     });
 }
+
+// "Password" menu item reads "Set Password" for accounts that signed up
+// with Google and have never set one, "Change Password" otherwise - so
+// it's clear which one you're about to land on before clicking through.
+auth.onAuthStateChanged((user) => {
+    const label = document.getElementById("passwordMenuLabel");
+    if (!user || !label) return;
+
+    const providerIds = (user.providerData || []).map((p) => p.providerId);
+    label.textContent = providerIds.includes("password") ? "Change Password" : "Set Password";
+});
 
 // Hide the "set up 2-step verification" banner and the MFA menu's "New"
 // badge once the user actually has a passkey set (js/passkey.js's

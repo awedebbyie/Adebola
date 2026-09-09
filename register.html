@@ -114,6 +114,15 @@ const db = firebase.firestore();
 const urlParams = new URLSearchParams(window.location.search);
 const referrerUid = (urlParams.get("ref") || "").trim() || null;
 
+// Pre-fill from register.html?email=... - used by login.html's "No
+// account found - Create an account?" link, so the person doesn't have
+// to retype the email they just tried to log in with.
+const prefillEmail = (urlParams.get("email") || "").trim();
+if (prefillEmail) {
+    const emailField = document.getElementById("email");
+    if (emailField) emailField.value = prefillEmail;
+}
+
 function referralFieldsForNewUser(newUid) {
     if (!referrerUid || referrerUid === newUid) return {};
     return {

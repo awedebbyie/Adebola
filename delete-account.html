@@ -187,18 +187,24 @@
     const passwordLabel = document.getElementById("passwordLabel");
     const googleReauthNote = document.getElementById("googleReauthNote");
 
-    // A Google-signed-in account has no password to confirm with - the
-    // old version of this page required one anyway, which meant delete
-    // could never actually succeed for those accounts. Detect the real
-    // provider and adjust the form instead of assuming password auth.
-    let isGoogleAccount = false;
+    // A Google-only account (no password credential) has nothing to
+    // confirm a password with - the old version of this page required
+    // one anyway, which meant delete could never actually succeed for
+    // those accounts. Now that Google-signup accounts can also set a
+    // password (see complete-profile.html / settings.html), prefer
+    // password confirmation whenever one exists - it's exactly the
+    // fallback the account holder set the password up for, and it
+    // doesn't depend on a popup completing successfully. Google reauth
+    // is only used for accounts that never set a password at all.
+    let hasPasswordCredential = false;
 
     auth.onAuthStateChanged((user) => {
         if (!user) return;
 
-        isGoogleAccount = user.providerData.some((p) => p.providerId === "google.com");
+        const providerIds = user.providerData.map((p) => p.providerId);
+        hasPasswordCredential = providerIds.includes("password");
 
-        if (isGoogleAccount) {
+        if (!hasPasswordCredential) {
             passwordInput.style.display = "none";
             passwordLabel.style.display = "none";
             googleReauthNote.style.display = "block";
@@ -226,7 +232,7 @@
             return;
         }
 
-        if (!isGoogleAccount && !password) {
+        if (hasPasswordCredential && !password) {
             showMessage("Enter your password to confirm.", "#ff5555");
             return;
         }
@@ -245,7 +251,7 @@
             // depends on how this account actually signed in: a Google
             // account has no password to check, so it needs its own
             // popup-based re-auth instead of EmailAuthProvider.
-            if (isGoogleAccount) {
+            if (!hasPasswordCredential) {
                 const provider = new firebase.auth.GoogleAuthProvider();
                 await user.reauthenticateWithPopup(provider);
             } else {

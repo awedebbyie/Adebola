@@ -116,6 +116,60 @@ const loginBtn = document.getElementById('loginBtn');
 const googleBtn = document.getElementById('googleBtn');
 const messageDiv = document.getElementById('message');
 
+const BACKEND_URL = "http://localhost:3000";
+
+// Reliable "does this email exist, and with which provider(s)" check -
+// see backend/server.js's /auth/check-email for why this has to be a
+// server call rather than the client-side fetchSignInMethodsForEmail().
+// Never throws - a failed lookup just means "we couldn't tell", so
+// callers should treat a thrown/false-y result as "unknown" rather than
+// "doesn't exist".
+async function checkEmail(email) {
+    try {
+        const res = await fetch(BACKEND_URL + "/auth/check-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email })
+        });
+
+        if (!res.ok) return null;
+
+        return await res.json(); // { exists, providers }
+
+    } catch (err) {
+        console.error("checkEmail failed:", err);
+        return null;
+    }
+}
+
+function showCreateAccountPrompt(email) {
+    messageDiv.style.color = "#ff4444";
+    messageDiv.innerHTML =
+        `No account found for that email. ` +
+        `<a href="register.html?email=${encodeURIComponent(email)}" style="color:#00aa44;">Create an account?</a>`;
+}
+
+function showContinueWithGooglePrompt() {
+    messageDiv.style.color = "#ff4444";
+    messageDiv.textContent = "";
+
+    const line = document.createElement("span");
+    line.textContent = "This email is linked to a Google account. ";
+    messageDiv.appendChild(line);
+
+    // A real button (not just a link/instruction) so this is a one-click
+    // fix instead of just telling the user to go find the other button -
+    // and a genuine click here, not an auto-triggered popup, so browser
+    // popup blockers don't get in the way.
+    const btn = document.createElement("button");
+    btn.textContent = "Continue with Google";
+    btn.style.cssText =
+        "margin-left:4px; padding:3px 10px; border-radius:6px; border:none; " +
+        "background:#4285F4; color:#fff; font-size:13px; cursor:pointer;";
+    btn.addEventListener("click", () => googleBtn.click());
+    messageDiv.appendChild(btn);
+}
+
 function showMessage(text, color = "#ff4444") {
     messageDiv.style.color = color;
     messageDiv.textContent = text;
@@ -194,6 +248,32 @@ async function routeAfterLogin(user) {
     }
 
     if (!userDoc.exists) {
+        // First time this Firebase Auth identity has been seen by the
+        // app - could be a brand-new Google sign-in (the common case,
+        // since Firebase itself auto-creates the underlying Auth user
+        // the moment someone completes the Google popup, before we ever
+        // get a say) or, rarely, a Firestore doc that never got written.
+        // Either way, don't silently create the app-level account (the
+        // Firestore profile/balance record) - ask first.
+        const wantsAccount = confirm(
+            `No account found for ${user.email}. Create one now?`
+        );
+
+        if (!wantsAccount) {
+            // Nothing in this app works without the Firestore doc, so
+            // declining here should leave no real trace of an account -
+            // clean up the Auth identity Firebase already created rather
+            // than leave an orphaned one behind.
+            try {
+                await user.delete();
+            } catch (err) {
+                console.error("Could not remove unconfirmed sign-in:", err);
+                await auth.signOut();
+            }
+            showMessage("No account was created.", "#bbb");
+            return;
+        }
+
         await userDocRef.set({
             username: user.displayName || "",
             email: user.email,
@@ -370,14 +450,29 @@ loginBtn.addEventListener('click', async () => {
 
     console.error(error);
 
-    if (error.code === "auth/invalid-credential" || 
-        error.code === "auth/user-not-found" || 
+    if (error.code === "auth/invalid-credential" ||
+        error.code === "auth/user-not-found" ||
         error.code === "auth/wrong-password") {
-        
-        showMessage(`
-            If you signed up with Google, please use the 
-            "Sign in with Google"button.
-        `, "red");
+
+        // Firebase's own error code doesn't reliably distinguish "no
+        // such account" from "account exists but has no password"
+        // (Google-only) from "wrong password" - especially with Email
+        // Enumeration Protection on, where Firebase deliberately
+        // collapses all three into the same generic error client-side.
+        // Ask the backend, which can tell the difference, instead of
+        // guessing.
+        const info = await checkEmail(email);
+
+        if (info && !info.exists) {
+            showCreateAccountPrompt(email);
+        } else if (info && info.exists && info.providers.includes("google.com") && !info.providers.includes("password")) {
+            showContinueWithGooglePrompt();
+        } else {
+            // Either it's a genuine wrong password, or the lookup
+            // itself failed (info === null) and we don't want to assert
+            // anything we're not sure of.
+            showMessage("Incorrect email or password.");
+        }
     }
     else if (error.code === "auth/invalid-email") {
         showMessage("Invalid email address");
