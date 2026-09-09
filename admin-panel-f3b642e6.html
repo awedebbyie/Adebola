@@ -274,6 +274,60 @@
         font-size:13px;
         padding:10px 0;
     }
+    .unread-badge{
+        display:inline-block;
+        background:#ff5c5c;
+        color:#fff;
+        font-size:12px;
+        font-weight:bold;
+        border-radius:10px;
+        padding:1px 8px;
+        margin-left:8px;
+    }
+    .report-card{
+        background:#1a1a2e;
+        border:1px solid #333;
+        border-radius:10px;
+        padding:14px;
+        margin-bottom:10px;
+    }
+    .report-card.unread{
+        border-color:#00aaff;
+        background:#132030;
+    }
+    .report-card-top{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        margin-bottom:6px;
+    }
+    .report-category{
+        font-size:12px;
+        font-weight:bold;
+        color:#00aaff;
+        text-transform:uppercase;
+        letter-spacing:0.3px;
+    }
+    .report-time{
+        font-size:12px;
+        color:#999;
+    }
+    .report-email{
+        font-size:12px;
+        color:#999;
+        margin-bottom:6px;
+    }
+    .report-description{
+        font-size:13px;
+        color:#eee;
+        line-height:1.5;
+        white-space:pre-wrap;
+    }
+    .reports-empty{
+        color:#3ddc84;
+        font-size:13px;
+        padding:10px 0;
+    }
 </style>
 </head>
 <body>
@@ -476,6 +530,20 @@
             also trigger it. Worth a look, not an automatic verdict.
         </p>
         <div id="takeoverList"><p class="anomaly-loading">Checking...</p></div>
+    </div>
+
+    <div class="anomaly-section">
+        <div class="chart-header">
+            <h2>📩 Reported Problems<span class="unread-badge" id="reportsUnreadBadge" style="display:none;">0</span></h2>
+            <button class="range-btn" id="markAllReadBtn" style="padding:4px 10px;">Mark all read</button>
+        </div>
+        <p class="anomaly-note">
+            Submitted through "Report a Problem" in the app (report-problem.html).
+            Newest first, most recent 200. Unread ones are outlined in blue.
+        </p>
+        <div class="chart-box" style="height:400px; overflow-y:auto; padding:6px 14px;" id="reportsList">
+            <p class="anomaly-loading">Loading...</p>
+        </div>
     </div>
 </main>
 
@@ -1058,6 +1126,79 @@
 
     document.getElementById("recheckTakeoverBtn").addEventListener("click", loadTakeoverWatch);
 
+    // =========================
+    // REPORTED PROBLEMS
+    // =========================
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+    }
+
+    async function loadReports() {
+        const list = document.getElementById("reportsList");
+        const badge = document.getElementById("reportsUnreadBadge");
+        list.innerHTML = '<p class="anomaly-loading">Loading...</p>';
+
+        try {
+            const res = await fetch(BACKEND_URL + "/admin/api/reports", {
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+
+            if (!data.ok) {
+                list.innerHTML = '<p class="anomaly-note">Failed to load: ' + (data.error || "unknown error") + '</p>';
+                return;
+            }
+
+            const unreadCount = data.reports.filter((r) => !r.read).length;
+            badge.style.display = unreadCount > 0 ? "inline-block" : "none";
+            badge.textContent = unreadCount;
+
+            if (data.reports.length === 0) {
+                list.innerHTML = '<p class="reports-empty">✅ No reports.</p>';
+                return;
+            }
+
+            list.innerHTML = data.reports.map((r) => `
+                <div class="report-card${r.read ? "" : " unread"}">
+                    <div class="report-card-top">
+                        <span class="report-category">${escapeHtml(r.category)}</span>
+                        <span class="report-time">${timeAgo(r.createdAt)}</span>
+                    </div>
+                    <div class="report-email">${escapeHtml(r.email || r.uid || "unknown user")}</div>
+                    <div class="report-description">${escapeHtml(r.description)}</div>
+                </div>
+            `).join("");
+        } catch (err) {
+            console.error("Reports load failed:", err);
+            list.innerHTML = '<p class="anomaly-note">Something went wrong loading reports.</p>';
+        }
+    }
+
+    document.getElementById("markAllReadBtn").addEventListener("click", async () => {
+        const btn = document.getElementById("markAllReadBtn");
+        btn.disabled = true;
+        try {
+            const res = await fetch(BACKEND_URL + "/admin/api/reports/mark-all-read", {
+                method: "POST",
+                headers: { Authorization: "Bearer " + adminToken }
+            });
+            const data = await res.json();
+            if (!data.ok) {
+                alert("Failed to mark reports read: " + (data.error || "unknown error"));
+                return;
+            }
+            await loadReports(); // re-render so unread outlines/badge clear immediately
+        } catch (err) {
+            console.error("Mark-all-read failed:", err);
+            alert("Something went wrong marking reports read.");
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
     checkSession();
     loadStats("today");
     loadTierBreakdown("today");
@@ -1070,6 +1211,7 @@
     loadRecentActivity();
     loadGrowthTrend(7);
     loadTakeoverWatch();
+    loadReports();
 
     // Live round refreshes on its own timer, same spirit as the game's
     // own 250ms poll - just much lighter (5s) since this is a

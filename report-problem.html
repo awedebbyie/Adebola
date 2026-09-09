@@ -9,6 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <link rel="stylesheet" href="theme.css">
     <script src="theme.js"></script>
+    <script src="js/reportGate.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
@@ -143,6 +144,8 @@
         <label for="description">What happened?</label>
         <textarea id="description" placeholder="Describe the problem - the more detail, the faster we can help."></textarea>
 
+        <div id="quotaNote" style="color:var(--g-999); font-size:12.5px; margin:-6px 0 14px;"></div>
+
         <button id="submitBtn" class="submit-btn">SUBMIT REPORT</button>
 
         <div id="message"></div>
@@ -169,11 +172,41 @@
 
     const submitBtn = document.getElementById("submitBtn");
     const messageDiv = document.getElementById("message");
+    const quotaNote = document.getElementById("quotaNote");
 
     function showMessage(text, color) {
         messageDiv.style.color = color;
         messageDiv.textContent = text;
     }
+
+    function formatResetDate(iso) {
+        try {
+            return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+        } catch {
+            return "next month";
+        }
+    }
+
+    // Shows "x of y reports left this month" so someone doesn't fill
+    // out a whole report only to be turned away at submit time -
+    // read-only, does not consume a slot.
+    async function refreshQuotaNote() {
+        if (typeof window.getReportQuotaStatus !== "function") return;
+
+        const status = await window.getReportQuotaStatus();
+        if (status.remaining > 0) {
+            quotaNote.textContent =
+                `${status.remaining} of ${status.limit} report${status.limit === 1 ? "" : "s"} left this month.`;
+        } else {
+            quotaNote.textContent =
+                `You've used all ${status.limit} of your reports for this month. ` +
+                `Resets ${formatResetDate(status.resetsAt)}.`;
+        }
+    }
+
+    auth.onAuthStateChanged((user) => {
+        if (user) refreshQuotaNote();
+    });
 
     submitBtn.addEventListener("click", async () => {
         const user = auth.currentUser;
@@ -195,17 +228,35 @@
         submitBtn.textContent = "SUBMITTING...";
 
         try {
+            // Atomic check-and-increment against this month's quota -
+            // premium accounts get 3, normal accounts get 1. Only
+            // write the actual report doc below if this comes back
+            // allowed, so a denied attempt never counts against
+            // anything or leaves a partial report behind.
+            const gate = await window.recordReportSubmissionIfAllowed();
+
+            if (!gate.allowed) {
+                showMessage(
+                    `You've used all ${gate.limit} of your reports for this month. ` +
+                    `Resets ${formatResetDate(gate.resetsAt)}.`,
+                    "#ff5555"
+                );
+                return;
+            }
+
             await db.collection("reports").add({
                 uid: user.uid,
                 email: user.email || null,
                 category: category,
                 description: description,
                 status: "open",
+                read: false,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
             showMessage("Thanks - your report has been submitted.", "#3ddc84");
             document.getElementById("description").value = "";
+            refreshQuotaNote();
 
         } catch (err) {
             console.error("Report submit failed:", err);

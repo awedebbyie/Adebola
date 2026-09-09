@@ -39,6 +39,12 @@ app.use("/admin/api", adminSecurity);
 const adminUsers = require("./adminUsers");
 app.use("/admin/api", adminUsers);
 
+// Reported problems (Firestore "reports" collection, written by
+// report-problem.html) - list + mark-all-read. Same guard pattern - see
+// backend/adminReports.js.
+const adminReports = require("./adminReports");
+app.use("/admin/api", adminReports);
+
 const FLW_SECRET_KEY = process.env.FLW_SECRET_KEY;
 
 app.post("/verify-payment", async (req, res) => {
